@@ -56,7 +56,7 @@ const modeMP: Map<string, new () => SyntaxMode> = new Map([
 
 const py: API = window.pywebview.api;
 
-const content = ref((await py.get_code()).code || "");
+const content = ref();
 const lang = ref("text");
 
 let editorOptions: Partial<Ace.EditorOptions> & { [key: string]: any }
