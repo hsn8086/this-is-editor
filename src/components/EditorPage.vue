@@ -59,7 +59,7 @@ const py: API = window.pywebview.api;
 const content = ref((await py.get_code()).code || "");
 const lang = ref("text");
 
-const editorOptions: Partial<Ace.EditorOptions> & { [key: string]: any }
+let editorOptions: Partial<Ace.EditorOptions> & { [key: string]: any }
 
 const theme = useTheme(); // useTheme must be called in setup
 let editor: Ace.Editor | undefined;
