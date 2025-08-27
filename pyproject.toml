@@ -1,0 +1,23 @@
+[project]
+name = "this-is-editor"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "a2wsgi>=1.10.10",
+    "appdirs>=1.4.4",
+    "fastapi>=0.116.1",
+    "psutil>=7.0.0",
+    "pydantic>=2.11.7",
+    "pywebview[gtk]>=6.0",
+    "uvicorn>=0.35.0",
+    "websockets>=15.0.1",
+]
+
+[dependency-groups]
+dev = [
+    "nuitka>=2.7.12",
+    "pyright>=1.1.404",
+    "python-lsp-server>=1.13.0",
+]

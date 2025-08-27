@@ -1,0 +1,99 @@
+.ace-tie .ace_gutter-active-line {
+  background-color: #3C3836;
+}
+
+.ace-tie {
+  color: #EBDAB4;
+  background-color: #1D2021;
+}
+
+.ace-tie .ace_invisible {
+  color: #504945;
+}
+
+.ace-tie .ace_marker-layer .ace_selection {
+  background: rgba(179, 101, 57, 0.75)
+}
+
+.ace-tie.ace_multiselect .ace_selection.ace_start {
+  box-shadow: 0 0 3px 0px #002240;
+}
+
+.ace-tie .ace_keyword {
+  color: #8ec07c;
+}
+
+.ace-tie .ace_comment {
+  font-style: italic;
+  color: #928375;
+}
+
+.ace-tie .ace-statement {
+  color: red;
+}
+
+.ace-tie .ace_variable {
+  color: #84A598;
+}
+
+.ace-tie .ace_variable.ace_language {
+  color: #D2879B;
+}
+
+.ace-tie .ace_constant {
+  color: #C2859A;
+}
+
+.ace-tie .ace_constant.ace_language {
+  color: #C2859A;
+}
+
+.ace-tie .ace_constant.ace_numeric {
+  color: #C2859A;
+}
+
+.ace-tie .ace_string {
+  color: #B8BA37;
+}
+
+.ace-tie .ace_support {
+  color: #F9BC41;
+}
+
+.ace-tie .ace_support.ace_function {
+  color: #F84B3C;
+}
+
+.ace-tie .ace_storage {
+  color: #8FBF7F;
+}
+
+.ace-tie .ace_keyword.ace_operator {
+  color: #EBDAB4;
+}
+
+.ace-tie .ace_punctuation.ace_operator {
+  color: yellow;
+}
+
+.ace-tie .ace_marker-layer .ace_active-line {
+  background: #3C3836;
+}
+
+.ace-tie .ace_marker-layer .ace_selected-word {
+  border-radius: 4px;
+  border: 8px solid #3f475d;
+}
+
+.ace-tie .ace_print-margin {
+  width: 5px;
+  background: #3C3836;
+}
+
+.ace-tie .ace_indent-guide {
+  background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAYAAACZgbYnAAAAEklEQVQImWNQUFD4z6Crq/sfAAuYAuYl+7lfAAAAAElFTkSuQmCC") right repeat-y;
+}
+
+.ace-tie .ace_indent-guide-active {
+  background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAYAAACZgbYnAAAAEklEQVQIW2PQ1dX9zzBz5sz/ABCcBFFentLlAAAAAElFTkSuQmCC) right repeat-y;
+}
