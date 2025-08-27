@@ -1,5 +1,6 @@
 from collections import namedtuple
 from pathlib import Path
+import platform
 import subprocess
 import tempfile
 import threading
@@ -37,6 +38,8 @@ def run_p(
     ) as p:  # set stdin to -1 for input and stdout stderr to -1 for capture output.
         print(cmd)
         try:
+            if platform.system() == "Windows":
+                time.sleep(0.005)  # 解决windows下的bug
             child_process = psutil.Process(
                 p.pid
             )  # use psutil tu monitoring process status

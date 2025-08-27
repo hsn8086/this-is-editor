@@ -25,7 +25,31 @@
     </v-dialog>
   </v-app>
 </template>
+<style>
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
 
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 120, 0.6);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 100, 100, 0.8);
+}
+
+body,
+.scroll-container {
+  scrollbar-gutter: stable;
+  overflow: overlay;
+}
+</style>
 <script lang="ts" setup>
 import { useTheme } from "vuetify";
 import type { TestCase } from "./pywebview-defines";
@@ -62,6 +86,6 @@ async function createProblem(lang: string) {
   await py.set_opened_file(fp);
   await py.save_testcase(prob);
   await router.push("/");
-  await router.push("/editor");  
+  await router.push("/editor");
 }
 </script>

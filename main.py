@@ -14,6 +14,7 @@ from runner import compile_c_cpp_builder, run_c_cpp, run_python
 import subprocess
 from functools import partial
 import psutil
+import platform
 
 app = FastAPI()
 should_exit = False
@@ -115,7 +116,7 @@ async def websocket_endpoint(websocket: WebSocket, lang: str):
                 task_ws.cancel()
                 task_perr.cancel()
                 p.terminate()
-                await p.wait()
+                p.wait()
                 print(f"WebSocket connection closed for language: {lang}")
                 return
             if task_p.done() or task_ws.done() or task_perr.done():
@@ -664,8 +665,11 @@ window = webview.create_window(
     height=600,
 )
 
+if platform.system() == "Windows":
+    webview.start(window, gui="qt")
+else:
+    webview.start(window)
 
-webview.start(window, debug=True)
 should_exit = True
 server.should_exit = True
 server_recver.should_exit = True
