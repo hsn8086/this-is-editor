@@ -21,7 +21,7 @@
       </v-list-item>
 
       <v-divider />
-      <!-- 这里创建新任务的时候可能还要作一下平滑过渡 -->
+
       <v-slide-y-transition class="py-0" tag="v-list" group>
         <div v-for="item in tasks" :key="item.id">
           <v-menu>
@@ -50,8 +50,8 @@
                         ? item.memory!.toFixed(0) + " MB"
                         : (item.memory! * 1000).toFixed(0) + " KB"
                     }}
-                  </v-chip></v-list-item-title
-                >
+                  </v-chip>
+                </v-list-item-title>
               </v-list-item>
             </template>
             <v-list>
@@ -62,7 +62,6 @@
                 <v-list-item-title>Delete Task</v-list-item-title>
               </v-list-item>
               <v-list-item @click="clearAllTasks()" link>
-                <!-- clean all -->
                 <template v-slot:prepend>
                   <v-icon color="blue"> mdi-broom </v-icon>
                 </template>
@@ -73,7 +72,6 @@
           <v-expand-transition>
             <div v-show="item.expend">
               <v-divider />
-
               <v-textarea
                 dense
                 variant="solo-filled"
@@ -179,6 +177,7 @@ defineExpose({
   runAll,
 });
 
+// Define color mappings for task statuses
 const colors: Record<string, string> = {
   null: "grey",
   pending: "blue",
@@ -187,16 +186,21 @@ const colors: Record<string, string> = {
   running: "orange",
 };
 
+// Access the Python API exposed via pywebview
 const py: API = window.pywebview.api;
+
+// Initialize the component when mounted
 onMounted(() => {
   init();
 });
 
+// Initialize the component by loading test cases and setting up the judge thread
 async function init() {
   await loadTestcase();
   await initJudgeThread();
 }
 
+// Define the structure of a test case and task
 let testcaseInfo: TestCase;
 const testcaseName = ref("");
 const tasks = ref<TaskItem[]>([]);
@@ -213,6 +217,8 @@ type TaskItem = {
   time?: number;
   memory?: number;
 };
+
+// Load test cases from the backend and initialize tasks
 async function loadTestcase() {
   testcaseInfo = await py.get_testcase();
   testcaseName.value = testcaseInfo.name;
@@ -228,6 +234,7 @@ async function loadTestcase() {
   }));
 }
 
+// Manage the state of the navigation drawer (collapsed/expanded)
 const rail = ref(false);
 function changRail(value: boolean) {
   console.log(tasks);
@@ -240,25 +247,33 @@ function changRail(value: boolean) {
   }
 }
 
+// Toggle the expanded state of a specific task
 function changeExpend(item: TaskItem, value: boolean) {
   item.expend = value;
   rail.value = !value && rail.value;
 }
 
-let judgeThread = 1; // waiting for init
+// Initialize the number of judge threads based on CPU count
+let judgeThread = 1; // Default to 1 thread until initialized
 async function initJudgeThread() {
   const [cpu_count, cpu_count_logical] = await py.get_cpu_count();
   if (cpu_count == cpu_count_logical)
     judgeThread = Math.max(Math.floor((cpu_count * 3) / 2), 1);
   else judgeThread = cpu_count;
 }
+
+// Manage the state of the "Run All" button
 const runAllBtnDisabled = ref(false);
 const runAllBtnIcon = ref("mdi-play");
 const runStatus = ref<string>("Run All");
+
+// Execute all tasks sequentially or in parallel based on the thread limit
 async function runAll() {
   runAllBtnDisabled.value = true;
   runAllBtnIcon.value = "mdi-pause";
   const limit = judgeThread;
+
+  // Reset task statuses and outputs
   for (const task of tasks.value) {
     task.status = "pending";
     task.output = "";
@@ -266,9 +281,11 @@ async function runAll() {
     task.memory = undefined;
   }
 
+  // Compile the test cases before running
   runStatus.value = "Compiling...";
   await py.compile();
 
+  // Run tasks with a limit on concurrent executions
   runStatus.value = "Running...";
   const executing = new Set<Promise<TaskResult>>();
   for (const task of tasks.value) {
@@ -288,20 +305,20 @@ async function runAll() {
         task.memory = result.memory;
         if (result.status !== "success") {
           task.status = "failed";
-          changeExpend(task, true); // 展开当前任务
+          changeExpend(task, true);
           if (result.result.length === 0)
             task.output = `<${result.status.toUpperCase().replace(/_/g, " ")}>`;
           console.error(
             `Task ${task.id} failed: ${result.status} - ${result.result}`
           );
           return;
-        } else changeExpend(task, false); // 关闭当前任务
+        } else changeExpend(task, false);
         task.status = "completed";
       })
       .catch((error) => {
         task.status = "failed";
         task.output = `Error: ${error.message}`;
-        changeExpend(task, true); // 展开当前任务
+        changeExpend(task, true);
         console.error(`Task ${task.id} encountered an error: ${error.message}`);
       })
       .finally(() => {
@@ -309,6 +326,8 @@ async function runAll() {
       });
   }
   await Promise.all(executing);
+
+  // Update the "Run All" button state after execution
   runStatus.value = "All Done";
   runAllBtnDisabled.value = false;
   runAllBtnIcon.value = "mdi-play";
@@ -316,6 +335,8 @@ async function runAll() {
     runStatus.value = "Run All";
   }, 2000);
 }
+
+// Create a new task with default values
 async function createTask() {
   const newId = tasks.value.length
     ? Math.max(...tasks.value.map((t) => t.id)) + 1
@@ -331,6 +352,8 @@ async function createTask() {
     expend: true,
   });
 }
+
+// Save the current state of tasks to the backend
 async function saveTasks() {
   const tests = tasks.value.map((task) => ({
     id: task.id,
@@ -340,16 +363,22 @@ async function saveTasks() {
   testcaseInfo.tests = tests;
   await py.save_testcase(testcaseInfo);
 }
+
+// Delete a specific task by its ID
 async function deleteTask(id: number) {
   tasks.value = tasks.value.filter((task) => task.id !== id);
   await saveTasks();
   await loadTestcase();
 }
+
+// Clear all tasks and reset the state
 async function clearAllTasks() {
   tasks.value = [];
   await saveTasks();
   await loadTestcase();
 }
+
+// Copy all task information to the clipboard
 const copyAllInfoDisplay = ref(false);
 async function CopyAll() {
   const tests = tasks.value.map((task) => ({
@@ -359,19 +388,22 @@ async function CopyAll() {
   }));
   let allText = JSON.stringify(tests, null, 2);
   await navigator.clipboard.writeText(allText);
-  // notify
+
+  // Notify the user that the copy operation was successful
   copyAllInfoDisplay.value = true;
   setTimeout(() => {
     copyAllInfoDisplay.value = false;
   }, 1000);
 }
+
+// Paste tasks from the clipboard, handling both JSON and plain text formats
 const pasteErrorDisplay = ref(false);
 async function PasteFromClipboard() {
   const text = await navigator.clipboard.readText();
   try {
     const parsed = JSON.parse(text);
 
-    // 检查是否是有效的 JSON 格式
+    // Validate the JSON format
     if (!Array.isArray(parsed)) throw new Error("Invalid format");
     for (const item of parsed) {
       if (
@@ -383,27 +415,25 @@ async function PasteFromClipboard() {
       }
     }
 
-    // 如果是有效的 JSON，保存到测试用例中
+    // Replace all tasks with the parsed data
     testcaseInfo.tests = parsed;
     await py.save_testcase(testcaseInfo);
     await loadTestcase();
   } catch (error) {
     console.warn("Invalid JSON format, attempting to paste as plain text.");
 
-    // 如果不是 JSON 格式，尝试将文本添加到第一个空的输入/输出中
+    // Handle plain text input by filling the first empty task or creating a new one
     const firstEmptyTask = tasks.value.find(
       (task) => !task.input || !task.answer
     );
 
     if (firstEmptyTask) {
-      // 如果存在空的输入/输出字段，添加文本到输入/输出字段
       if (!firstEmptyTask.input) {
         firstEmptyTask.input = text;
       } else if (!firstEmptyTask.answer) {
         firstEmptyTask.answer = text;
       }
     } else {
-      // 如果没有空的输入/输出字段，新建一个任务并添加文本
       const newId = tasks.value.length
         ? Math.max(...tasks.value.map((t) => t.id)) + 1
         : 1;
@@ -419,7 +449,6 @@ async function PasteFromClipboard() {
       });
     }
 
-    // 保存任务
     await saveTasks();
   }
 }

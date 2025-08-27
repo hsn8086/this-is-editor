@@ -20,18 +20,19 @@
 </style>
 
 <script lang="ts" setup>
+import type { API } from "@/pywebview-defines";
+import type { SyntaxMode } from "ace-code/src/ext/static_highlight";
+import type { SessionLspConfig } from "ace-linters/build/ace-language-client";
+import type { VAceEditorInstance } from "vue3-ace-editor/types";
 import { ref, onMounted, onUnmounted } from "vue";
 import { VAceEditor } from "vue3-ace-editor";
-import type { VAceEditorInstance } from "vue3-ace-editor/types";
 import { Mode as python } from "ace-code/src/mode/python";
 import { Mode as cpp } from "ace-code/src/mode/c_cpp";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/mode-c_cpp";
-import type { SyntaxMode } from "ace-code/src/ext/static_highlight";
-import type { SessionLspConfig } from "ace-linters/build/ace-language-client";
 import event from "ace-code/src/lib/event";
 import keyUtil from "ace-code/src/lib/keys";
-import { Ace, config as aceCFG } from "ace-builds";
+import { Ace } from "ace-builds";
 import "ace-builds/src-noconflict/ext-language_tools";
 import { HashHandler } from "ace-code/src/keyboard/hash_handler";
 import "@/ace-theme-tie"; // 自定义主题
@@ -42,43 +43,25 @@ import { getLanguageProvider } from "@/lsp";
 import { debounce } from "lodash";
 import CheckerPanel from "./CheckerPanel.vue";
 import { useHotkey } from "vuetify";
-import type { API } from "@/pywebview-defines";
-const checkPanel: Ref<InstanceType<typeof CheckerPanel> | null> = ref(null);
 
+const checkPanel: Ref<InstanceType<typeof CheckerPanel> | null> = ref(null);
 useHotkey("f5", () => {
   checkPanel.value?.runAll();
 });
-const theme = useTheme();
-const aceRef = ref<VAceEditorInstance>();
+
 const modeMP: Map<string, new () => SyntaxMode> = new Map([
   ["python", python],
   ["cpp", cpp],
 ]);
+
 const py: API = window.pywebview.api;
-const content = ref("");
+
+const content = ref((await py.get_code()).code || "");
 const lang = ref("text");
-const editorOptions: Partial<Ace.EditorOptions> & { [key: string]: any } = {
-  enableBasicAutocompletion: true,
-  // enableSnippets: true,
-  enableLiveAutocompletion: true,
-  fontSize: "14px",
-  fontFamily: "maple mono",
-  animatedScroll: true,
-  scrollPastEnd: 1,
-  showPrintMargin: false,
-  fixedWidthGutter: true,
-  fadeFoldWidgets: true,
-  displayIndentGuides: false,
-  highlightIndentGuides: true,
-  highlightGutterLine: true,
-  highlightActiveLine: true,
-  highlightSelectedWord: true,
-  cursorStyle: "smooth",
-  tabSize: 4,
-  tooltipFollowsMouse: true,
-  foldStyle: "markbeginend",
-};
+
+const theme = useTheme(); // useTheme must be called in setup
 let editor: Ace.Editor | undefined;
+const aceRef = ref<VAceEditorInstance>();
 async function initEditor() {
   if (aceRef.value) {
     editor = aceRef.value.getAceInstance();
@@ -87,16 +70,18 @@ async function initEditor() {
     const initialCode = await py.get_code();
     lang.value = initialCode.type;
     content.value = initialCode.code || ""; // Set initial code from backend
+
     // config
     const config = await py.get_config();
     console.log("Editor config:", config);
-    for (const key in config.editor.aceMain) {
+    for (const key in config.editor.aceMain)
       editor.setOption(
         key as keyof Ace.EditorOptions,
         config.editor.aceMain[key].value
       );
-    }
-    editor.container.style.lineHeight = "2";
+
+    // set line height
+    editor.container.style.lineHeight = "2"; // todo: make configurable
     editor.renderer.updateFontSize();
 
     // editor.setKeyboardHandler("ace/keyboard/vscode");
@@ -113,11 +98,12 @@ async function initEditor() {
       );
       editor.session.setMode("ace/mode/text");
     }
+
     const languageProvider = await getLanguageProvider();
     let menuKb = new HashHandler([
       {
         bindKey: "f10",
-        name: "format",
+        name: "format", //todo: fix it
         exec: function () {
           console.log("Format command triggered");
           languageProvider.format();
@@ -131,6 +117,7 @@ async function initEditor() {
         },
       }, // todo
     ]);
+    
     event.addCommandKeyListener(window, function (e, hashId, keyCode) {
       let keyString = keyUtil.keyCodeToString(keyCode);
       let command = menuKb.findKeyCommand(hashId, keyString);
