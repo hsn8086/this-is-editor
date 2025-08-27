@@ -22,7 +22,11 @@ def write_thread(p: Popen, inp: str):
     p.stdin.flush()
     p.stdin.close()
 
-
+def try_r(func,*args,default=None):
+    try:
+        return func(*args)
+    except Exception:
+        return default
 def run_p(
     cmd: list,
     inp: str = "",
@@ -33,23 +37,20 @@ def run_p(
 ):
     # print(f"Running command: {' '.join(cmd)}")
     print(cmd, cwd)
-    with Popen(
+    with psutil.Popen(
         cmd, text=True, stdin=-1, stdout=-1, stderr=-1, cwd=cwd
     ) as p:  # set stdin to -1 for input and stdout stderr to -1 for capture output.
         print(cmd)
         try:
-            if platform.system() == "Windows":
-                time.sleep(0.005)  # 解决windows下的bug
-            child_process = psutil.Process(
-                p.pid
-            )  # use psutil tu monitoring process status
+
+            child_process = p
             start = time.monotonic()
             threading.Thread(target=write_thread, args=(p, inp)).start()
             max_memory = 0
 
             while True:
                 state = p.poll()  # check process state
-
+                print("ping")
                 if state is not None:
                     return RunProcessResult(
                         stdout=p.stdout.read(),
@@ -58,12 +59,13 @@ def run_p(
                         memory=max_memory,
                         status=None,
                     )
-
-                mem_use = child_process.memory_full_info().uss / (1024**2)
+                if mem:=try_r(child_process.memory_full_info):
+                    mem_use = mem.uss / (1024**2)
+                    
                 max_memory = max(max_memory, mem_use)
                 if mem_use > memory_limit:  # check memory
-                    child_process.kill()
-                    child_process.terminate()
+                    try_r(child_process.kill)
+                    try_r(child_process.terminate)
                     return RunProcessResult(
                         status="memory_limit_exceeded",
                         stdout=p.stdout.read(),
@@ -71,10 +73,10 @@ def run_p(
                         time=time.monotonic() - start,
                         memory=max_memory,
                     )
-
+    
                 if time.monotonic() - start >= timeout:  # check timeout
-                    child_process.kill()
-                    child_process.terminate()
+                    try_r(child_process.kill)
+                    try_r(child_process.terminate)
                     return RunProcessResult(
                         status="timeout",
                         stdout=p.stdout.read(),
@@ -86,7 +88,8 @@ def run_p(
             p.stdin.close()
             p.stdout.close()
             p.stderr.close()
-            p.terminate()
+            try_r(child_process.kill)
+            try_r(child_process.terminate)
             p.wait()  # 等待子进程完全退出
 
 
@@ -112,6 +115,7 @@ def run(
         memory = rst.memory
         status = rst.status
     except Exception as e:
+        raise e
         return Result(output=str(e), type="runtime_error", time=0, memory=0)
     if status == "timeout":
         return Result(output=stdout, type="timeout", time=time, memory=memory)
