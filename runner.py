@@ -22,11 +22,14 @@ def write_thread(p: Popen, inp: str):
     p.stdin.flush()
     p.stdin.close()
 
-def try_r(func,*args,default=None):
+
+def try_r(func, *args, default=None):
     try:
         return func(*args)
     except Exception:
         return default
+
+
 def run_p(
     cmd: list,
     inp: str = "",
@@ -40,9 +43,7 @@ def run_p(
     with psutil.Popen(
         cmd, text=True, stdin=-1, stdout=-1, stderr=-1, cwd=cwd
     ) as p:  # set stdin to -1 for input and stdout stderr to -1 for capture output.
-        print(cmd)
         try:
-
             child_process = p
             start = time.monotonic()
             threading.Thread(target=write_thread, args=(p, inp)).start()
@@ -50,7 +51,6 @@ def run_p(
 
             while True:
                 state = p.poll()  # check process state
-                print("ping")
                 if state is not None:
                     return RunProcessResult(
                         stdout=p.stdout.read(),
@@ -59,9 +59,9 @@ def run_p(
                         memory=max_memory,
                         status=None,
                     )
-                if mem:=try_r(child_process.memory_full_info):
+                if mem := try_r(child_process.memory_full_info):
                     mem_use = mem.uss / (1024**2)
-                    
+
                 max_memory = max(max_memory, mem_use)
                 if mem_use > memory_limit:  # check memory
                     try_r(child_process.kill)
@@ -73,7 +73,7 @@ def run_p(
                         time=time.monotonic() - start,
                         memory=max_memory,
                     )
-    
+
                 if time.monotonic() - start >= timeout:  # check timeout
                     try_r(child_process.kill)
                     try_r(child_process.terminate)
@@ -96,14 +96,15 @@ def run_p(
 def run(
     file_path: Path,
     inp: str,
-    cmd: str,
+    cmd: list,
     *,
     memory_limit: int = 256,
     timeout: int = 1,
 ):
+    cmd = [c.format(file_name=str(file_path)) for c in cmd]
     try:
         rst = run_p(
-            cmd.format(file_name=str(file_path)).split(),
+            cmd,
             inp=inp,
             timeout=timeout,
             memory_limit=memory_limit,
@@ -158,7 +159,8 @@ def run_c_cpp(
     memory_limit: int = 256,
     timeout: int = 1,
 ):
-    cmd = "{file_name}"
+    # cmd = '"{file_name}"'
+    cmd = ["{file_name}"]
     return run(
         file_path,
         inp,
@@ -176,5 +178,6 @@ def run_python(
     *,
     version: str = "python3.10",
 ):
-    cmd = f"{version} {{file_name}}"
+    # cmd = f'{version} {{file_name}}"'
+    cmd = [version, "{file_name}"]
     return run(file_path, inp, cmd, memory_limit=memory_limit, timeout=timeout)
