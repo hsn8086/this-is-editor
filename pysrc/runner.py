@@ -3,10 +3,11 @@ import subprocess
 import time
 from collections.abc import Callable
 from pathlib import Path
-from subprocess import Popen
-from typing import NamedTuple
+from typing import NamedTuple, TypeVar
 
 import psutil
+
+T = TypeVar("T")
 
 
 # Define namedtuples
@@ -25,13 +26,7 @@ class RunProcessResult(NamedTuple):
     status: str | None
 
 
-def write_thread(p: Popen, inp: str) -> None:
-    p.stdin.write(inp)
-    p.stdin.flush()
-    p.stdin.close()
-
-
-def try_r(func: Callable, *args: object, default: object = None) -> object:
+def try_r(func: Callable[..., T], *args: any, default: T = None) -> T:
     try:
         return func(*args)
     except Exception:
