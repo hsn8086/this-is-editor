@@ -41,7 +41,7 @@ def run_p(
     # print(f"Running command: {' '.join(cmd)}")
     print(cmd, cwd)
     with psutil.Popen(
-        cmd, text=True, stdin=-1, stdout=-1, stderr=-1, cwd=cwd,creationflags=subprocess.CREATE_NO_WINDOW
+        cmd, text=True, stdin=-1, stdout=-1, stderr=-1, cwd=cwd,creationflags=subprocess.CREATE_NO_WINDOW,shell=True
     ) as p:  # set stdin to -1 for input and stdout stderr to -1 for capture output.
         try:
             child_process = p
