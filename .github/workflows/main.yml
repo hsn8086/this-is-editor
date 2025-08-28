@@ -69,7 +69,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-artifacts-${{ matrix.os }}
-          path: ./build  # 替换为你的构建目录
+          path: | 
+            main.bin
+            main.exe
 
   release:
     name: Release
