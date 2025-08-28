@@ -1,0 +1,115 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    name: Build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]  # 定义操作系统矩阵
+
+    steps:
+      # 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 设置 Node.js 环境
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 24
+
+      # 安装 Yarn
+      - name: Install Yarn
+        run: corepack enable
+
+      # 安装依赖
+      - name: Install dependencies
+        run: yarn install
+
+      # 安装 Python 和 Nuitka
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12  # 指定 Python 版本
+
+      - name: Install env
+        run: uv sync
+
+      # 构建项目
+      - name: Build project
+        run: yarn build
+
+      # 确认构建产物
+      - name: Verify build output
+        run: |
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            test -f main.bin || (echo "main.bin not found!" && exit 1)
+          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            test -f main.exe || (echo "main.exe not found!" && exit 1)
+          fi
+
+      # 上传构建产物
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts-${{ matrix.os }}
+          path: |
+            main.bin
+            main.exe
+
+  release:
+    name: Release
+    needs: build  # 依赖于 build 任务
+    runs-on: ubuntu-latest
+
+    steps:
+      # 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 下载 Linux 构建产物
+      - name: Download Linux build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts-ubuntu-latest
+
+      # 下载 Windows 构建产物
+      - name: Download Windows build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts-windows-latest
+
+      # 发布到 GitHub Releases
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v1.0.${{ github.run_number }}  # 自动生成版本号
+          release_name: Release v1.0.${{ github.run_number }}
+          draft: false
+          prerelease: false
+
+      # 上传 Linux 构建产物到 Release
+      - name: Upload Linux Release Asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: main.bin
+          asset_name: main-linux.bin
+          asset_content_type: application/octet-stream
+
+      # 上传 Windows 构建产物到 Release
+      - name: Upload Windows Release Asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: main.exe
+          asset_name: main-windows.exe
+          asset_content_type: application/octet-stream
