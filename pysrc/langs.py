@@ -7,8 +7,6 @@ langs = [
         "id": "python",
         "display": "Python Source",
         "lsp": ["uv", "run", "pylsp"],
-        # "lsp": ["ruff", "server"],
-        # "lsp": ["uv", "run", "pyright-langserver", "--stdio"],
         "suffix": [".py"],
         "alias": ["py", "Python", "python3"],
     },

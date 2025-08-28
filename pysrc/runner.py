@@ -27,6 +27,19 @@ class RunProcessResult(NamedTuple):
 
 
 def try_r(func: Callable[..., T], *args: any, default: T = None) -> T:
+    """
+    Executes a function with the provided arguments and returns its result.
+    If an exception occurs during execution, returns a default value.
+    Args:
+        func (Callable[..., T]): The function to execute.
+        *args (any): Arguments to pass to the function.
+        default (T, optional): The value to return if an exception occurs.
+            Defaults to None.
+    Returns:
+        T: The result of the function execution,
+            or the default value if an exception occurs.
+    """
+
     try:
         return func(*args)
     except Exception:
@@ -41,8 +54,6 @@ def run_p(
     timeout: int = 1,
     cwd: Path | None = None,
 ) -> RunProcessResult:
-    # print(f"Running command: {' '.join(cmd)}")
-    print(cmd, cwd)
     with psutil.Popen(
         cmd,
         text=True,
@@ -62,8 +73,6 @@ def run_p(
             p.stdin.write(inp)
             p.stdin.flush()
             p.stdin.close()
-
-            # threading.Thread(target=write_thread, args=(p, inp)).start()
             max_memory = 0
 
             while True:
@@ -108,7 +117,7 @@ def run_p(
             p.stderr.close()
             try_r(child_process.kill)
             try_r(child_process.terminate)
-            p.wait()  # 等待子进程完全退出
+            p.wait()  # wait for process to terminate
 
 
 def run(
@@ -134,7 +143,6 @@ def run(
         memory = rst.memory
         status = rst.status
     except Exception as e:
-        raise e
         return Result(output=str(e), type="runtime_error", time=0, memory=0)
     if status == "timeout":
         return Result(output=stdout, type="timeout", time=time, memory=memory)
@@ -144,7 +152,6 @@ def run(
         )
 
     if stderr:
-        print(stderr)
         return Result(output=stderr, type="runtime_error", time=time, memory=memory)
     return Result(output=stdout, type="success", time=time, memory=memory)
 
@@ -185,7 +192,6 @@ def run_c_cpp(
     memory_limit: int = 256,
     timeout: int = 1,
 ) -> Result:
-    # cmd = '"{file_name}"'
     cmd = ["{file_name}"]
     return run(
         file_path,
@@ -204,6 +210,5 @@ def run_python(
     *,
     version: str = "python3.10",
 ) -> Result:
-    # cmd = f'{version} {{file_name}}"'
     cmd = [version, "{file_name}"]
     return run(file_path, inp, cmd, memory_limit=memory_limit, timeout=timeout)

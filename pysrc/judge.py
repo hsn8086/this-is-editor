@@ -1,7 +1,10 @@
+from itertools import zip_longest
+
+
 def task_checker(ouput: str, answer: str) -> bool:
     oup = filter(bool, ouput.split())
     ans = filter(bool, answer.split())
-    for i, j in zip(oup, ans):
+    for i, j in zip_longest(oup, ans):
         if i.strip() != j.strip():
             return False
     return True

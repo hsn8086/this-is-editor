@@ -36,7 +36,6 @@ async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
     if should_exit:
         await websocket.close()
         return
-    # 使用 await 获取 Process 对象
 
     p = subprocess.Popen(
         type_mp.get(lang, {}).get("lsp", []),
@@ -46,16 +45,16 @@ async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
         creationflags=subprocess.CREATE_NO_WINDOW
         if platform.system() == "Windows"
         else 0,
-        shell=True if platform.system() == "Windows"
-        else 0,
+        shell=True if platform.system() == "Windows" else 0,
     )
 
     time.sleep(0.1)
     if p.poll() is not None:
         print(f"Failed to start LSP for language: {lang}")
-        print(p.stderr.read().decode("utf-8"))  
+        print(p.stderr.read().decode("utf-8"))
         await websocket.close()
         return
+    
     await websocket.accept()
     print(f"WebSocket connection established for language: {lang}")
 
@@ -63,17 +62,14 @@ async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
         try:
             while True:
                 data = (await websocket.receive_text()).encode("utf-8")
-                # p.stdin.write(f"Content-Length: {len(data)}\r\n\r\n".encode("utf-8"))
                 await asyncio.to_thread(
                     p.stdin.write,
                     f"Content-Length: {len(data)}\r\n\r\n".encode(),
                 )
-                # p.stdin.write(data)
                 await asyncio.to_thread(p.stdin.write, data)
                 await asyncio.to_thread(p.stdin.flush)
         except Exception as e:
             print(f"WebSocket handler error: {e}")
-            # 确保 WebSocket 关闭时不会重复调用
             if not websocket.client_state.name == "DISCONNECTED":
                 await websocket.close()
 
@@ -81,7 +77,6 @@ async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
         buffer = b""
         try:
             while True:
-                # chunk = await p.stdout.read(1024)
                 # 你就说他是不是能跑!
                 await asyncio.to_thread(p.stdout.read, 16)
                 while b"\r\n\r\n" not in buffer:
@@ -95,31 +90,30 @@ async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
                 content_length = int(
                     buffer[:header_end].strip().split(b"\n")[0].strip().split()[-1]
                 )
-                buffer = buffer[header_end + 4 :]  # 跳过头部
+                buffer = buffer[header_end + 4 :]  # skip \r\n\r\n
                 while len(buffer) < content_length:
-                    # chunk = await p.stdout.read(content_length - len(buffer))
+
                     chunk = await asyncio.to_thread(
                         p.stdout.read, content_length - len(buffer)
                     )
                     buffer += chunk
 
                 content = buffer[:content_length]
-                buffer = buffer[content_length:]  # 保留剩余数据
+                buffer = buffer[content_length:]  # keep remaining data for next
                 # check content
                 if not content:
                     continue
                 await websocket.send_text(content.decode("utf-8"))
 
         except Exception as e:
-            print(f"WebSocket handler error: {e}")
-            # 确保 WebSocket 关闭时不会重复调用
+            print(f"WebSocket handler error: {e}") # todo: logger
+            # make sure websocket is closed
             if not websocket.client_state.name == "DISCONNECTED":
                 await websocket.close()
 
     async def p_err_handler() -> None:
         try:
             while True:
-                # error_chunk = await p.stderr.read(1024)
                 error_chunk = await asyncio.to_thread(p.stderr.readline)
                 if not error_chunk:
                     break
@@ -159,7 +153,6 @@ app_prob_recver = FastAPI()
 @app_prob_recver.post("/")
 async def receive_problem(problem: Problem) -> dict:
     print(f"Received problem: {problem.name} with {len(problem.tests)} tests.")
-    print(problem)
     tests = []
     for i, test in enumerate(problem.tests, start=1):
         tests.append(

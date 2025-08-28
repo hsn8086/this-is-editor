@@ -4,22 +4,11 @@ from pathlib import Path
 
 import psutil
 
-from .config import config, config_p
+from .config import config, config_p, merge_meta
 from .config_meta import config_meta
 from .judge import cph2testcase, task_checker
 from .langs import lang_compilers, lang_runners, langs, type_mp
 from .user_data import user_data_dir
-
-
-def merge_meta(cfg_meta: dict, config: dict) -> dict:
-    merged = {}
-    for key, value in cfg_meta.items():
-        if "display" in value:
-            merged[key] = {"value": config.get(key, None)}
-            merged[key].update(value)
-        else:
-            merged[key] = merge_meta(value, config.get(key, {}))
-    return merged
 
 
 class Api:
@@ -27,16 +16,16 @@ class Api:
         self,
     ) -> None:
         self.cwd_save_path = user_data_dir / "cwd.txt"
+        self.cwd = Path.cwd()
         if self.cwd_save_path.exists():
-            self.cwd = Path(self.cwd_save_path.read_text(encoding="utf-8"))
-        else:
-            self.cwd = Path.cwd()
-        if not self.cwd.is_dir():
-            self.cwd = Path.cwd()
+            p = Path(self.cwd_save_path.read_text(encoding="utf-8"))
+            if p.is_dir():
+                self.cwd = p
 
         self.opened_file: Path = self.cwd / ".tie.temp.txt"
         if self.opened_file.exists():
             self.opened_file.unlink()
+
         self.opened_testcase_file = None
         self.bin_path = None
 
@@ -188,7 +177,7 @@ class Api:
         alias = type_mp.get(self.opened_file.suffix.lower(), {}).get("alias", [])
         if id_ := type_mp.get(self.opened_file.suffix.lower(), {}).get("id"):
             alias.append(id_)
-        alias = list(set(alias))  # 去重
+        alias = list(set(alias))  # deduplicate
         return {
             "code": self.opened_file.read_text(encoding="utf-8"),
             "type": type_mp.get(self.opened_file.suffix.lower(), {}).get("id", "text"),
