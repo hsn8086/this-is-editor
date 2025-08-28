@@ -39,7 +39,9 @@ jobs:
           python-version: 3.12  # 指定 Python 版本
 
       - name: Install env
-        run: uv sync
+        run: |
+          pip install uv  # 安装 uv
+          uv sync
 
       # 构建项目
       - name: Build project
