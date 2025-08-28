@@ -5,7 +5,7 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "vite",
-    "dev-all": "vite build && uv run main.py",
+    "dev-all": "vite build && uv run main.py --debug",
     "build": "run-p type-check \"build-only {@}\" --",
     "build-py": "uv run nuitka --standalone --onefile --include-data-dir=web=web --include-module=fastapi --include-module=uvicorn --windows-disable-console main.py",
     "build-all": "run-p type-check \"build-only {@}\" build-py",

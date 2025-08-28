@@ -1,5 +1,6 @@
 import asyncio
 import json
+import sys
 import threading
 from pydantic import BaseModel
 import webview
@@ -15,6 +16,13 @@ import subprocess
 from functools import partial
 import psutil
 import platform
+import argparse
+
+
+if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+    res_path = Path(sys._MEIPASS)
+else:
+    res_path = Path(__file__).parent
 
 app = FastAPI()
 should_exit = False
@@ -26,6 +34,7 @@ async def websocket_endpoint(websocket: WebSocket, lang: str):
         await websocket.close()
         return
     # 使用 await 获取 Process 对象
+
     p = subprocess.Popen(
         type_mp.get(lang, {}).get("lsp", []),
         stdin=subprocess.PIPE,
@@ -33,6 +42,11 @@ async def websocket_endpoint(websocket: WebSocket, lang: str):
         stderr=subprocess.PIPE,
     )
 
+    time.sleep(0.1)
+    if p.poll() is not None:
+        print(f"Failed to start LSP for language: {lang}")
+        await websocket.close()
+        return
     await websocket.accept()
     print(f"WebSocket connection established for language: {lang}")
 
@@ -123,7 +137,7 @@ async def websocket_endpoint(websocket: WebSocket, lang: str):
                 return
 
 
-app.mount("/", StaticFiles(directory="web", html=True), name="web")
+app.mount("/", StaticFiles(directory=res_path / "web", html=True), name="web")
 
 app_prob_recver = FastAPI()
 
@@ -656,6 +670,10 @@ def start_server():
     return server, thread, server_recver, thread_recver
 
 
+args_parser=argparse.ArgumentParser()
+args_parser.add_argument("--debug",action="store_true",help="Run in debug mode")
+args=args_parser.parse_args()
+
 server, thread, server_recver, thread_recver = start_server()
 window = webview.create_window(
     "TIE",
@@ -666,9 +684,9 @@ window = webview.create_window(
 )
 
 if platform.system() == "Windows":
-    webview.start(window, gui="qt")
+    webview.start(window, gui="qt", debug=args.debug)
 else:
-    webview.start(window)
+    webview.start(window, debug=args.debug)
 
 should_exit = True
 server.should_exit = True
