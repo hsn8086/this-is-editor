@@ -50,7 +50,8 @@ def run_p(
         creationflags=subprocess.CREATE_NO_WINDOW
         if platform.system() == "Windows"
         else 0,
-        shell=True,
+        shell=True if platform.system() == "Windows"
+        else False,
     ) as p:  # set stdin to -1 for input and stdout stderr to -1 for capture output.
         try:
             child_process = p
@@ -141,6 +142,7 @@ def run(
         )
 
     if stderr:
+        print(stderr)
         return Result(output=stderr, type="runtime_error", time=time, memory=memory)
     return Result(output=stdout, type="success", time=time, memory=memory)
 
