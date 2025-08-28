@@ -41,16 +41,25 @@ def run_p(
     # print(f"Running command: {' '.join(cmd)}")
     print(cmd, cwd)
     with psutil.Popen(
-        cmd, text=True, stdin=-1, stdout=-1, stderr=-1, cwd=cwd,creationflags=subprocess.CREATE_NO_WINDOW,shell=True
+        cmd,
+        text=True,
+        stdin=-1,
+        stdout=-1,
+        stderr=-1,
+        cwd=cwd,
+        creationflags=subprocess.CREATE_NO_WINDOW
+        if platform.system() == "Windows"
+        else 0,
+        shell=True,
     ) as p:  # set stdin to -1 for input and stdout stderr to -1 for capture output.
         try:
             child_process = p
-            
+
             start = time.monotonic()
             p.stdin.write(inp)
             p.stdin.flush()
             p.stdin.close()
-            
+
             # threading.Thread(target=write_thread, args=(p, inp)).start()
             max_memory = 0
 
@@ -64,7 +73,7 @@ def run_p(
                         memory=max_memory,
                         status=None,
                     )
-                mem_use=0
+                mem_use = 0
                 if mem := try_r(child_process.memory_full_info):
                     mem_use = mem.uss / (1024**2)
 
@@ -150,7 +159,13 @@ def compile_c_cpp_builder(
             "-std=" + std,
         ] + flags
         result = subprocess.run(
-            cmd, capture_output=True, text=True, cwd=Path(file_path).parent
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=Path(file_path).parent,
+            creationflags=subprocess.CREATE_NO_WINDOW
+            if platform.system() == "Windows"
+            else 0,
         )
         if result.returncode != 0:
             raise RuntimeError(result.stderr)
