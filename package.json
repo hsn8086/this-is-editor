@@ -5,11 +5,11 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "vite build && uv run main.py --debug",
-    "build": "run-p type-check \"build-only {@}\" build-py",
+    "build": "license-gen && type-check && build-only && build-py",
     "build-py": "uv run nuitka --standalone --onefile --assume-yes-for-downloads --include-data-dir=web=web --include-module=fastapi --include-module=uvicorn --windows-disable-console main.py",
-    "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build --force",
+    "license-gen": "uv run tools/gen_license.py",
     "lint": "eslint . --fix"
   },
   "dependencies": {
@@ -32,6 +32,7 @@
     "@vue/tsconfig": "^0.7.0",
     "eslint": "^9.30.1",
     "eslint-config-vuetify": "^4.0.0",
+    "license-checker": "^25.0.1",
     "npm-run-all2": "^7.0.2",
     "sass-embedded": "^1.89.2",
     "typescript": "~5.8.3",

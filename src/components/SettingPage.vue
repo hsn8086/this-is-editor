@@ -69,6 +69,19 @@
           </div>
         </v-list-item>
       </template>
+      <!-- About -->
+      <v-list-subheader>About</v-list-subheader>
+      <v-list-group value="Users">
+        <template v-slot:activator="{ props }">
+          <v-list-item
+            v-bind="props"
+            prepend-icon="mdi-information-outline"
+            title="Licenses"
+          />
+        </template>
+
+        <LicensesPage />
+      </v-list-group>
     </v-list>
   </v-card>
 </template>
@@ -77,6 +90,9 @@ import { type API } from "@/pywebview-defines";
 import { ref, type Ref } from "vue";
 import { type Config } from "@/pywebview-defines";
 import { useTheme } from "vuetify";
+import LicensePage from "./LicensesPage.vue";
+import AboutPage from "./LicensesPage.vue";
+import LicensesPage from "./LicensesPage.vue";
 const theme = useTheme();
 
 const config = ref<[string, ConfigItem[]][]>([]);
