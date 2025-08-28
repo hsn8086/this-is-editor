@@ -41,7 +41,7 @@ jobs:
       - name: Install env
         run: |
           pip install uv  # 安装 uv
-          uv sync
+          uv sync --group default
 
       # 构建项目
       - name: Build project

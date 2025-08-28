@@ -17,6 +17,8 @@ dependencies = [
 ]
 
 
-
 [dependency-groups]
-dev = ["nuitka>=2.7.12", "pyright>=1.1.404", "python-lsp-server>=1.13.0"]
+dev = [
+    "nuitka>=2.7.12",
+    "python-lsp-server>=1.13.1",
+]
