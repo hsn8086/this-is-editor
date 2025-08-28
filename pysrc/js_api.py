@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 
 import psutil
+from loguru import logger
 
 from .config import config, config_p, merge_meta
 from .config_meta import config_meta
@@ -79,13 +80,12 @@ class Api:
         }
 
     def get_config(self) -> dict:
-        # print(merge_meta(config_meta, config))
         return merge_meta(config_meta, config)
 
     def compile(self) -> str:
         lang_info = self.get_code().get("type", None)
         if lang_info not in lang_compilers:
-            print(f"Language {lang_info} is not supported for compilation.")
+            logger.warning(f"Language {lang_info} is not supported for compilation.")
             self.bin_path = self.opened_file
             return "success"
         compile_func = lang_compilers[lang_info]
@@ -147,7 +147,7 @@ class Api:
         p.write_text(json.dumps(j, indent=4), encoding="utf-8")
 
     def set_config(self, id_str: str, value: str | bool | float) -> None:
-        print(f"Setting config: {id_str} = {value}")
+        logger.info(f"Setting config: {id_str} = {value}")
         id_str = id_str.strip()
         if "." in id_str:
             keys = id_str.split(".")
@@ -173,7 +173,6 @@ class Api:
         if not self.opened_file.exists():
             self.opened_file.parent.mkdir(parents=True, exist_ok=True)
             self.opened_file.touch()
-        print(type_mp.get(self.opened_file.suffix.lower(), {}).get("id", "text"))
         alias = type_mp.get(self.opened_file.suffix.lower(), {}).get("alias", [])
         if id_ := type_mp.get(self.opened_file.suffix.lower(), {}).get("id"):
             alias.append(id_)

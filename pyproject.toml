@@ -1,6 +1,6 @@
 [project]
 name = "this-is-editor"
-version = "1.0.0"
+version = "1.0.1"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -8,6 +8,7 @@ dependencies = [
     "a2wsgi>=1.10.10",
     "appdirs>=1.4.4",
     "fastapi>=0.116.1",
+    "loguru>=0.7.3",
     "psutil>=7.0.0",
     "pydantic>=2.11.7",
     "pywebview[gtk]>=6.0 ; sys_platform == 'linux'",

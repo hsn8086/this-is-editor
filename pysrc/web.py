@@ -11,6 +11,7 @@ import uvicorn
 import webview
 from fastapi import FastAPI, WebSocket
 from fastapi.staticfiles import StaticFiles
+from loguru import logger
 
 from .js_api import Api
 from .langs import type_mp
@@ -50,13 +51,13 @@ async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
 
     time.sleep(0.1)
     if p.poll() is not None:
-        print(f"Failed to start LSP for language: {lang}")
-        print(p.stderr.read().decode("utf-8"))
+        logger.error(f"Failed to start LSP for language: {lang}")
+        logger.error(p.stderr.read().decode("utf-8"))
         await websocket.close()
         return
-    
+
     await websocket.accept()
-    print(f"WebSocket connection established for language: {lang}")
+    logger.info(f"WebSocket connection established for language: {lang}")
 
     async def ws_handler() -> None:
         try:
@@ -69,7 +70,7 @@ async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
                 await asyncio.to_thread(p.stdin.write, data)
                 await asyncio.to_thread(p.stdin.flush)
         except Exception as e:
-            print(f"WebSocket handler error: {e}")
+            logger.opt(exception=e).error(f"{lang} LS websocket error")
             if not websocket.client_state.name == "DISCONNECTED":
                 await websocket.close()
 
@@ -92,7 +93,6 @@ async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
                 )
                 buffer = buffer[header_end + 4 :]  # skip \r\n\r\n
                 while len(buffer) < content_length:
-
                     chunk = await asyncio.to_thread(
                         p.stdout.read, content_length - len(buffer)
                     )
@@ -106,7 +106,7 @@ async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
                 await websocket.send_text(content.decode("utf-8"))
 
         except Exception as e:
-            print(f"WebSocket handler error: {e}") # todo: logger
+            logger.opt(exception=e).error(f"{lang} LS process error")
             # make sure websocket is closed
             if not websocket.client_state.name == "DISCONNECTED":
                 await websocket.close()
@@ -117,9 +117,11 @@ async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
                 error_chunk = await asyncio.to_thread(p.stderr.readline)
                 if not error_chunk:
                     break
-                print(f"Error from LSP: {error_chunk.decode('utf-8')}")
+                logger.error(
+                    f"{lang} LSP stderr: {error_chunk.decode('utf-8').strip()}"
+                )
         except Exception as e:
-            print(f"Error handler error: {e}")
+            logger.opt(exception=e).error(f"{lang} LS process stderr error")
 
     async with asyncio.TaskGroup() as tg:
         task_ws = tg.create_task(ws_handler())
@@ -134,7 +136,7 @@ async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
                 task_perr.cancel()
                 p.terminate()
                 p.wait()
-                print(f"WebSocket connection closed for language: {lang}")
+                logger.info(f"WebSocket connection closed for language: {lang}")
                 return
             if task_p.done() or task_ws.done() or task_perr.done():
                 return
@@ -152,7 +154,7 @@ app_prob_recver = FastAPI()
 
 @app_prob_recver.post("/")
 async def receive_problem(problem: Problem) -> dict:
-    print(f"Received problem: {problem.name} with {len(problem.tests)} tests.")
+    logger.info(f"Received problem: {problem.name} with {len(problem.tests)} tests.")
     tests = []
     for i, test in enumerate(problem.tests, start=1):
         tests.append(
@@ -165,8 +167,14 @@ async def receive_problem(problem: Problem) -> dict:
         print(tests[-1])
 
     window.run_js(
-        "window.dispatchEvent(new CustomEvent('problem-received', "
-        f"{{ detail: {json.dumps({'name': problem.name, 'tests': tests})} }}));"
+        f"""
+        window.dispatchEvent(
+            new CustomEvent(
+                'problem-received', 
+                {{ detail: {json.dumps({"name": problem.name, "tests": tests})} }}
+            )
+        );
+        """
     )
 
     return {"status": "success", "message": f"Problem {problem.name} received."}
@@ -186,7 +194,7 @@ def start_server() -> tuple[
 ]:
     import uvicorn
 
-    print(f"Starting server on port {port}...")
+    logger.info(f"Starting server on port {port}")
     conf = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="info", workers=8)
     server = uvicorn.Server(conf)
     conf_recver = uvicorn.Config(
