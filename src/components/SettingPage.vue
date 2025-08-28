@@ -62,10 +62,31 @@
               max-width="300"
             />
             <v-switch
-              v-else
+              v-else-if="typeof item.value === 'boolean'"
               v-model="item.value"
               @change="changeConfig(item.id, item.value)"
             />
+
+            <v-combobox
+              v-else-if="
+                typeof item.value === 'object' && Array.isArray(item.value)
+              "
+              v-model="item.value"
+              :label="item.display"
+              @update:model-value="changeConfig(item.id, item.value)"
+              chips
+              clearable
+              closable-chips
+              hide-selected
+              multiple
+              max-width="300"
+            >
+              <template v-slot:chip="{ props, item }">
+                <v-chip v-bind="props" label size="x-small">
+                  {{ item.raw }}
+                </v-chip>
+              </template>
+            </v-combobox>
           </div>
         </v-list-item>
       </template>
@@ -88,6 +109,7 @@ import { useTheme } from "vuetify";
 import LicensePage from "./LicensesPage.vue";
 import AboutPage from "./LicensesPage.vue";
 import LicensesPage from "./LicensesPage.vue";
+import { it } from "vuetify/locale";
 const theme = useTheme();
 
 const config = ref<[string, ConfigItem[]][]>([]);
