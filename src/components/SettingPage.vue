@@ -70,18 +70,13 @@
         </v-list-item>
       </template>
       <!-- About -->
-      <v-list-subheader>About</v-list-subheader>
-      <v-list-group value="Users">
-        <template v-slot:activator="{ props }">
-          <v-list-item
-            v-bind="props"
-            prepend-icon="mdi-information-outline"
-            title="Licenses"
-          />
-        </template>
+      <v-list-subheader>about</v-list-subheader>
 
-        <LicensesPage />
-      </v-list-group>
+      <v-list-item
+        prepend-icon="mdi-information-outline"
+        title="Licenses"
+        @click="$router.push('/license')"
+      />
     </v-list>
   </v-card>
 </template>

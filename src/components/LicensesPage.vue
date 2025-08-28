@@ -1,11 +1,16 @@
 <template>
   <v-container>
-  <v-card v-for="(license, index) in licenses" :key="index">
-    <v-card-title>{{ license.name }}</v-card-title>
-    <v-card-text>
-      <pre style="white-space: pre-wrap">{{ license.content }}</pre>
-    </v-card-text>
-  </v-card>
+    <v-card v-for="(license, index) in licenses" :key="index" class="mb-4">
+      <v-card-title>{{ license.name }}</v-card-title>
+      <v-card-text>
+        <v-textarea
+          readonly
+          auto-grow
+          :model-value="license.content"
+          variant="solo"
+        />
+      </v-card-text>
+    </v-card>
   </v-container>
 </template>
 
