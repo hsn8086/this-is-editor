@@ -102,7 +102,7 @@
                 variant="solo-filled"
                 class="mt-0 mb-0"
                 label="Output"
-                disabled
+                readonly
                 rows="1"
                 max-rows="5"
                 auto-grow
