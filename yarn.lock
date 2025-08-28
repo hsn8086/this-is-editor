@@ -65,101 +65,6 @@
     picocolors "^1.0.0"
     sisteransi "^1.0.5"
 
-"@codemirror/autocomplete@^6.0.0", "@codemirror/autocomplete@^6.3.2":
-  version "6.18.6"
-  resolved "https://registry.yarnpkg.com/@codemirror/autocomplete/-/autocomplete-6.18.6.tgz#de26e864a1ec8192a1b241eb86addbb612964ddb"
-  integrity sha512-PHHBXFomUs5DF+9tCOM/UoW6XQ4R44lLNNhRaW9PKPTU0D7lIjRg3ElxaJnTwsl/oHiR93WSXDBrekhoUGCPtg==
-  dependencies:
-    "@codemirror/language" "^6.0.0"
-    "@codemirror/state" "^6.0.0"
-    "@codemirror/view" "^6.17.0"
-    "@lezer/common" "^1.0.0"
-
-"@codemirror/commands@6.x", "@codemirror/commands@^6.0.0":
-  version "6.8.1"
-  resolved "https://registry.yarnpkg.com/@codemirror/commands/-/commands-6.8.1.tgz#639f5559d2f33f2582a2429c58cb0c1b925c7a30"
-  integrity sha512-KlGVYufHMQzxbdQONiLyGQDUW0itrLZwq3CcY7xpv9ZLRHqzkBSoteocBHtMCoY7/Ci4xhzSrToIeLg7FxHuaw==
-  dependencies:
-    "@codemirror/language" "^6.0.0"
-    "@codemirror/state" "^6.4.0"
-    "@codemirror/view" "^6.27.0"
-    "@lezer/common" "^1.1.0"
-
-"@codemirror/lang-python@^6.2.1":
-  version "6.2.1"
-  resolved "https://registry.yarnpkg.com/@codemirror/lang-python/-/lang-python-6.2.1.tgz#37c9930716110156865a95c548aa0eef5552863a"
-  integrity sha512-IRjC8RUBhn9mGR9ywecNhB51yePWCGgvHfY1lWN/Mrp3cKuHr0isDKia+9HnvhiWNnMpbGhWrkhuWOc09exRyw==
-  dependencies:
-    "@codemirror/autocomplete" "^6.3.2"
-    "@codemirror/language" "^6.8.0"
-    "@codemirror/state" "^6.0.0"
-    "@lezer/common" "^1.2.1"
-    "@lezer/python" "^1.1.4"
-
-"@codemirror/language@6.x", "@codemirror/language@^6.0.0", "@codemirror/language@^6.8.0":
-  version "6.11.3"
-  resolved "https://registry.yarnpkg.com/@codemirror/language/-/language-6.11.3.tgz#8e6632df566a7ed13a1bd307f9837765bb1abfdd"
-  integrity sha512-9HBM2XnwDj7fnu0551HkGdrUrrqmYq/WC5iv6nbY2WdicXdGbhR/gfbZOH73Aqj4351alY1+aoG9rCNfiwS1RA==
-  dependencies:
-    "@codemirror/state" "^6.0.0"
-    "@codemirror/view" "^6.23.0"
-    "@lezer/common" "^1.1.0"
-    "@lezer/highlight" "^1.0.0"
-    "@lezer/lr" "^1.0.0"
-    style-mod "^4.0.0"
-
-"@codemirror/lint@^6.0.0":
-  version "6.8.5"
-  resolved "https://registry.yarnpkg.com/@codemirror/lint/-/lint-6.8.5.tgz#9edaa808e764e28e07665b015951934c8ec3a418"
-  integrity sha512-s3n3KisH7dx3vsoeGMxsbRAgKe4O1vbrnKBClm99PU0fWxmxsx5rR2PfqQgIt+2MMJBHbiJ5rfIdLYfB9NNvsA==
-  dependencies:
-    "@codemirror/state" "^6.0.0"
-    "@codemirror/view" "^6.35.0"
-    crelt "^1.0.5"
-
-"@codemirror/search@^6.0.0":
-  version "6.5.11"
-  resolved "https://registry.yarnpkg.com/@codemirror/search/-/search-6.5.11.tgz#a324ffee36e032b7f67aa31c4fb9f3e6f9f3ed63"
-  integrity sha512-KmWepDE6jUdL6n8cAAqIpRmLPBZ5ZKnicE8oGU/s3QrAVID+0VhLFrzUucVKHG5035/BSykhExDL/Xm7dHthiA==
-  dependencies:
-    "@codemirror/state" "^6.0.0"
-    "@codemirror/view" "^6.0.0"
-    crelt "^1.0.5"
-
-"@codemirror/state@6.x", "@codemirror/state@^6.0.0", "@codemirror/state@^6.4.0", "@codemirror/state@^6.5.0", "@codemirror/state@^6.5.2":
-  version "6.5.2"
-  resolved "https://registry.yarnpkg.com/@codemirror/state/-/state-6.5.2.tgz#8eca3a64212a83367dc85475b7d78d5c9b7076c6"
-  integrity sha512-FVqsPqtPWKVVL3dPSxy8wEF/ymIEuVzF1PK3VbUgrxXpJUSHQWWZz4JMToquRxnkw+36LTamCZG2iua2Ptq0fA==
-  dependencies:
-    "@marijn/find-cluster-break" "^1.0.0"
-
-"@codemirror/theme-one-dark@^6.1.3":
-  version "6.1.3"
-  resolved "https://registry.yarnpkg.com/@codemirror/theme-one-dark/-/theme-one-dark-6.1.3.tgz#1dbb73f6e73c53c12ad2aed9f48c263c4e63ea37"
-  integrity sha512-NzBdIvEJmx6fjeremiGp3t/okrLPYT0d9orIc7AFun8oZcRk58aejkqhv6spnz4MLAevrKNPMQYXEWMg4s+sKA==
-  dependencies:
-    "@codemirror/language" "^6.0.0"
-    "@codemirror/state" "^6.0.0"
-    "@codemirror/view" "^6.0.0"
-    "@lezer/highlight" "^1.0.0"
-
-"@codemirror/view@6.x", "@codemirror/view@^6.0.0", "@codemirror/view@^6.17.0", "@codemirror/view@^6.23.0", "@codemirror/view@^6.27.0", "@codemirror/view@^6.35.0", "@codemirror/view@^6.38.1":
-  version "6.38.1"
-  resolved "https://registry.yarnpkg.com/@codemirror/view/-/view-6.38.1.tgz#74214434351719ec0710431363a85f7a01e80a73"
-  integrity sha512-RmTOkE7hRU3OVREqFVITWHz6ocgBjv08GoePscAakgVQfciA3SGCEk7mb9IzwW61cKKmlTpHXG6DUE5Ubx+MGQ==
-  dependencies:
-    "@codemirror/state" "^6.5.0"
-    crelt "^1.0.6"
-    style-mod "^4.1.0"
-    w3c-keyname "^2.2.4"
-
-"@codingame/monaco-jsonrpc@^0.4.1":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@codingame/monaco-jsonrpc/-/monaco-jsonrpc-0.4.1.tgz#59c1394f8c9d4764d382db7df176deafa1545bbe"
-  integrity sha512-G4Ukz9/MvrgfQ2We5CT09N7SuhZ0Bd4w5haUdiXY5HL/ugU9BcHgTyzolzXxquXqQ0K/tz1O1QcPLo24T/WYag==
-  dependencies:
-    vscode-jsonrpc "^8.0.1"
-
 "@emnapi/core@^1.4.3":
   version "1.4.5"
   resolved "https://registry.yarnpkg.com/@emnapi/core/-/core-1.4.5.tgz#bfbb0cbbbb9f96ec4e2c4fd917b7bbe5495ceccb"
@@ -477,39 +382,6 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@lezer/common@^1.0.0", "@lezer/common@^1.1.0", "@lezer/common@^1.2.0", "@lezer/common@^1.2.1":
-  version "1.2.3"
-  resolved "https://registry.yarnpkg.com/@lezer/common/-/common-1.2.3.tgz#138fcddab157d83da557554851017c6c1e5667fd"
-  integrity sha512-w7ojc8ejBqr2REPsWxJjrMFsA/ysDCFICn8zEOR9mrqzOu2amhITYuLD8ag6XZf0CFXDrhKqw7+tW8cX66NaDA==
-
-"@lezer/highlight@^1.0.0":
-  version "1.2.1"
-  resolved "https://registry.yarnpkg.com/@lezer/highlight/-/highlight-1.2.1.tgz#596fa8f9aeb58a608be0a563e960c373cbf23f8b"
-  integrity sha512-Z5duk4RN/3zuVO7Jq0pGLJ3qynpxUVsh7IbUbGj88+uV2ApSAn6kWg2au3iJb+0Zi7kKtqffIESgNcRXWZWmSA==
-  dependencies:
-    "@lezer/common" "^1.0.0"
-
-"@lezer/lr@^1.0.0":
-  version "1.4.2"
-  resolved "https://registry.yarnpkg.com/@lezer/lr/-/lr-1.4.2.tgz#931ea3dea8e9de84e90781001dae30dea9ff1727"
-  integrity sha512-pu0K1jCIdnQ12aWNaAVU5bzi7Bd1w54J3ECgANPmYLtQKP0HBj2cE/5coBD66MT10xbtIuUr7tg0Shbsvk0mDA==
-  dependencies:
-    "@lezer/common" "^1.0.0"
-
-"@lezer/python@^1.1.4":
-  version "1.1.18"
-  resolved "https://registry.yarnpkg.com/@lezer/python/-/python-1.1.18.tgz#fa02fbf492741c82dc2dc98a0a042bd0d4d7f1d3"
-  integrity sha512-31FiUrU7z9+d/ElGQLJFXl+dKOdx0jALlP3KEOsGTex8mvj+SoE1FgItcHWK/axkxCHGUSpqIHt6JAWfWu9Rhg==
-  dependencies:
-    "@lezer/common" "^1.2.0"
-    "@lezer/highlight" "^1.0.0"
-    "@lezer/lr" "^1.0.0"
-
-"@marijn/find-cluster-break@^1.0.0":
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/@marijn/find-cluster-break/-/find-cluster-break-1.0.2.tgz#775374306116d51c0c500b8c4face0f9a04752d8"
-  integrity sha512-l0h88YhZFyKdXIFNfSWpyjStDjGHwZ/U7iobcK1cQQD8sejsONdQtTVU+1wVN1PBw40PiiHB1vA5S7VTfQiP9g==
-
 "@mdi/font@7.4.47":
   version "7.4.47"
   resolved "https://registry.npmjs.org/@mdi/font/-/font-7.4.47.tgz"
@@ -774,7 +646,7 @@
 
 "@types/lodash@^4.17.20":
   version "4.17.20"
-  resolved "https://registry.npmjs.org/@types/lodash/-/lodash-4.17.20.tgz"
+  resolved "https://registry.yarnpkg.com/@types/lodash/-/lodash-4.17.20.tgz#1ca77361d7363432d29f5e55950d9ec1e1c6ea93"
   integrity sha512-H3MHACvFUEiujabxhaI/ImO6gUrd8oOurg7LQtS7mbwIXA/cUqWrvBsaeJ23aZEPk1TAYkurjfMbSELfoCXlGA==
 
 "@types/node@^22.9.0":
@@ -1186,11 +1058,6 @@ ace-linters@^1.8.3:
     vscode-languageserver-textdocument "^1.0.12"
     vscode-languageserver-types "^3.17.5"
 
-ace-sql-linter@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/ace-sql-linter/-/ace-sql-linter-1.1.0.tgz#cb54a601603afba16e876df812c184939151fb33"
-  integrity sha512-iCgva6O0T2kg9SIxYJRAhQqbTVbFwUcb1Uy6hDEV4xAT/QHMIwuQ+nMfXNGoJ1zvvDUvqKLBq6HLFmoFbBus5Q==
-
 acorn-jsx@^5.3.2:
   version "5.3.2"
   resolved "https://registry.npmjs.org/acorn-jsx/-/acorn-jsx-5.3.2.tgz"
@@ -1378,19 +1245,6 @@ clean-regexp@^1.0.0:
   dependencies:
     escape-string-regexp "^1.0.5"
 
-codemirror@^6.0.2:
-  version "6.0.2"
-  resolved "https://registry.yarnpkg.com/codemirror/-/codemirror-6.0.2.tgz#4d3fea1ad60b6753f97ca835f2f48c6936a8946e"
-  integrity sha512-VhydHotNW5w1UGK0Qj96BwSk/Zqbp9WbnyK2W/eVMv4QyF41INRGpjUhFJY7/uDNuudSc33a/PKr4iDqRduvHw==
-  dependencies:
-    "@codemirror/autocomplete" "^6.0.0"
-    "@codemirror/commands" "^6.0.0"
-    "@codemirror/language" "^6.0.0"
-    "@codemirror/lint" "^6.0.0"
-    "@codemirror/search" "^6.0.0"
-    "@codemirror/state" "^6.0.0"
-    "@codemirror/view" "^6.0.0"
-
 color-convert@^2.0.1:
   version "2.0.1"
   resolved "https://registry.npmjs.org/color-convert/-/color-convert-2.0.1.tgz"
@@ -1446,11 +1300,6 @@ core-js-compat@^3.41.0:
   integrity sha512-gRoVMBawZg0OnxaVv3zpqLLxaHmsubEGyTnqdpI/CEBvX4JadI1dMSHxagThprYRtSVbuQxvi6iUatdPxohHpA==
   dependencies:
     browserslist "^4.25.1"
-
-crelt@^1.0.5, crelt@^1.0.6:
-  version "1.0.6"
-  resolved "https://registry.yarnpkg.com/crelt/-/crelt-1.0.6.tgz#7cc898ea74e190fb6ef9dae57f8f81cf7302df72"
-  integrity sha512-VQ2MBenTq1fWZUH9DJNGti7kKv6EeAuYr3cLwxUWhIu1baTaXh4Ib5W2CqHVqib4/MqbYGJqiL3Zb8GJZr3l4g==
 
 cross-spawn@^7.0.6:
   version "7.0.6"
@@ -2276,11 +2125,6 @@ mlly@^1.7.4:
     pkg-types "^1.3.0"
     ufo "^1.5.4"
 
-monaco-editor@^0.52.2:
-  version "0.52.2"
-  resolved "https://registry.yarnpkg.com/monaco-editor/-/monaco-editor-0.52.2.tgz#53c75a6fcc6802684e99fd1b2700299857002205"
-  integrity sha512-GEQWEZmfkOGLdd3XK8ryrfWz3AIP8YymVXiPHEdewrUq7mh0qrKrfHLNCXcbB6sTnMLnOZ3ztSiKcciFUkIJwQ==
-
 ms@^2.1.3:
   version "2.1.3"
   resolved "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz"
@@ -2334,11 +2178,6 @@ normalize-path@^3.0.0, normalize-path@~3.0.0:
   version "3.0.0"
   resolved "https://registry.npmjs.org/normalize-path/-/normalize-path-3.0.0.tgz"
   integrity sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==
-
-normalize-url@^8.0.2:
-  version "8.0.2"
-  resolved "https://registry.npmjs.org/normalize-url/-/normalize-url-8.0.2.tgz"
-  integrity sha512-Ee/R3SyN4BuynXcnTaekmaVdbDAEiNrHqjQIA37mHU8G9pf7aaAD4ZX3XjBLo6rsdcxA/gtkcNYZLt30ACgynw==
 
 npm-normalize-package-bin@^4.0.0:
   version "4.0.0"
@@ -2922,11 +2761,6 @@ strip-literal@^3.0.0:
   dependencies:
     js-tokens "^9.0.1"
 
-style-mod@^4.0.0, style-mod@^4.1.0:
-  version "4.1.2"
-  resolved "https://registry.yarnpkg.com/style-mod/-/style-mod-4.1.2.tgz#ca238a1ad4786520f7515a8539d5a63691d7bf67"
-  integrity sha512-wnD1HyVqpJUI2+eKZ+eo1UwghftP6yuFheBqqe+bWCotBjC2K1YnteJILRMs3SM4V/0dLEW1SC27MWP5y+mwmw==
-
 superjson@^2.2.2:
   version "2.2.2"
   resolved "https://registry.npmjs.org/superjson/-/superjson-2.2.2.tgz"
@@ -3241,11 +3075,6 @@ vscode-jsonrpc@8.2.0:
   resolved "https://registry.yarnpkg.com/vscode-jsonrpc/-/vscode-jsonrpc-8.2.0.tgz#f43dfa35fb51e763d17cd94dcca0c9458f35abf9"
   integrity sha512-C+r0eKJUIfiDIfwJhria30+TYWPtuHJXHtI7J0YlOmKAo7ogxP20T0zxB7HZQIFhIyvoBPwWskjxrvAtfjyZfA==
 
-vscode-jsonrpc@^8.0.1:
-  version "8.2.1"
-  resolved "https://registry.npmjs.org/vscode-jsonrpc/-/vscode-jsonrpc-8.2.1.tgz"
-  integrity sha512-kdjOSJ2lLIn7r1rtrMbbNCHjyMPfRnowdKjBQ+mGq6NAW5QY2bEZC/khaC5OR8svbbjvLEaIXkOq45e2X9BIbQ==
-
 vscode-languageserver-protocol@^3.17.5:
   version "3.17.5"
   resolved "https://registry.yarnpkg.com/vscode-languageserver-protocol/-/vscode-languageserver-protocol-3.17.5.tgz#864a8b8f390835572f4e13bd9f8313d0e3ac4bea"
@@ -3268,16 +3097,6 @@ vscode-uri@^3.0.8:
   version "3.1.0"
   resolved "https://registry.npmjs.org/vscode-uri/-/vscode-uri-3.1.0.tgz"
   integrity sha512-/BpdSx+yCQGnCvecbyXdxHDkuk55/G3xwnC0GqY4gmQ3j+A+g8kzzgB4Nk/SINjqn6+waqw3EgbVF2QKExkRxQ==
-
-vue-codemirror@^6.1.1:
-  version "6.1.1"
-  resolved "https://registry.yarnpkg.com/vue-codemirror/-/vue-codemirror-6.1.1.tgz#246697ef4cfa6b2448dd592ade214bb7ff86611f"
-  integrity sha512-rTAYo44owd282yVxKtJtnOi7ERAcXTeviwoPXjIc6K/IQYUsoDkzPvw/JDFtSP6T7Cz/2g3EHaEyeyaQCKoDMg==
-  dependencies:
-    "@codemirror/commands" "6.x"
-    "@codemirror/language" "6.x"
-    "@codemirror/state" "6.x"
-    "@codemirror/view" "6.x"
 
 vue-eslint-parser@^10.1.3:
   version "10.2.0"
@@ -3328,11 +3147,6 @@ vuetify@^3.9.1:
   version "3.9.5"
   resolved "https://registry.npmjs.org/vuetify/-/vuetify-3.9.5.tgz"
   integrity sha512-rJBSo1FeKcJJaqTfVHbOdpFXCmgeEIGzrh6HBEMGjSflan6voPIMSiK2dTCUU4t9JeghwvJtoAE5eBuqYIkFVA==
-
-w3c-keyname@^2.2.4:
-  version "2.2.8"
-  resolved "https://registry.yarnpkg.com/w3c-keyname/-/w3c-keyname-2.2.8.tgz#7b17c8c6883d4e8b86ac8aba79d39e880f8869c5"
-  integrity sha512-dpojBhNsCNN7T82Tm7k26A6G9ML3NkhDsnw9n/eoxSRlVBB4CEtIQ/KTCLI2Fwf3ataSXRhYFkQi3SlnFwPvPQ==
 
 webpack-virtual-modules@^0.6.2:
   version "0.6.2"
