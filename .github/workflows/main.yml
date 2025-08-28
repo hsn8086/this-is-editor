@@ -56,12 +56,10 @@ jobs:
 
       # 上传构建产物
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-artifacts-${{ matrix.os }}
-          path: |
-            main.bin
-            main.exe
+          path: ./build  # 替换为你的构建目录
 
   release:
     name: Release
@@ -75,13 +73,13 @@ jobs:
 
       # 下载 Linux 构建产物
       - name: Download Linux build artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: build-artifacts-ubuntu-latest
 
       # 下载 Windows 构建产物
       - name: Download Windows build artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: build-artifacts-windows-latest
 
@@ -98,18 +96,18 @@ jobs:
 
       # 上传 Linux 构建产物到 Release
       - name: Upload Linux Release Asset
-        uses: actions/upload-release-asset@v1
+        uses: actions/upload-release-asset@v2
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: main.bin
-          asset_name: main-linux.bin
+          asset_name: tie-linux.bin
           asset_content_type: application/octet-stream
 
       # 上传 Windows 构建产物到 Release
       - name: Upload Windows Release Asset
-        uses: actions/upload-release-asset@v1
+        uses: actions/upload-release-asset@v2
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: main.exe
-          asset_name: main-windows.exe
+          asset_name: tie-windows.exe
           asset_content_type: application/octet-stream
