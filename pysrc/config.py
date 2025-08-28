@@ -1,8 +1,7 @@
 import json
 
-from pysrc.user_data import user_config_dir
-
 from .config_meta import config as cfg
+from .user_data import user_config_dir
 
 
 def merge_meta(cfg_meta: dict, config: dict) -> dict:

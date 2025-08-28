@@ -1,4 +1,5 @@
 import platform
+import shlex
 import subprocess
 import time
 from collections.abc import Callable
@@ -123,15 +124,32 @@ def run_p(
 def run(
     file_path: Path,
     inp: str,
-    cmd: list,
+    cmd: list | str,
     *,
+    executable: str = "",
     memory_limit: int = 256,
     timeout: int = 1,
 ) -> Result:
-    cmd = [c.format(file_name=str(file_path)) for c in cmd]
+    if isinstance(cmd, str):
+        cmd = shlex.split(cmd)
+    r_cmd = []
+    for c in cmd:
+        c: str
+
+        r_cmd.append(
+            c.format(
+                file=str(file_path),
+                fileName=file_path.name,
+                fileStem=file_path.stem,
+                fileExt=file_path.suffix,
+                fileParent=str(file_path.parent),
+                fileParentName=file_path.parent.name,
+                executable=executable,
+            )
+        )
     try:
         rst = run_p(
-            cmd,
+            r_cmd,
             inp=inp,
             timeout=timeout,
             memory_limit=memory_limit,
@@ -154,6 +172,38 @@ def run(
     if stderr:
         return Result(output=stderr, type="runtime_error", time=time, memory=memory)
     return Result(output=stdout, type="success", time=time, memory=memory)
+
+
+def compile(file_path: Path, cmd: list | str, *, executable: str = "") -> None:
+    if isinstance(cmd, str):
+        cmd = shlex.split(cmd)
+    r_cmd = []
+    for c in cmd:
+        c: str
+
+        r_cmd.append(
+            c.format(
+                file=str(file_path),
+                fileName=file_path.name,
+                fileStem=file_path.stem,
+                fileExt=file_path.suffix,
+                fileParent=str(file_path.parent),
+                fileParentName=file_path.parent.name,
+                executable=executable,
+            )
+        )
+    try:
+        subprocess.run(
+            r_cmd,
+            check=True,
+            cwd=file_path.parent,
+            creationflags=subprocess.CREATE_NO_WINDOW
+            if platform.system() == "Windows"
+            else 0,
+            shell=True if platform.system() == "Windows" else False,
+        )
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(e.stderr) from e
 
 
 def compile_c_cpp_builder(

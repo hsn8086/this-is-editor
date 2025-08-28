@@ -577,7 +577,7 @@ wheels = [
 
 [[package]]
 name = "this-is-editor"
-version = "1.0.0"
+version = "1.0.2"
 source = { virtual = "." }
 dependencies = [
     { name = "a2wsgi" },

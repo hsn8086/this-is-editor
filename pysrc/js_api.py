@@ -28,7 +28,6 @@ class Api:
             self.opened_file.unlink()
 
         self.opened_testcase_file = None
-        self.bin_path = None
 
     def focus(self) -> None:
         # window.show()
@@ -48,15 +47,6 @@ class Api:
         return 0
 
     def run_task(self, task_id: int, memory_limit: int = 256, timeout: int = 1) -> dict:
-        if self.bin_path is None:
-            oup = self.compile()
-            if oup != "success":
-                return {
-                    "result": oup,
-                    "status": "compile_error",
-                    "time": 0,
-                    "memory": 0,
-                }
         code = self.get_code()
         lang = code.get("type", None)
         if lang not in lang_runners:
@@ -64,7 +54,7 @@ class Api:
         task = self.get_testcase().get("tests", [{}])[task_id - 1]
         inp = task.get("input", "")
         output, status, time, memory = lang_runners[lang](
-            self.bin_path, inp, memory_limit=memory_limit, timeout=timeout
+            self.opened_file, inp, memory_limit=memory_limit, timeout=timeout
         )
         answer = task.get("answer", "")
         if status == "success":
@@ -86,11 +76,10 @@ class Api:
         lang_info = self.get_code().get("type", None)
         if lang_info not in lang_compilers:
             logger.warning(f"Language {lang_info} is not supported for compilation.")
-            self.bin_path = self.opened_file
             return "success"
         compile_func = lang_compilers[lang_info]
         try:
-            self.bin_path = compile_func(self.opened_file)
+            compile_func(self.opened_file)
         except Exception as e:
             return str(e)
         return "success"

@@ -3,6 +3,7 @@ import json
 import platform
 import subprocess
 import sys
+import shlex
 import threading
 import time
 from pathlib import Path
@@ -37,17 +38,29 @@ async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
     if should_exit:
         await websocket.close()
         return
-
-    p = subprocess.Popen(
-        type_mp.get(lang, {}).get("lsp", []),
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        creationflags=subprocess.CREATE_NO_WINDOW
-        if platform.system() == "Windows"
-        else 0,
-        shell=True if platform.system() == "Windows" else 0,
-    )
+    cmd = type_mp.get(lang, {}).get("lsp", {}).get("command", "")
+    if not cmd:
+        logger.error(f"No LSP command found for language: {lang}")
+        await websocket.close()
+        return
+    if isinstance(cmd, str):
+        cmd = shlex.split(cmd)
+    try:
+        p = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            creationflags=subprocess.CREATE_NO_WINDOW
+            if platform.system() == "Windows"
+            else 0,
+            shell=True if platform.system() == "Windows" else 0,
+        )
+    except Exception as e:
+        logger.error(f"Failed to start LSP for language: {lang}")
+        logger.opt(exception=e).error(f"Command: {' '.join(cmd)}")
+        await websocket.close()
+        return
 
     time.sleep(0.1)
     if p.poll() is not None:

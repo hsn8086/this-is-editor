@@ -30,13 +30,35 @@ config_meta = {
         "tie": {
             "theme": {"display": "Theme", "enum": ["light", "dark", "system"]},
         },
-    }
+    },
+    "programmingLanguages": {
+        "python": {
+            "executable": {"display": "Python: Executable"},
+            "compileCommand": {"display": "Python: Compile Command"},
+            "runCommand": {"display": "Python: Run Command"},
+            "fileExtensions": {"display": "Python: File Extensions"},
+            "alias": {"display": "Python: Alias"},
+            "lsp": {
+                "command": {"display": "Python: LSP Command"},
+            },
+        },
+        "cpp": {
+            "executable": {"display": "C++: Executable"},
+            "compileCommand": {"display": "C++: Compile Command"},
+            "runCommand": {"display": "C++: Run Command"},
+            "fileExtensions": {"display": "C++: File Extensions"},
+            "alias": {"display": "C++: Alias"},
+            "lsp": {
+                "command": {"display": "C++: LSP Command"},
+            },
+        },
+    },
 }
 config = {
     "editor": {
         "aceMain": {
             "fontSize": 14,
-            "fontFamily": "Fira Code, monospace",
+            "fontFamily": "Maple Mono, Maple Mono NF CN, Fira Code, monospace",
             "enableBasicAutocompletion": True,
             "enableSnippets": False,
             "enableLiveAutocompletion": True,
@@ -56,5 +78,30 @@ config = {
             "foldStyle": "markbeginend",
         },
         "tie": {"theme": "system"},
+    },
+    "programmingLanguages": {
+        "python": {
+            "executable": "python3",
+            "compileCommand": "{executable} -m compileall -o 2 -b {file}",
+            "runCommand": "{executable} {fileStem}.pyc",
+            "fileExtensions": [".py"],
+            "alias": ["py", "python", "Python", "python3", "Python3"],
+            "display": "Python Source",
+            "lsp": {
+                "command": "pylsp",
+            },
+        },
+        "cpp": {
+            "executable": "g++",
+            "compileCommand": "{executable} {file} "
+            "-O 2 -Wall -Wextra -std=c++20 -o {fileStem}",
+            "runCommand": "{fileStem}",
+            "fileExtensions": [".cpp", ".cc", ".cxx", ".c++", ".C"],
+            "alias": ["cpp", "Cpp", "CPP", "c++", "C++", "c_cpp"],
+            "display": "C++ Source",
+            "lsp": {
+                "command": "clangd",
+            },
+        },
     },
 }

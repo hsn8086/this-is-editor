@@ -1,33 +1,39 @@
 from functools import partial
 
-from pysrc.runner import compile_c_cpp_builder, run_c_cpp, run_python
+from .config import config
+from .runner import compile, run
 
+lang_config = config["programmingLanguages"]
+lang_cfg_python = lang_config["python"]
+lang_cfg_cpp = lang_config["cpp"]
 langs = [
     {
-        "id": "python",
-        "display": "Python Source",
-        "lsp": ["uv", "run", "pylsp"],
-        "suffix": [".py"],
-        "alias": ["py", "Python", "python3"],
-    },
-    {
-        "id": "cpp",
-        "display": "C++ Source",
-        "lsp": ["clangd"],
-        "suffix": [".cpp", ".cxx", ".cc", ".c++", ".hpp"],
-        "alias": ["C++", "c++", "c_cpp"],
-    },
+        "id": key,
+        "suffix": value.get("fileExtensions", []),
+        "alias": value.get("alias", []),
+        "display": value.get("display", key),
+        "runCommand": value.get("runCommand", ""),
+        "compileCommand": value.get("compileCommand", ""),
+        "executable": value.get("executable", ""),
+        "lsp": value.get("lsp", {}),
+    }
+    for key, value in lang_config.items()
 ]
 lang_runners = {
-    "python": partial(run_python, version="python"),
-    "cpp": partial(run_c_cpp),
-    "c": partial(
-        run_c_cpp,
-    ),
+    key: partial(
+        run,
+        cmd=value.get("runCommand", ""),
+        executable=value.get("executable", ""),
+    )
+    for key, value in lang_config.items()
 }
 lang_compilers = {
-    "cpp": compile_c_cpp_builder("gnu++23", "c++", ["-O2", "-Wall", "-Wextra"]),
-    "c": compile_c_cpp_builder("gcc", "c", ["-O2", "-Wall", "-Wextra"]),
+    key: partial(
+        compile,
+        cmd=value.get("compileCommand", ""),
+        executable=value.get("executable", ""),
+    )
+    for key, value in lang_config.items()
 }
 type_mp = {}
 for lang in langs:
