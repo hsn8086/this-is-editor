@@ -39,6 +39,7 @@ jobs:
           python-version: 3.12  # 指定 Python 版本
 
       - name: Install env
+        shell: bash  # 强制使用 Bash
         run: |
           if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
             sudo apt-get update
@@ -55,6 +56,7 @@ jobs:
 
       # 确认构建产物
       - name: Verify build output
+        shell: bash
         run: |
           if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
             test -f main.bin || (echo "main.bin not found!" && exit 1)
