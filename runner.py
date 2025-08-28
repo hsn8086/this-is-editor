@@ -41,12 +41,17 @@ def run_p(
     # print(f"Running command: {' '.join(cmd)}")
     print(cmd, cwd)
     with psutil.Popen(
-        cmd, text=True, stdin=-1, stdout=-1, stderr=-1, cwd=cwd, createflags=subprocess.CREATE_NO_WINDOW
+        cmd, text=True, stdin=-1, stdout=-1, stderr=-1, cwd=cwd
     ) as p:  # set stdin to -1 for input and stdout stderr to -1 for capture output.
         try:
             child_process = p
+            
             start = time.monotonic()
-            threading.Thread(target=write_thread, args=(p, inp)).start()
+            p.stdin.write(inp)
+            p.stdin.flush()
+            p.stdin.close()
+            
+            # threading.Thread(target=write_thread, args=(p, inp)).start()
             max_memory = 0
 
             while True:

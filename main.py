@@ -40,6 +40,7 @@ async def websocket_endpoint(websocket: WebSocket, lang: str):
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        creationflags=subprocess.CREATE_NO_WINDOW
     )
 
     time.sleep(0.1)
