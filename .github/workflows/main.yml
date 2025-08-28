@@ -112,7 +112,7 @@ jobs:
           p = pathlib.Path('pyproject.toml')
           if not p.exists():
               print('pyproject.toml not found', file=sys.stderr); sys.exit(1)
-          data = tomllib.loads(p.read_bytes())
+          data = tomllib.loads(p.read_text())
           version = data.get('tool',{}).get('poetry',{}).get('version') or data.get('project',{}).get('version')
           if not version:
               print('version not found in pyproject.toml', file=sys.stderr); sys.exit(1)
