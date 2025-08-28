@@ -159,6 +159,9 @@ class Api:
             config[id_str] = value
         config_p.write_text(json.dumps(config, indent=4), encoding="utf-8")
 
+    def get_config_path(self) -> str:
+        return str(config_p)
+
     def get_langs(self) -> dict:
         return langs
 

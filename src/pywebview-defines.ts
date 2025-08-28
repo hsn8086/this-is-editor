@@ -97,6 +97,7 @@ export interface API {
     save_testcase: (testcase: TestCase) => Promise<void>;
     set_config: (id_str: string, value: string | boolean | number) => Promise<void>;
     get_config: () => Promise<Config>;
+    get_config_path: () => Promise<string>;
     get_langs: () => Promise<Lang[]>;
     get_port: () => number;
     get_code: () => Promise<Code>;

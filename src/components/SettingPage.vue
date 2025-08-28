@@ -6,7 +6,7 @@
         <v-text-field
           v-model="search"
           prepend-inner-icon="mdi-magnify"
-          class="ml-4"
+          class="ma-2"
           dense
           density="compact"
           hide-details
@@ -41,7 +41,7 @@
               :items="item.enum"
               @update:model-value="changeConfig(item.id, item.value)"
               :label="item.display"
-              class="flex-grow-1"
+              class="flex-grow-1 ma-2"
               max-width="300"
             />
             <v-text-field
@@ -49,7 +49,7 @@
               v-model="item.value"
               @update:focused="changeConfig(item.id, item.value)"
               :label="item.display"
-              class="flex-grow-1"
+              class="flex-grow-1 ma-2"
               max-width="300"
             />
             <v-text-field
@@ -58,13 +58,15 @@
               @update:focused="changeConfig(item.id, item.value)"
               :label="item.display"
               type="number"
-              class="flex-grow-1"
+              class="flex-grow-1 ma-2"
               max-width="300"
             />
             <v-switch
               v-else-if="typeof item.value === 'boolean'"
               v-model="item.value"
               @change="changeConfig(item.id, item.value)"
+              class="ma-2"
+              variant="tonal"
             />
 
             <v-combobox
@@ -80,6 +82,7 @@
               hide-selected
               multiple
               max-width="300"
+              class="flex-grow-1 ma-2"
             >
               <template v-slot:chip="{ props, item }">
                 <v-chip v-bind="props" label size="x-small">
@@ -87,9 +90,24 @@
                 </v-chip>
               </template>
             </v-combobox>
+            <v-btn
+              v-else
+              prepend-icon="mdi-file-edit-outline"
+              @click="openConfigFile()"
+              class="ma-2"
+              variant="tonal"
+            >
+              Open config file to edit
+            </v-btn>
           </div>
         </v-list-item>
       </template>
+      <v-list-subheader>advance</v-list-subheader>
+      <v-list-item
+        prepend-icon="mdi-file-edit-outline"
+        title="Open config file to edit"
+        @click="openConfigFile()"
+      />
       <!-- About -->
       <v-list-subheader>about</v-list-subheader>
 
@@ -103,13 +121,10 @@
 </template>
 <script lang="ts" setup>
 import { type API } from "@/pywebview-defines";
-import { ref, type Ref } from "vue";
+import { ref } from "vue";
 import { type Config } from "@/pywebview-defines";
 import { useTheme } from "vuetify";
-import LicensePage from "./LicensesPage.vue";
-import AboutPage from "./LicensesPage.vue";
-import LicensesPage from "./LicensesPage.vue";
-import { it } from "vuetify/locale";
+import { useRouter } from "vue-router";
 const theme = useTheme();
 
 const config = ref<[string, ConfigItem[]][]>([]);
@@ -172,5 +187,12 @@ async function init() {
   const cfg = await py.get_config();
   config.value = sortConfig(Array.from(parseConfig(cfg)));
   console.log("config", config.value);
+}
+
+const router = useRouter();
+async function openConfigFile() {
+  const path = await py.get_config_path();
+  await py.set_opened_file(path);
+  await router.push("/editor");
 }
 </script>
