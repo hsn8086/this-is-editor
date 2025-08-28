@@ -40,6 +40,10 @@ jobs:
 
       - name: Install env
         run: |
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            sudo apt-get update
+            sudo apt-get install -y libcairo2-dev libgirepository1.0-dev  # 安装 Linux 系统依赖
+          fi
           pip install uv  # 安装 uv
           uv sync --no-dev
 
