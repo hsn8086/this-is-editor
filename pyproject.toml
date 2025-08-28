@@ -1,6 +1,6 @@
 [project]
 name = "this-is-editor"
-version = "0.1.0"
+version = "1.0.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -22,3 +22,17 @@ dev = [
     "nuitka>=2.7.12",
     "python-lsp-server>=1.13.1",
 ]
+
+[tool.ruff]
+# 启用 pyright 的类型检查规则
+select = [
+    "E",   # 启用 pycodestyle 错误
+    "F",   # 启用 Pyflakes
+    "I",   # 启用 isort
+    "UP",  # 启用 pyupgrade
+    "PYI", # 启用 flake8-pyi
+    "RUF", # 启用 Ruff 特定规则
+    "ANN", # 启用 flake8-annotations (类型注解)
+    # "TCH", # 启用 flake8-type-checking
+]
+target-version = "py313"

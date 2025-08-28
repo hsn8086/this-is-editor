@@ -98,6 +98,27 @@ jobs:
         with:
           name: build-artifacts-windows-latest
 
+      # 从 pyproject.toml 获取版本号（支持 Poetry 的 tool.poetry.version 或 PEP621 的 project.version）
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Read version from pyproject.toml
+        id: version
+        run: |
+          python - <<'PY'
+          import tomllib, pathlib, os, sys
+          p = pathlib.Path('pyproject.toml')
+          if not p.exists():
+              print('pyproject.toml not found', file=sys.stderr); sys.exit(1)
+          data = tomllib.loads(p.read_bytes())
+          version = data.get('tool',{}).get('poetry',{}).get('version') or data.get('project',{}).get('version')
+          if not version:
+              print('version not found in pyproject.toml', file=sys.stderr); sys.exit(1)
+          print(f"version={version}", file=open(os.environ['GITHUB_OUTPUT'],'a'))
+          PY
+
       # 发布到 GitHub Releases
       - id: create_release
         name: Create GitHub Release
@@ -105,8 +126,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v1.0.${{ github.run_number }}  # 自动生成版本号
-          release_name: Release v1.0.${{ github.run_number }}
+          tag_name: v${{ steps.version.outputs.version }}.{{ github.run_number }}
+          release_name: Release v${{ steps.version.outputs.version }}.{{ github.run_number }}
           draft: false
           prerelease: false
 
