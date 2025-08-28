@@ -99,7 +99,8 @@ jobs:
           name: build-artifacts-windows-latest
 
       # 发布到 GitHub Releases
-      - name: Create GitHub Release
+      - id: create_release
+        name: Create GitHub Release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
