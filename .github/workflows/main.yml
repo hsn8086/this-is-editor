@@ -49,7 +49,9 @@ jobs:
 
       # 构建项目
       - name: Build project
-        run: yarn build
+        run: |
+          yarn build-only
+          yarn build-py
 
       # 确认构建产物
       - name: Verify build output
