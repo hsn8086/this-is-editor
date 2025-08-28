@@ -106,7 +106,7 @@ jobs:
 
       # 上传 Linux 构建产物到 Release
       - name: Upload Linux Release Asset
-        uses: actions/upload-release-asset@v2
+        uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: main.bin
@@ -115,7 +115,7 @@ jobs:
 
       # 上传 Windows 构建产物到 Release
       - name: Upload Windows Release Asset
-        uses: actions/upload-release-asset@v2
+        uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: main.exe
