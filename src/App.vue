@@ -55,6 +55,8 @@ import { useTheme } from "vuetify";
 import type { TestCase } from "./pywebview-defines";
 import router from "./router";
 import { random } from "lodash";
+import { useI18n } from "vue-i18n";
+const { locale } = useI18n();
 const theme = useTheme();
 
 const py = window.pywebview.api;

@@ -10,7 +10,7 @@
       <v-divider />
       <v-list-item
         @click.stop="runAll()"
-        :title="runStatus"
+        :title="$t('checkerPanel.runAllStatus', runStatus)"
         link
         class="mt-1"
         :disabled="runAllBtnDisabled"
@@ -34,8 +34,8 @@
                 <template v-slot:prepend>
                   <v-avatar :color="colors[item.status]"></v-avatar>
                 </template>
-                <v-list-item-title
-                  >#{{ item.id }}
+                <v-list-item-title>
+                  #{{ item.id }}
                   <v-chip
                     v-if="item.time !== undefined"
                     :color="colors[item.status]"
@@ -59,13 +59,17 @@
                 <template v-slot:prepend>
                   <v-icon color="red"> mdi-delete </v-icon>
                 </template>
-                <v-list-item-title>Delete Task</v-list-item-title>
+                <v-list-item-title>{{
+                  $t("checkerPanel.deleteTask")
+                }}</v-list-item-title>
               </v-list-item>
               <v-list-item @click="clearAllTasks()" link>
                 <template v-slot:prepend>
                   <v-icon color="blue"> mdi-broom </v-icon>
                 </template>
-                <v-list-item-title>Clear All Tasks</v-list-item-title>
+                <v-list-item-title>{{
+                  $t("checkerPanel.clearAllTasks")
+                }}</v-list-item-title>
               </v-list-item>
             </v-list>
           </v-menu>
@@ -75,7 +79,7 @@
               <v-textarea
                 dense
                 variant="solo-filled"
-                label="Input"
+                :label="$t('checkerPanel.input')"
                 rows="1"
                 class="mt-2 mb-0"
                 max-rows="5"
@@ -87,7 +91,7 @@
               <v-textarea
                 dense
                 variant="solo-filled"
-                label="Answer"
+                :label="$t('checkerPanel.answer')"
                 class="mt-0 mb-0"
                 rows="1"
                 max-raws="5"
@@ -101,7 +105,7 @@
                 dense
                 variant="solo-filled"
                 class="mt-0 mb-0"
-                label="Output"
+                :label="$t('checkerPanel.output')"
                 readonly
                 rows="1"
                 max-rows="5"
@@ -116,7 +120,7 @@
         <template v-slot:prepend>
           <v-icon> mdi-plus </v-icon>
         </template>
-        <v-list-item-title>Add Task</v-list-item-title>
+        <v-list-item-title>{{ $t("checkerPanel.addTask") }}</v-list-item-title>
       </v-list-item>
     </v-list>
     <template v-slot:append>
@@ -129,14 +133,15 @@
         >
           <template v-slot:activator="{ props: activatorProps }">
             <v-list-item @click.stop="CopyAll()" link v-bind="activatorProps">
-              <!-- Copy all -->
               <template v-slot:prepend>
                 <v-icon> mdi-clipboard-multiple</v-icon>
               </template>
-              <v-list-item-title>Copy All</v-list-item-title>
+              <v-list-item-title>{{
+                $t("checkerPanel.copyAll")
+              }}</v-list-item-title>
             </v-list-item>
           </template>
-          <span>Copied to clipboard!</span>
+          <span>{{ $t("checkerPanel.copied") }}</span>
         </v-tooltip>
         <v-tooltip
           location="top"
@@ -150,16 +155,17 @@
               link
               v-bind="activatorProps"
             >
-              <!-- Paste from clipboard  -->
               <template v-slot:prepend>
                 <v-icon> mdi-clipboard-arrow-down </v-icon>
               </template>
-              <v-list-item-title>Paste from Clipboard</v-list-item-title>
+              <v-list-item-title>{{
+                $t("checkerPanel.pasteFromClipboard")
+              }}</v-list-item-title>
             </v-list-item>
           </template>
           <v-alert
             type="error"
-            text="Failed to paste tasks! Please ensure the clipboard contains valid task data."
+            :text="$t('checkerPanel.pasteError')"
             class="ma-0 pa-0"
             variant="text"
           ></v-alert>
@@ -170,6 +176,8 @@
 </template>
 <script lang="ts" setup>
 import type { API, TaskResult, TestCase } from "@/pywebview-defines";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 
 import { ref } from "vue";
 
@@ -265,7 +273,7 @@ async function initJudgeThread() {
 // Manage the state of the "Run All" button
 const runAllBtnDisabled = ref(false);
 const runAllBtnIcon = ref("mdi-play");
-const runStatus = ref<string>("Run All");
+const runStatus = ref(0); // 0: Run All, 1: Compiling..., 2: Running..., 3: All Done
 
 // Execute all tasks sequentially or in parallel based on the thread limit
 async function runAll() {
@@ -282,11 +290,11 @@ async function runAll() {
   }
 
   // Compile the test cases before running
-  runStatus.value = "Compiling...";
+  runStatus.value = 1; // Compiling...
   await py.compile();
 
   // Run tasks with a limit on concurrent executions
-  runStatus.value = "Running...";
+  runStatus.value = 2; // Running...
   const executing = new Set<Promise<TaskResult>>();
   for (const task of tasks.value) {
     if (executing.size >= limit) await Promise.race(executing);
@@ -328,11 +336,11 @@ async function runAll() {
   await Promise.all(executing);
 
   // Update the "Run All" button state after execution
-  runStatus.value = "All Done";
+  runStatus.value = 3; // All Done
   runAllBtnDisabled.value = false;
   runAllBtnIcon.value = "mdi-play";
   setTimeout(() => {
-    runStatus.value = "Run All";
+    runStatus.value = 0; // Reset to Run All
   }, 2000);
 }
 

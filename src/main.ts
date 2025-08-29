@@ -17,12 +17,16 @@ import { createApp } from 'vue'
 // Styles
 import 'unfonts.css'
 
-const app = createApp(App)
-registerPlugins(app)
-if (window.pywebview && window.pywebview.api) {
+function init() {
+    const app = createApp(App)
+    registerPlugins(app)
     app.mount('#app')
+}
+
+if (window.pywebview && window.pywebview.api) {
+    init()
 } else {
     window.addEventListener('pywebviewready', () => {
-        app.mount('#app')
+        init()
     })
 }

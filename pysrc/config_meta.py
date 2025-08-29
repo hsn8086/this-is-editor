@@ -1,55 +1,153 @@
 config_meta = {
     "editor": {
         "aceMain": {
-            "fontSize": {"display": "Font Size"},
-            "fontFamily": {"display": "Font Family"},
-            "enableBasicAutocompletion": {"display": "Autocompletion"},
-            "enableSnippets": {"display": "Enable Snippets"},
-            "enableLiveAutocompletion": {"display": "Live Autocompletion"},
-            "animatedScroll": {"display": "Animated Scroll"},
-            "scrollPastEnd": {"display": "Scroll Past End"},
-            "showPrintMargin": {"display": "Show Print Margin"},
-            "fixedWidthGutter": {"display": "Fixed Width Gutter"},
-            "fadeFoldWidgets": {"display": "Fade Fold Widgets"},
-            "displayIndentGuides": {"display": "Display Indent Guides"},
-            "highlightIndentGuides": {"display": "Highlight Indent Guides"},
-            "highlightGutterLine": {"display": "Highlight Gutter Line"},
-            "highlightActiveLine": {"display": "Highlight Active Line"},
-            "highlightSelectedWord": {"display": "Highlight Selected Word"},
+            "fontSize": {
+                "display": "Font Size",
+                "i18n": "setting.editor.aceMain.fontSize",
+            },
+            "fontFamily": {
+                "display": "Font Family",
+                "i18n": "setting.editor.aceMain.fontFamily",
+            },
+            "enableBasicAutocompletion": {
+                "display": "Autocompletion",
+                "i18n": "setting.editor.aceMain.enableBasicAutocompletion",
+            },
+            "enableSnippets": {
+                "display": "Enable Snippets",
+                "i18n": "setting.editor.aceMain.enableSnippets",
+            },
+            "enableLiveAutocompletion": {
+                "display": "Live Autocompletion",
+                "i18n": "setting.editor.aceMain.enableLiveAutocompletion",
+            },
+            "animatedScroll": {
+                "display": "Animated Scroll",
+                "i18n": "setting.editor.aceMain.animatedScroll",
+            },
+            "scrollPastEnd": {
+                "display": "Scroll Past End",
+                "i18n": "setting.editor.aceMain.scrollPastEnd",
+            },
+            "showPrintMargin": {
+                "display": "Show Print Margin",
+                "i18n": "setting.editor.aceMain.showPrintMargin",
+            },
+            "fixedWidthGutter": {
+                "display": "Fixed Width Gutter",
+                "i18n": "setting.editor.aceMain.fixedWidthGutter",
+            },
+            "fadeFoldWidgets": {
+                "display": "Fade Fold Widgets",
+                "i18n": "setting.editor.aceMain.fadeFoldWidgets",
+            },
+            "displayIndentGuides": {
+                "display": "Display Indent Guides",
+                "i18n": "setting.editor.aceMain.displayIndentGuides",
+            },
+            "highlightIndentGuides": {
+                "display": "Highlight Indent Guides",
+                "i18n": "setting.editor.aceMain.highlightIndentGuides",
+            },
+            "highlightGutterLine": {
+                "display": "Highlight Gutter Line",
+                "i18n": "setting.editor.aceMain.highlightGutterLine",
+            },
+            "highlightActiveLine": {
+                "display": "Highlight Active Line",
+                "i18n": "setting.editor.aceMain.highlightActiveLine",
+            },
+            "highlightSelectedWord": {
+                "display": "Highlight Selected Word",
+                "i18n": "setting.editor.aceMain.highlightSelectedWord",
+            },
             "cursorStyle": {
                 "display": "Cursor Style",
+                "i18n": "setting.editor.aceMain.cursorStyle",
                 "enum": ["smooth", "slim", "wide", "ace", "smoothwide"],
             },
-            "tabSize": {"display": "Tab Size"},
-            "tooltipFollowsMouse": {"display": "Tooltip Follows Mouse"},
+            "tabSize": {
+                "display": "Tab Size",
+                "i18n": "setting.editor.aceMain.tabSize",
+            },
+            "tooltipFollowsMouse": {
+                "display": "Tooltip Follows Mouse",
+                "i18n": "setting.editor.aceMain.tooltipFollowsMouse",
+            },
             "foldStyle": {
                 "display": "Fold Style",
+                "i18n": "setting.editor.aceMain.foldStyle",
                 "enum": ["markbeginend", "manual", "markbegin"],
             },
         },
         "tie": {
-            "theme": {"display": "Theme", "enum": ["light", "dark", "system"]},
+            "theme": {
+                "display": "Theme",
+                "i18n": "setting.editor.tie.theme",
+                "enum": ["light", "dark", "system"],
+            },
+            "language": {
+                "display": "Language",
+                "i18n": "setting.editor.tie.language",
+                "enum": ["en-US", "zh-Hans"],
+            },
         },
     },
     "programmingLanguages": {
         "python": {
-            "executable": {"display": "Python: Executable"},
-            "compileCommand": {"display": "Python: Compile Command"},
-            "runCommand": {"display": "Python: Run Command"},
-            "fileExtensions": {"display": "Python: File Extensions"},
-            "alias": {"display": "Python: Alias"},
+            "executable": {
+                "display": "Python: Executable",
+                "i18n": "setting.programmingLanguages.python.executable",
+            },
+            "compileCommand": {
+                "display": "Python: Compile Command",
+                "i18n": "setting.programmingLanguages.python.compileCommand",
+            },
+            "runCommand": {
+                "display": "Python: Run Command",
+                "i18n": "setting.programmingLanguages.python.runCommand",
+            },
+            "fileExtensions": {
+                "display": "Python: File Extensions",
+                "i18n": "setting.programmingLanguages.python.fileExtensions",
+            },
+            "alias": {
+                "display": "Python: Alias",
+                "i18n": "setting.programmingLanguages.python.alias",
+            },
             "lsp": {
-                "command": {"display": "Python: LSP Command"},
+                "command": {
+                    "display": "Python: LSP Command",
+                    "i18n": "setting.programmingLanguages.python.lsp.command",
+                },
             },
         },
         "cpp": {
-            "executable": {"display": "C++: Executable"},
-            "compileCommand": {"display": "C++: Compile Command"},
-            "runCommand": {"display": "C++: Run Command"},
-            "fileExtensions": {"display": "C++: File Extensions"},
-            "alias": {"display": "C++: Alias"},
+            "executable": {
+                "display": "C++: Executable",
+                "i18n": "setting.programmingLanguages.cpp.executable",
+            },
+            "compileCommand": {
+                "display": "C++: Compile Command",
+                "i18n": "setting.programmingLanguages.cpp.compileCommand",
+            },
+            "runCommand": {
+                "display": "C++: Run Command",
+                "i18n": "setting.programmingLanguages.cpp.runCommand",
+            },
+            "fileExtensions": {
+                "display": "C++: File Extensions",
+                "i18n": "setting.programmingLanguages.cpp.fileExtensions",
+            },
+            "alias": {
+                "display": "C++: Alias",
+                "i18n": "setting.programmingLanguages.cpp.alias",
+            },
             "lsp": {
-                "command": {"display": "C++: LSP Command"},
+                "command": {
+                    "display": "C++: LSP Command",
+                    "i18n": "setting.programmingLanguages.cpp.lsp.command",
+                },
             },
         },
     },
@@ -77,7 +175,7 @@ config = {
             "tooltipFollowsMouse": True,
             "foldStyle": "markbeginend",
         },
-        "tie": {"theme": "system"},
+        "tie": {"theme": "system", "language": "en-US"},
     },
     "programmingLanguages": {
         "python": {

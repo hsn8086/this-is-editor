@@ -1,8 +1,8 @@
 <template>
-  <v-card title="Settings">
+  <v-card :title="$t('settingPage.title')">
     <template v-slot:title>
       <div class="d-flex justify-space-between align-center">
-        <span>Settings</span>
+        <span>{{ $t("settingPage.title") }}</span>
         <v-text-field
           v-model="search"
           prepend-inner-icon="mdi-magnify"
@@ -12,13 +12,16 @@
           hide-details
           variant="solo-filled"
           style="max-width: 300px"
+          :placeholder="$t('settingPage.search')"
         />
       </div>
     </template>
 
     <v-list dense>
       <template v-for="[group, cfg] in config">
-        <v-list-subheader>{{ group }}</v-list-subheader>
+        <v-list-subheader>{{
+          $t(`settingPage.group.${group}`)
+        }}</v-list-subheader>
 
         <v-list-item
           v-for="item in cfg.filter(
@@ -33,14 +36,14 @@
             style="width: 100%"
           >
             <v-list-item-title class="text-left">{{
-              item.display
+              $t("settingPage." + item.i18n)
             }}</v-list-item-title>
             <v-select
               v-if="item.enum"
               v-model="item.value"
               :items="item.enum"
               @update:model-value="changeConfig(item.id, item.value)"
-              :label="item.display"
+              :label="$t('settingPage.' + item.i18n)"
               class="flex-grow-1 ma-2"
               max-width="300"
             />
@@ -48,7 +51,7 @@
               v-else-if="typeof item.value === 'string'"
               v-model="item.value"
               @update:focused="changeConfig(item.id, item.value)"
-              :label="item.display"
+              :label="$t('settingPage.' + item.i18n)"
               class="flex-grow-1 ma-2"
               max-width="300"
             />
@@ -56,7 +59,7 @@
               v-else-if="typeof item.value === 'number'"
               v-model.number="item.value"
               @update:focused="changeConfig(item.id, item.value)"
-              :label="item.display"
+              :label="$t('settingPage.' + item.i18n)"
               type="number"
               class="flex-grow-1 ma-2"
               max-width="300"
@@ -74,7 +77,7 @@
                 typeof item.value === 'object' && Array.isArray(item.value)
               "
               v-model="item.value"
-              :label="item.display"
+              :label="$t('settingPage.' + item.i18n)"
               @update:model-value="changeConfig(item.id, item.value)"
               chips
               clearable
@@ -97,23 +100,23 @@
               class="ma-2"
               variant="tonal"
             >
-              Open config file to edit
+              {{ $t("settingPage.openConfigFile") }}
             </v-btn>
           </div>
         </v-list-item>
       </template>
-      <v-list-subheader>advance</v-list-subheader>
+      <v-list-subheader>{{ $t("settingPage.advance") }}</v-list-subheader>
       <v-list-item
         prepend-icon="mdi-file-edit-outline"
-        title="Open config file to edit"
+        :title="$t('settingPage.openConfigFile')"
         @click="openConfigFile()"
       />
       <!-- About -->
-      <v-list-subheader>about</v-list-subheader>
+      <v-list-subheader>{{ $t("settingPage.about") }}</v-list-subheader>
 
       <v-list-item
         prepend-icon="mdi-information-outline"
-        title="Licenses"
+        :title="$t('settingPage.licenses')"
         @click="$router.push('/license')"
       />
     </v-list>
@@ -125,6 +128,10 @@ import { ref } from "vue";
 import { type Config } from "@/pywebview-defines";
 import { useTheme } from "vuetify";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
+import type { I18nType } from "@/plugins/i18n";
+
+const { locale, t } = useI18n();
 const theme = useTheme();
 
 const config = ref<[string, ConfigItem[]][]>([]);
@@ -138,7 +145,8 @@ type ConfigItem = {
   display: string;
   value: any;
   group: string;
-  enum?: readonly any[]; // Explicitly define 'enum' as an optional array
+  i18n: string;
+  enum?: readonly any[];
 };
 function sortConfig(config: ConfigItem[]): [string, ConfigItem[]][] {
   const groupMap: Record<string, ConfigItem[]> = {};
@@ -175,12 +183,21 @@ function* parseConfig(
 }
 async function changeConfig(id: string, value: any): Promise<void> {
   await py.set_config(id, value);
-  if (id === "editor.tie.theme") {
-    const cfg = await py.get_config();
-    if (cfg.editor.tie.theme.value === "dark") theme.global.name.value = "dark";
-    else if (cfg.editor.tie.theme.value === "light")
-      theme.global.name.value = "light";
-    else theme.global.name.value = "system";
+  switch (id) {
+    case "editor.tie.theme": {
+      const cfg = await py.get_config();
+      if (cfg.editor.tie.theme.value === "dark")
+        theme.global.name.value = "dark";
+      else if (cfg.editor.tie.theme.value === "light")
+        theme.global.name.value = "light";
+      else theme.global.name.value = "system";
+      break;
+    }
+    case "editor.tie.language": {
+      const cfg = await py.get_config();
+      locale.value = cfg.editor.tie.language.value as I18nType;
+      break;
+    }
   }
 }
 async function init() {

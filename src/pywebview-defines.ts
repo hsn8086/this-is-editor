@@ -3,15 +3,7 @@ export interface Code {
     type: string;
     alias: string[];
 }
-/* 
-    {
-        "id": "cpp",
-        "display": "C++ Source",
-        "lsp": ["clangd"],
-        "suffix": [".cpp", ".cxx", ".cc", ".c++", ".hpp"],
-        "alias": ["C++", "c++", "c_cpp"],
-    },
-*/
+
 export interface Lang {
     id: string;
     display: string;
@@ -41,6 +33,7 @@ export interface Response {
 export interface ConfigItem {
     display: string;
     value: string | boolean | number;
+    i18n: string;
     enum?: string[]; // for select options
 }
 
@@ -69,8 +62,24 @@ export interface Config {
         } & { [key: string]: any },
         tie: {
             theme: ConfigItem;
+            language: ConfigItem;
         } & { [key: string]: any },
+
     };
+    programmingLanguages: {
+        [key: string]: {
+            executable: ConfigItem;
+            compileCommand: ConfigItem;
+            runCommand: ConfigItem;
+            fileExtensions: ConfigItem;
+            alias: ConfigItem;
+            display: string;
+            lsp: {
+                command: ConfigItem;
+                [key: string]: any;
+            } & { [key: string]: any };
+        } & { [key: string]: any };
+    } & { [key: string]: any };
 }
 
 export interface TestCase {
