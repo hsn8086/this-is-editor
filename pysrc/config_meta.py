@@ -94,8 +94,8 @@ config = {
         "cpp": {
             "executable": "g++",
             "compileCommand": "{executable} {file} "
-            "-O 2 -Wall -Wextra -std=c++20 -o {fileStem}",
-            "runCommand": "{fileStem}",
+            "-O2 -Wall -Wextra -std=c++20 -o {fileStem}.out",
+            "runCommand": "{fileWithoutExt}.out",
             "fileExtensions": [".cpp", ".cc", ".cxx", ".c++", ".C"],
             "alias": ["cpp", "Cpp", "CPP", "c++", "C++", "c_cpp"],
             "display": "C++ Source",

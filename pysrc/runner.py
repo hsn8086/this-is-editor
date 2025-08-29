@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import NamedTuple, TypeVar
 
 import psutil
+from loguru import logger
 
 T = TypeVar("T")
 
@@ -55,6 +56,8 @@ def run_p(
     timeout: int = 1,
     cwd: Path | None = None,
 ) -> RunProcessResult:
+    logger.debug(f"Run command: {' '.join(cmd)}")
+    logger.debug(f"Working directory: {cwd}")
     with psutil.Popen(
         cmd,
         text=True,
@@ -139,6 +142,7 @@ def run(
         r_cmd.append(
             c.format(
                 file=str(file_path),
+                fileWithoutExt=str(file_path.with_suffix("")),
                 fileName=file_path.name,
                 fileStem=file_path.stem,
                 fileExt=file_path.suffix,
@@ -184,6 +188,7 @@ def compile(file_path: Path, cmd: list | str, *, executable: str = "") -> None:
         r_cmd.append(
             c.format(
                 file=str(file_path),
+                fileWithoutExt=str(file_path.with_suffix("")),
                 fileName=file_path.name,
                 fileStem=file_path.stem,
                 fileExt=file_path.suffix,
@@ -192,6 +197,7 @@ def compile(file_path: Path, cmd: list | str, *, executable: str = "") -> None:
                 executable=executable,
             )
         )
+    logger.debug(f"Compile command: {' '.join(r_cmd)}")
     try:
         subprocess.run(
             r_cmd,
