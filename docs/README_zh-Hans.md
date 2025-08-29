@@ -26,6 +26,8 @@ TIE 是 "This Is Editor" 的缩写，是一个基于 **Python** 和 **Vue.js** �
 - 题面时空限制修改
 - 代码生图
 - 一键复制代码
+- i18n
+- gdb
 
 ___
 

@@ -30,6 +30,8 @@ TIE stands for "This Is Editor," a cross-platform competitive programming code e
 - Problem time and space limit modification
 - Code visualization
 - One-click code copying
+- i18n
+- gdb
 
 ---
 
