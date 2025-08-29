@@ -1,9 +1,9 @@
 
 
 def task_checker(ouput: str, answer: str) -> bool:
-    oup = filter(bool, ouput.split())
-    ans = filter(bool, answer.split())
-    if len(ouput)!=len(answer):
+    oup = list(filter(bool, ouput.split()))
+    ans = list(filter(bool, answer.split()))
+    if len(oup)!=len(ans):
         return False
     for i, j in zip(oup, ans):
         if i.strip() != j.strip():
