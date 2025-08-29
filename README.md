@@ -6,6 +6,20 @@ TIE stands for "This Is Editor," a cross-platform competitive programming code e
 
 ---
 
+## 🖼️ Interface Preview
+
+<div align="center">
+  <img src="./docs/assets/tie-light.png" alt="Light Theme" width="600"/>
+  <br/>
+  <em>Light Theme</em>
+  <br/><br/>
+  <img src="./docs/assets/tie-dark.png" alt="Dark Theme" width="600"/>
+  <br/>
+  <em>Dark Theme</em>
+</div>
+
+---
+
 ## ✨ Key Features
 
 - **🌍 Cross-Platform Support**: Compatible with **Windows** and **Linux** operating systems.

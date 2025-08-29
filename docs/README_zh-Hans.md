@@ -4,6 +4,19 @@ TIE 是 "This Is Editor" 的缩写，是一个基于 **Python** 和 **Vue.js** �
 
 ---
 
+## 🖼️ 界面预览
+
+<div align="center">
+   <img src="./assets/tie-light.png" alt="浅色主题" width="600"/>
+   <br/>
+   <em>浅色主题</em>
+   <br/><br/>
+   <img src="./assets/tie-dark.png" alt="深色主题" width="600"/>
+   <br/>
+   <em>深色主题</em>
+</div>
+
+---
 ## ✨ 主要特性
 - **🌍 跨平台支持**：兼容 **Windows** 和 **Linux** 操作系统。
 - **🌐 多语言支持**：支持 **Python**、**C++** 等多种编程语言。
