@@ -52,7 +52,7 @@ ___
    - **`clangd`**：提升 C++ 代码补全和错误提示体验。
    - **`Competitive Companion`** 浏览器插件：快速载入测试数据。
 
-💡 **推荐字体**：为了获得更好的代码显示效果，建议使用 [Maple Mono](https://pangocdn.com/mononoki/) 字体。
+💡 **推荐字体**：为了获得更好的代码显示效果，建议使用 [Maple Mono](https://github.com/subframe7536/Maple-font) 字体。
 
 ---
 

@@ -58,7 +58,7 @@ TIE stands for "This Is Editor," a cross-platform competitive programming code e
    - **`clangd`**: Enhance C++ code completion and error hinting.
    - **`Competitive Companion`** browser plugin: Quickly load test data.
 
-💡 **Recommended Font**: For better code display, it is recommended to use the [Maple Mono](https://pangocdn.com/mononoki/) font.
+💡 **Recommended Font**: For better code display, it is recommended to use the [Maple Mono](https://github.com/subframe7536/Maple-font) font.
 
 ---
 
