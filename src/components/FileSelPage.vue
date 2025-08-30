@@ -6,13 +6,14 @@
         :absolute="true"
         color="primary"
         size="large"
+        
         aria-label="Create File or Folder"
         icon
       >
         <v-icon>{{ fabOpen ? "mdi-close" : "mdi-plus" }}</v-icon>
         <v-speed-dial
           v-model="fabOpen"
-          location="top center"
+          location="left center"
           transition="scale-transition"
           activator="parent"
         >
