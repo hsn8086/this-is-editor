@@ -105,6 +105,7 @@ export interface TaskResult {
 }
 
 export interface API {
+    get_disks: () => Promise<FileInfo[]>;
     format_code: () => Promise<string>;
     focus: () => Promise<void>;
     save_scoll: (scroll: number) => Promise<void>;

@@ -55,6 +55,49 @@ class Api:
         )
         logger.debug("File change event dispatched.")
 
+    def get_disks(self) -> list[dict]:
+        if platform.system() != "Windows":
+            return [
+                {
+                    "name": "/",
+                    "is_dir": True,
+                    "is_file": False,
+                    "is_symlink": False,
+                    "size": 0,
+                    "last_modified": "",
+                    "type": "Drive",
+                },
+                {
+                    "name": Path.home().as_posix(),
+                    "is_dir": True,
+                    "is_file": False,
+                    "is_symlink": False,
+                    "size": 0,
+                    "last_modified": "",
+                    "type": "Drive",
+                },
+            ]
+        import ctypes
+        import string
+
+        drives = []
+        bitmask = ctypes.cdll.kernel32.GetLogicalDrives()
+        for letter in string.ascii_uppercase:
+            if bitmask & 1:
+                drives.append(
+                    {
+                        "name": letter + ":\\",
+                        "is_dir": True,
+                        "is_file": False,
+                        "is_symlink": False,
+                        "size": 0,
+                        "last_modified": "",
+                        "type": "Drive",
+                    }
+                )
+            bitmask >>= 1
+        return drives
+
     def format_code(self) -> str:
         code = self.get_code()
         lang = code.get("type", None)
@@ -279,7 +322,10 @@ class Api:
             p = self.cwd
         rst = []
         for f in p.iterdir():
-            rst.append(self.path_get_info(str(f)))
+            try:
+                rst.append(self.path_get_info(str(f)))
+            except Exception as e:
+                logger.opt(exception=e).warning(f"Failed to get info for {f}: {e}")
         rst.sort(key=lambda x: (not x["is_dir"], x["name"].lower()))
         return {
             "now_path": str(p),
@@ -293,6 +339,8 @@ class Api:
         return str(Path(path).parent)
 
     def path_get_info(self, path: str) -> dict:
+        if not Path(path).exists():
+            raise FileNotFoundError(f"{path} does not exist.")
         p = Path(path)
         return {
             "name": p.name,

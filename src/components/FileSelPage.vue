@@ -1,4 +1,16 @@
 <template>
+  <v-navigation-drawer expand-on-hover permanent rail>
+    <v-list>
+      <v-list-item
+        v-for="disk in disks"
+        :key="disk.name"
+        @click="navigateToDisk(disk.name)"
+        :title="disk.name"
+        :prepend-icon="'mdi-harddisk'"
+      >
+      </v-list-item>
+    </v-list>
+  </v-navigation-drawer>
   <div class="scroll-container" @scroll="onScroll" ref="scrollContainer">
     <div class="fab-fixed">
       <v-fab
@@ -6,7 +18,6 @@
         :absolute="true"
         color="primary"
         size="large"
-        
         aria-label="Create File or Folder"
         icon
       >
@@ -143,6 +154,7 @@ const folderLoading = ref(false);
 const py: API = window.pywebview.api;
 onMounted(() => {
   init();
+  fetchDisks();
 });
 
 async function init() {
@@ -152,6 +164,7 @@ async function init() {
 
 const folder = ref<string>();
 const ls = ref<File[]>([]);
+const disks = ref<FileInfo[]>([]);
 
 interface File extends FileInfo {
   isReturn: boolean;
@@ -179,6 +192,14 @@ async function fetchFiles(path: string | null = null) {
   for (const file of response.files)
     ls.value.push({ ...file, isReturn: false });
   folder.value = response.now_path;
+}
+
+async function fetchDisks() {
+  disks.value = await py.get_disks();
+}
+
+async function navigateToDisk(diskName: string) {
+  await changeDirectory(diskName);
 }
 
 // file click
