@@ -160,7 +160,6 @@ function sortConfig(config: ConfigItem[]): [string, ConfigItem[]][] {
     groupMap[group].sort((a, b) => a.display.localeCompare(b.display));
   }
   let sortedConfig: [string, ConfigItem[]][] = Object.keys(groupMap)
-    .sort()
     .map((group): [string, ConfigItem[]] => [group, groupMap[group]]);
   return sortedConfig;
 }
