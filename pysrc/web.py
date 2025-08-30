@@ -155,7 +155,12 @@ async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
                 return
 
 
-app.mount("/", StaticFiles(directory=Path(__file__).parent / "web", html=True), name="web")
+web_dir = Path(__file__).parent.parent / "web"
+app.mount(
+    "/",
+    StaticFiles(directory=web_dir, html=True),
+    name="web",
+)
 
 app_prob_recver = FastAPI()
 
