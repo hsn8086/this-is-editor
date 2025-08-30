@@ -107,19 +107,13 @@ jobs:
       - name: Compress build artifacts
         shell: bash
         run: |
-          if [[ "${{ matrix.mode }}" == "onefile" ]]; then
+          if [[ "${{ matrix.mode }}" == "dir" ]]; then
             if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
               tar -czf main.tar.gz -C .dist/main.dist .
             elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-              pwsh -Command "Compress-Archive -Path .dist/main.dist/* -DestinationPath main.zip"
+              pwsh -Command "Compress-Archive -Path .dist/main.dist -DestinationPath main.zip"
             fi
-            else
-              if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-                tar -czf main.tar.gz -C .dist .
-              elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-                pwsh -Command "Compress-Archive -Path .dist/* -DestinationPath main.zip"
-              fi
-            fi
+          fi
 
       # 上传构建产物到 GitHub Release
       - name: Upload build artifacts
