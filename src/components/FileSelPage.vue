@@ -4,7 +4,7 @@
       <v-list-item
         v-for="disk in disks"
         :key="disk.name"
-        @click="navigateToDisk(disk.name)"
+        @click="changeDirectory(disk.name)"
         :title="disk.name"
         :prepend-icon="'mdi-harddisk'"
       >
@@ -196,10 +196,6 @@ async function fetchFiles(path: string | null = null) {
 
 async function fetchDisks() {
   disks.value = await py.get_disks();
-}
-
-async function navigateToDisk(diskName: string) {
-  await changeDirectory(diskName);
 }
 
 // file click
