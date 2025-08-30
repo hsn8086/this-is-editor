@@ -74,6 +74,7 @@ export interface Config {
             fileExtensions: ConfigItem;
             alias: ConfigItem;
             display: string;
+            enableCheckerPanel?: boolean;
             lsp?: {
                 command: ConfigItem;
             } & { [key: string]: any };

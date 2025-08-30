@@ -1,5 +1,5 @@
 <template>
-  <CheckerPanel ref="checkPanel" />
+  <CheckerPanel ref="checkPanel" v-if="enableCheckerPanel" />
   <v-ace-editor
     ref="aceRef"
     v-model:value="content"
@@ -10,14 +10,6 @@
     :lang="lang"
   />
 </template>
-
-<style scoped>
-.evaluation-panel {
-  /* padding: 0px; */
-  height: 100vh; /* 确保面板高度与页面一致 */
-  overflow-y: auto;
-}
-</style>
 
 <script lang="ts" setup>
 import type { API } from "@/pywebview-defines";
@@ -63,7 +55,7 @@ const py: API = window.pywebview.api;
 
 const content = ref();
 const lang = ref("text");
-
+const enableCheckerPanel = ref(false);
 let editorOptions: Partial<Ace.EditorOptions> & { [key: string]: any };
 
 const theme = useTheme(); // useTheme must be called in setup
@@ -86,7 +78,10 @@ async function initEditor() {
         key as keyof Ace.EditorOptions,
         config.editor.aceMain[key].value
       );
-
+    if (config.programmingLanguages[initialCode.type])
+      enableCheckerPanel.value =
+        config.programmingLanguages[initialCode.type].enableCheckerPanel ||
+        false;
     // set line height
     editor.container.style.lineHeight = "2"; // todo: make configurable
     editor.renderer.updateFontSize();

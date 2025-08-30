@@ -54,7 +54,8 @@ export default {
                         active: "Python: 格式化工具启用",
                         command: "Python: 格式化工具命令",
                         action: "Python: 格式化后操作",
-                    }
+                    },
+                    enableCheckerPanel: "Python: 启用评测面板"
                 },
                 cpp: {
                     executable: "C++: 可执行文件",
@@ -69,7 +70,12 @@ export default {
                         active: "C++: 格式化工具启用",
                         command: "C++: 格式化工具命令",
                         action: "C++: 格式化后操作",
-                    }
+                    },
+                    enableCheckerPanel: "C++: 启用评测面板"
+                },
+                json: {
+                    fileExtensions: "JSON: 文件扩展名",
+                    alias: "JSON: 别名",
                 }
             },
             keyboardShortcuts: {

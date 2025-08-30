@@ -136,6 +136,10 @@ config_meta = {
                     "i18n": "setting.programmingLanguages.python.formatter.active",
                 },
             },
+            "enableCheckerPanel": {
+                "display": "Python: Enable Checker Panel",
+                "i18n": "setting.programmingLanguages.python.enableCheckerPanel",
+            },
         },
         "cpp": {
             "executable": {
@@ -178,6 +182,20 @@ config_meta = {
                     "display": "C++: Formatter Active",
                     "i18n": "setting.programmingLanguages.cpp.formatter.active",
                 },
+            },
+            "enableCheckerPanel": {
+                "display": "C++: Enable Checker Panel",
+                "i18n": "setting.programmingLanguages.cpp.enableCheckerPanel",
+            },
+        },
+        "json": {
+            "alias": {
+                "display": "JSON: Alias",
+                "i18n": "setting.programmingLanguages.json.alias",
+            },
+            "fileExtensions": {
+                "display": "JSON: File Extensions",
+                "i18n": "setting.programmingLanguages.json.fileExtensions",
             },
         },
     },
@@ -233,6 +251,7 @@ config = {
                 "command": "ruff format {file}",
                 "action": "reload",
             },
+            "enableCheckerPanel": True,
         },
         "cpp": {
             "executable": "g++",
@@ -250,6 +269,7 @@ config = {
                 "command": "clang-format -style=file -i {file}",
                 "action": "reload",
             },
+            "enableCheckerPanel": True,
         },
         "json": {
             "alias": ["json", "JSON", "Json", "json5", "JSON5", "Json5"],

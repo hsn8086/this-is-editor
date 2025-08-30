@@ -55,7 +55,8 @@ export default {
                         active: "Python: Formatter Active",
                         command: "Python: Formatter Command",
                         action: "Python: Formatter Action",
-                    }
+                    },
+                    enableCheckerPanel: "Python: Enable Checker Panel"
                 },
                 cpp: {
                     executable: "C++: Executable",
@@ -70,8 +71,13 @@ export default {
                         active: "C++: Formatter Active",
                         command: "C++: Formatter Command",
                         action: "C++: Formatter Action",
-                    }
-                }
+                    },
+                    enableCheckerPanel: "C++: Enable Checker Panel"
+                },
+                json: {
+                    fileExtensions: "JSON: File Extensions",
+                    alias: "JSON: Alias",
+                },
             },
             keyboardShortcuts: {
                 runJudge: "Run Judge",
