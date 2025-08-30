@@ -65,7 +65,7 @@ class Api:
             raise ValueError(f"Formatter for language {lang} is not active.")
         if not (cmd := formatter_cfg.get("command", "")).strip():
             raise ValueError(f"Formatter command for language {lang} is empty.")
-        cmd_list=[]
+        cmd_list = []
         for c in shlex.split(cmd):
             cmd_list.append(fmt(c, file_path=self.opened_file))
         return subprocess.check_output(
@@ -216,7 +216,7 @@ class Api:
             self.opened_file.touch()
         alias = type_mp.get(self.opened_file.suffix.lower(), {}).get("alias", [])
         if id_ := type_mp.get(self.opened_file.suffix.lower(), {}).get("id"):
-            alias.append(id_)
+            alias = [id_, *alias]
         alias = list(set(alias))  # deduplicate
         return {
             "code": self.opened_file.read_text(encoding="utf-8"),
