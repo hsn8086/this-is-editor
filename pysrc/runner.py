@@ -9,6 +9,8 @@ from typing import NamedTuple, TypeVar
 import psutil
 from loguru import logger
 
+from .utils import format as fmt
+
 T = TypeVar("T")
 
 
@@ -139,18 +141,7 @@ def run(
     for c in cmd:
         c: str
 
-        r_cmd.append(
-            c.format(
-                file=str(file_path),
-                fileWithoutExt=str(file_path.with_suffix("")),
-                fileName=file_path.name,
-                fileStem=file_path.stem,
-                fileExt=file_path.suffix,
-                fileParent=str(file_path.parent),
-                fileParentName=file_path.parent.name,
-                executable=executable,
-            )
-        )
+        r_cmd.append(fmt(c, file_path=file_path, executable=executable))
     try:
         rst = run_p(
             r_cmd,
@@ -185,18 +176,7 @@ def compile(file_path: Path, cmd: list | str, *, executable: str = "") -> None:
     for c in cmd:
         c: str
 
-        r_cmd.append(
-            c.format(
-                file=str(file_path),
-                fileWithoutExt=str(file_path.with_suffix("")),
-                fileName=file_path.name,
-                fileStem=file_path.stem,
-                fileExt=file_path.suffix,
-                fileParent=str(file_path.parent),
-                fileParentName=file_path.parent.name,
-                executable=executable,
-            )
-        )
+        r_cmd.append(fmt(c, file_path=file_path, executable=executable))
     logger.debug(f"Compile command: {' '.join(r_cmd)}")
     try:
         subprocess.run(
