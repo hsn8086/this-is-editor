@@ -42,42 +42,11 @@ export default {
                 }
             },
             programmingLanguages: {
-                python: {
-                    executable: "Python: Executable",
-                    compileCommand: "Python: Compile Command",
-                    runCommand: "Python: Run Command",
-                    fileExtensions: "Python: File Extensions",
-                    alias: "Python: Alias",
-                    lsp: {
-                        command: "Python: LSP Command"
-                    },
-                    formatter: {
-                        active: "Python: Formatter Active",
-                        command: "Python: Formatter Command",
-                        action: "Python: Formatter Action",
-                    },
-                    enableCheckerPanel: "Python: Enable Checker Panel"
-                },
-                cpp: {
-                    executable: "C++: Executable",
-                    compileCommand: "C++: Compile Command",
-                    runCommand: "C++: Run Command",
-                    fileExtensions: "C++: File Extensions",
-                    alias: "C++: Alias",
-                    lsp: {
-                        command: "C++: LSP Command"
-                    },
-                    formatter: {
-                        active: "C++: Formatter Active",
-                        command: "C++: Formatter Command",
-                        action: "C++: Formatter Action",
-                    },
-                    enableCheckerPanel: "C++: Enable Checker Panel"
-                },
-                json: {
-                    fileExtensions: "JSON: File Extensions",
-                    alias: "JSON: Alias",
-                },
+                ...genProgrammingLanguages([
+                    ["python", "Python"],
+                    ["cpp", "C++"],
+                    ["json", "JSON"],
+                ])
             },
             keyboardShortcuts: {
                 runJudge: "Run Judge",
@@ -98,4 +67,31 @@ export default {
         pasteFromClipboard: "Paste from Clipboard",
         pasteError: "Failed to paste tasks! Please ensure the clipboard contains valid task data."
     }
+}
+
+function genProgrammingLanguages(langMP: [string, string][]) {
+    const res: { [key: string]: any } = {};
+    for (const [lang, display] of langMP) {
+        res[lang] = commonProgrammingLanguage(display);
+    }
+    return res;
+}
+
+function commonProgrammingLanguage(langId: string) {
+    return {
+        executable: `${langId}: Executable File`,
+        compileCommand: `${langId}: Compile Command`,
+        runCommand: `${langId}: Run Command`,
+        fileExtensions: `${langId}: File Extensions`,
+        alias: `${langId}: Alias`,
+        lsp: {
+            command: `${langId}: LSP Command`
+        },
+        formatter: {
+            active: `${langId}: Formatter Enabled`,
+            command: `${langId}: Formatter Command`,
+            action: `${langId}: Post-Format Action`,
+        },
+        enableCheckerPanel: `${langId}: Enable Checker Panel`
+    };
 }

@@ -41,42 +41,11 @@ export default {
                 }
             },
             programmingLanguages: {
-                python: {
-                    executable: "Python: 可执行文件",
-                    compileCommand: "Python: 编译命令",
-                    runCommand: "Python: 运行命令",
-                    fileExtensions: "Python: 文件扩展名",
-                    alias: "Python: 别名",
-                    lsp: {
-                        command: "Python: LSP命令"
-                    },
-                    formatter: {
-                        active: "Python: 格式化工具启用",
-                        command: "Python: 格式化工具命令",
-                        action: "Python: 格式化后操作",
-                    },
-                    enableCheckerPanel: "Python: 启用评测面板"
-                },
-                cpp: {
-                    executable: "C++: 可执行文件",
-                    compileCommand: "C++: 编译命令",
-                    runCommand: "C++: 运行命令",
-                    fileExtensions: "C++: 文件扩展名",
-                    alias: "C++: 别名",
-                    lsp: {
-                        command: "C++: LSP命令"
-                    },
-                    formatter: {
-                        active: "C++: 格式化工具启用",
-                        command: "C++: 格式化工具命令",
-                        action: "C++: 格式化后操作",
-                    },
-                    enableCheckerPanel: "C++: 启用评测面板"
-                },
-                json: {
-                    fileExtensions: "JSON: 文件扩展名",
-                    alias: "JSON: 别名",
-                }
+                ...genProgrammingLanguages([
+                    ["python", "Python"],
+                    ["cpp", "C++"],
+                    ["json", "JSON"],
+                ])
             },
             keyboardShortcuts: {
                 runJudge: "运行评测",
@@ -98,4 +67,31 @@ export default {
         pasteFromClipboard: "从剪贴板粘贴",
         pasteError: "粘贴任务失败！请确保剪贴板内容为有效的任务数据。"
     }
+}
+
+function genProgrammingLanguages(langMP: [string, string][]) {
+    const res: { [key: string]: any } = {};
+    for (const [lang, display] of langMP) {
+        res[lang] = commonProgrammingLanguage(display);
+    }
+    return res;
+}
+
+function commonProgrammingLanguage(langId: string) {
+    return {
+        executable: `${langId}: 可执行文件`,
+        compileCommand: `${langId}: 编译命令`,
+        runCommand: `${langId}: 运行命令`,
+        fileExtensions: `${langId}: 文件扩展名`,
+        alias: `${langId}: 别名`,
+        lsp: {
+            command: `${langId}: LSP命令`
+        },
+        formatter: {
+            active: `${langId}: 格式化工具启用`,
+            command: `${langId}: 格式化工具命令`,
+            action: `${langId}: 格式化后操作`,
+        },
+        enableCheckerPanel: `${langId}: 启用评测面板`
+    };
 }
