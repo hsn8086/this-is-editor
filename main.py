@@ -1,6 +1,6 @@
 import argparse
-import platform
 import logging
+import platform
 
 import webview
 from loguru import logger

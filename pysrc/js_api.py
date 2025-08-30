@@ -55,11 +55,66 @@ class Api:
         )
         logger.debug("File change event dispatched.")
 
+    def get_pinned_files(self) -> list[str]:
+        pinned_p = user_data_dir / "pinned.txt"
+        if not pinned_p.exists():
+            return []
+        rst = []
+        for line in pinned_p.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and (path := Path(line)).exists():
+                rst.append(
+                    {
+                        "name": path.name,
+                        "stem": path.stem,
+                        "path": str(path),
+                        "is_dir": path.is_dir(),
+                        "is_file": path.is_file(),
+                        "is_symlink": path.is_symlink(),
+                        "size": path.stat().st_size,
+                        "last_modified": time.strftime(
+                            "%Y-%m-%d %H:%M:%S", time.localtime(path.stat().st_mtime)
+                        ),
+                        "type": "Directory"
+                        if path.is_dir()
+                        else type_mp.get(path.suffix.lower(), {}).get(
+                            "display", "File"
+                        ),
+                    }
+                )
+        return rst
+
+    def add_pinned_file(self, path: str) -> None:
+        pinned_p = user_data_dir / "pinned.txt"
+        pinned_files = []
+        for line in pinned_p.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line:
+                pinned_files.append(line)
+        if path in pinned_files:
+            return
+        pinned_files.append(path)
+        pinned_p.write_text("\n".join(pinned_files), encoding="utf-8")
+
+    def remove_pinned_file(self, path: str) -> None:
+        pinned_p = user_data_dir / "pinned.txt"
+        pinned_files = []
+        for line in pinned_p.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line:
+                pinned_files.append(line)
+        if path not in pinned_files:
+            return
+        pinned_files.remove(path)
+        pinned_p.write_text("\n".join(pinned_files), encoding="utf-8")
+
     def get_disks(self) -> list[dict]:
         if platform.system() != "Windows":
             return [
                 {
                     "name": "/",
+                    "stem": "/",
+                    "path": "/",
                     "is_dir": True,
                     "is_file": False,
                     "is_symlink": False,
@@ -68,7 +123,9 @@ class Api:
                     "type": "Drive",
                 },
                 {
-                    "name": Path.home().as_posix(),
+                    "name": "home",
+                    "stem": "home",
+                    "path": str(Path.home()),
                     "is_dir": True,
                     "is_file": False,
                     "is_symlink": False,
@@ -87,6 +144,8 @@ class Api:
                 drives.append(
                     {
                         "name": letter + ":\\",
+                        "stem": letter,
+                        "path": letter + ":\\",
                         "is_dir": True,
                         "is_file": False,
                         "is_symlink": False,
@@ -344,6 +403,8 @@ class Api:
         p = Path(path)
         return {
             "name": p.name,
+            "stem": p.stem,
+            "path": str(p),
             "is_dir": p.is_dir(),
             "is_file": p.is_file(),
             "is_symlink": p.is_symlink(),

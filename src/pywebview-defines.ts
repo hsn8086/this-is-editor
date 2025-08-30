@@ -13,6 +13,8 @@ export interface Lang {
 }
 export interface FileInfo {
     name: string;
+    stem: string;
+    path: string;
     is_dir: boolean;
     is_file: boolean;
     is_symlink: boolean;
@@ -105,6 +107,10 @@ export interface TaskResult {
 }
 
 export interface API {
+    [x: string]: any;
+    get_pinned_files: () => Promise<FileInfo[]>;
+    add_pinned_file: (path: string) => Promise<void>;
+    remove_pinned_file: (path: string) => Promise<void>;
     get_disks: () => Promise<FileInfo[]>;
     format_code: () => Promise<string>;
     focus: () => Promise<void>;

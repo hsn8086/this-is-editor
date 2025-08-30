@@ -1,14 +1,39 @@
 <template>
   <v-navigation-drawer expand-on-hover permanent rail>
-    <v-list>
+    <v-list nav>
       <v-list-item
         v-for="disk in disks"
         :key="disk.name"
-        @click="changeDirectory(disk.name)"
+        @click="changeDirectory(disk.path)"
         :title="disk.name"
         :prepend-icon="'mdi-harddisk'"
       >
       </v-list-item>
+      <v-divider v-if="pinnedFiles.length > 0" />
+      <v-menu v-for="pinned in pinnedFiles" :key="pinned.name">
+        <template #activator="{ props }">
+          <v-list-item
+            :key="pinned.name"
+            @click.left="fileClick(pinned)"
+            @click.right.prevent.stop="props.onClick"
+            :title="pinned.name"
+            :prepend-icon="pinned.is_dir ? 'mdi-folder' : 'mdi-file'"
+            density="compact"
+          />
+        </template>
+        <v-list>
+          <v-list-item
+            @click="
+              async () => {
+                await py.remove_pinned_file(pinned.path);
+                await fetchPinnedFiles();
+              }
+            "
+          >
+            <v-list-item-title>Unpin</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-menu>
     </v-list>
   </v-navigation-drawer>
   <div class="scroll-container" @scroll="onScroll" ref="scrollContainer">
@@ -95,19 +120,35 @@
     </v-dialog>
     <v-card class="base" density="compact" nav style="min-height: 100%">
       <v-list>
-        <v-list-item
-          v-for="file in ls"
-          :key="folder + '/' + file.name"
-          @click="file_click(file.name, file.isReturn)"
-          :prepend-icon="file.is_dir ? 'mdi-folder' : 'mdi-file'"
-          :title="file.name"
-          :value="file.name"
-        >
-          <div style="display: flex; gap: 4px">
-            <v-chip label size="x-small">{{ file.type }}</v-chip>
-            <v-chip label size="x-small">{{ file.last_modified }}</v-chip>
-          </div>
-        </v-list-item>
+        <v-menu v-for="file in ls">
+          <template #activator="{ props }">
+            <v-list-item
+              :key="folder + '/' + file.name"
+              @click.left="fileClick(file)"
+              @click.right.prevent.stop="props.onClick"
+              :prepend-icon="file.is_dir ? 'mdi-folder' : 'mdi-file'"
+              :title="file.name"
+              :value="file.name"
+            >
+              <div style="display: flex; gap: 4px">
+                <v-chip label size="x-small">{{ file.type }}</v-chip>
+                <v-chip label size="x-small">{{ file.last_modified }}</v-chip>
+              </div>
+            </v-list-item>
+          </template>
+          <v-list>
+            <v-list-item
+              @click="
+                async () => {
+                  await py.add_pinned_file(file.path);
+                  await fetchPinnedFiles();
+                }
+              "
+            >
+              <v-list-item-title>Pin</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
       </v-list>
     </v-card>
   </div>
@@ -160,8 +201,13 @@ onMounted(() => {
 async function init() {
   await fetchFiles();
   await initScrool();
+  await fetchPinnedFiles();
 }
 
+const pinnedFiles = ref<FileInfo[]>([]);
+async function fetchPinnedFiles() {
+  pinnedFiles.value = await py.get_pinned_files();
+}
 const folder = ref<string>();
 const ls = ref<File[]>([]);
 const disks = ref<FileInfo[]>([]);
@@ -180,6 +226,8 @@ async function fetchFiles(path: string | null = null) {
   ls.value = [
     {
       name: "...",
+      stem: "...",
+      path: "",
       type: "return to parent",
       last_modified: "",
       is_dir: true,
@@ -187,7 +235,7 @@ async function fetchFiles(path: string | null = null) {
       is_symlink: false,
       size: 0,
       isReturn: true,
-    },
+    }, // todo: 会不会有更优雅的方式?
   ];
   for (const file of response.files)
     ls.value.push({ ...file, isReturn: false });
@@ -199,22 +247,20 @@ async function fetchDisks() {
 }
 
 // file click
-async function file_click(name: string, returnValue: boolean) {
+async function fileClick(file: File|FileInfo) {
   folderLoading.value = true;
-  let path: string;
-  if (returnValue) {
+  if ("isReturn" in file && file.isReturn) {
     // If it is return
     const parentPath = await py.path_parent(folder.value!);
     await changeDirectory(parentPath);
   } else if (
-    (await py.path_get_info((path = await py.path_join(folder.value!, name))))
-      .is_dir
+    file.is_dir
   ) {
     // If open dir
-    changeDirectory(path);
+    changeDirectory(file.path);
   } else {
     // If open file
-    await py.set_opened_file(await py.path_join(folder.value!, name));
+    await py.set_opened_file(file.path);
     router.push("/editor");
     await py.set_cwd(folder.value!);
   }
