@@ -254,6 +254,6 @@ config = {
     },
     "keyboardShortcuts": {
         "runJudge": "F5",
-        "formatCode": "Ctrl-L Alt-L",
+        "formatCode": "Ctrl-Alt-L",
     },
 }
