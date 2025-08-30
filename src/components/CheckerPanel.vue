@@ -243,7 +243,7 @@ async function loadTestcase() {
 }
 
 // Manage the state of the navigation drawer (collapsed/expanded)
-const rail = ref(false);
+const rail = ref(true);
 function changRail(value: boolean) {
   console.log(tasks);
   rail.value = value;
