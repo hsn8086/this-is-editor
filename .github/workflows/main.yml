@@ -61,7 +61,7 @@ jobs:
       - name: Compress build artifacts
         run: |
           if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-            tar -czf main.tar.gz main.dist
+            tar -czf main.tar.gz .dist/main.dist
           elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             powershell Compress-Archive -Path main.dist\* -DestinationPath main.zip
           fi
