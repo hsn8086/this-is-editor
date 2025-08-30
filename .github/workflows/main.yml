@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - master
+      - dev
 
 jobs:
   build:
@@ -14,7 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]  # 定义操作系统矩阵
+        os: [ubuntu-latest, windows-latest] # 定义操作系统矩阵
 
     steps:
       # 检出代码
@@ -39,10 +40,10 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.12  # 指定 Python 版本
+          python-version: 3.12 # 指定 Python 版本
 
       - name: Install env
-        shell: bash  # 强制使用 Bash
+        shell: bash # 强制使用 Bash
         run: |
           if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
             sudo apt-get update
@@ -72,13 +73,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-artifacts-${{ matrix.os }}
-          path: | 
+          path: |
             main.bin
             main.exe
 
   release:
     name: Release
-    needs: build  # 依赖于 build 任务
+    needs: build # 依赖于 build 任务
     runs-on: ubuntu-latest
 
     steps:
@@ -129,7 +130,7 @@ jobs:
           tag_name: v${{ steps.version.outputs.version }}.${{ github.run_number }}
           release_name: Release v${{ steps.version.outputs.version }}.${{ github.run_number }}
           draft: false
-          prerelease: false
+          prerelease: ${{ contains(github.ref, 'dev') }}
 
       # 上传 Linux 构建产物到 Release
       - name: Upload Linux Release Asset
