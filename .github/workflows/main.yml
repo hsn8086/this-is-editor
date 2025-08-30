@@ -59,6 +59,7 @@ jobs:
 
       # 压缩构建产物
       - name: Compress build artifacts
+        shell: bash
         run: |
           if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
             tar -czf main.tar.gz .dist/main.dist
