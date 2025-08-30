@@ -55,17 +55,16 @@ jobs:
       # 构建项目
       - name: Build project
         run: |
-          yarn build-only
-          yarn build-py
+          yarn build
 
-      # 确认构建产物
-      - name: Verify build output
+      # 压缩构建产物
+      - name: Compress build artifacts
         shell: bash
         run: |
           if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-            test -f main.bin || (echo "main.bin not found!" && exit 1)
+            tar -czf main.tar.gz .dist/main.dist
           elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            test -f main.exe || (echo "main.exe not found!" && exit 1)
+            powershell Compress-Archive -Path .dist\main.dist\* -DestinationPath main.zip
           fi
 
       # 上传构建产物
@@ -74,8 +73,8 @@ jobs:
         with:
           name: build-artifacts-${{ matrix.os }}
           path: |
-            main.bin
-            main.exe
+            main.tar.gz
+            main.zip
 
   release:
     name: Release
@@ -139,8 +138,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: main.bin
-          asset_name: tie-linux.bin
+          asset_path: main.tar.gz
+          asset_name: tie-linux.tar.gz
           asset_content_type: application/octet-stream
 
       # 上传 Windows 构建产物到 Release
@@ -150,6 +149,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: main.exe
-          asset_name: tie-windows.exe
+          asset_path: main.zip
+          asset_name: tie-windows.zip
           asset_content_type: application/octet-stream

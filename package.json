@@ -4,9 +4,9 @@
   "type": "module",
   "version": "0.0.0",
   "scripts": {
-    "dev": "vite build && uv run main.py --debug",
-    "build": "license-gen && type-check && build-only && build-py",
-    "build-py": "uv run nuitka --standalone --onefile --assume-yes-for-downloads --include-data-dir=web=web --include-module=fastapi --include-module=uvicorn --windows-disable-console main.py",
+    "dev": "yarn type-check && vite build && uv run main.py --debug",
+    "build": "yarn license-gen && yarn type-check && yarn build-only && yarn build-py",
+    "build-py": "uv run nuitka --standalone --assume-yes-for-downloads --include-data-dir=web=web --include-module=fastapi --include-module=uvicorn --windows-disable-console --output-dir=.dist main.py",
     "build-only": "vite build",
     "type-check": "vue-tsc --build --force",
     "license-gen": "uv run tools/gen_license.py",

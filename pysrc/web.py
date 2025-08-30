@@ -155,12 +155,12 @@ async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
                 return
 
 
-if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-    res_path = Path(sys._MEIPASS)
-else:
-    res_path = Path.cwd()
-
-app.mount("/", StaticFiles(directory=res_path / "web", html=True), name="web")
+web_dir = Path(__file__).parent.parent / "web"
+app.mount(
+    "/",
+    StaticFiles(directory=web_dir, html=True),
+    name="web",
+)
 
 app_prob_recver = FastAPI()
 
