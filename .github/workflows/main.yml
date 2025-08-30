@@ -64,7 +64,7 @@ jobs:
           if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
             tar -czf main.tar.gz .dist/main.dist
           elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            powershell Compress-Archive -Path .dist\main.dist\* -DestinationPath main.zip
+            pwsh -Command "Compress-Archive -Path .dist/main.dist/* -DestinationPath main.zip"
           fi
 
       # 上传构建产物
