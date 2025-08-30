@@ -48,6 +48,11 @@ export default {
                     alias: "Python: 别名",
                     lsp: {
                         command: "Python: LSP命令"
+                    },
+                    formatter: {
+                        active: "Python: 格式化工具启用",
+                        command: "Python: 格式化工具命令",
+                        action: "Python: 格式化后操作",
                     }
                 },
                 cpp: {
@@ -58,6 +63,11 @@ export default {
                     alias: "C++: 别名",
                     lsp: {
                         command: "C++: LSP命令"
+                    },
+                    formatter: {
+                        active: "C++: 格式化工具启用",
+                        command: "C++: 格式化工具命令",
+                        action: "C++: 格式化后操作",
                     }
                 }
             }

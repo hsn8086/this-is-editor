@@ -76,10 +76,14 @@ export interface Config {
             display: string;
             lsp: {
                 command: ConfigItem;
-                [key: string]: any;
+            } & { [key: string]: any };
+            formatter: {
+                active: ConfigItem;
+                command: ConfigItem;
+                action: ConfigItem;
             } & { [key: string]: any };
         } & { [key: string]: any };
-    } & { [key: string]: any };
+    } ;
 }
 
 export interface TestCase {
@@ -96,6 +100,7 @@ export interface TaskResult {
 }
 
 export interface API {
+    format_code: () => Promise<string>;
     focus: () => Promise<void>;
     save_scoll: (scroll: number) => Promise<void>;
     get_scoll: () => Promise<number>;

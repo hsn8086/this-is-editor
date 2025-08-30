@@ -1,4 +1,7 @@
 import json
+import platform
+import shlex
+import subprocess
 import time
 from pathlib import Path
 
@@ -10,6 +13,7 @@ from .config_meta import config_meta
 from .judge import cph2testcase, task_checker
 from .langs import lang_compilers, lang_runners, langs, type_mp
 from .user_data import user_data_dir
+from .utils import format as fmt
 from .watch import Watcher
 
 
@@ -50,6 +54,29 @@ class Api:
             """
         )
         logger.debug("File change event dispatched.")
+
+    def format_code(self) -> str:
+        code = self.get_code()
+        lang = code.get("type", None)
+        if lang not in config.get("programmingLanguages", {}):
+            raise ValueError(f"Language {lang} is not supported.")
+        formatter_cfg = config["programmingLanguages"][lang].get("formatter", {})
+        if not formatter_cfg.get("active", False):
+            raise ValueError(f"Formatter for language {lang} is not active.")
+        if not (cmd := formatter_cfg.get("command", "")).strip():
+            raise ValueError(f"Formatter command for language {lang} is empty.")
+        cmd_list=[]
+        for c in shlex.split(cmd):
+            cmd_list.append(fmt(c, file_path=self.opened_file))
+        return subprocess.check_output(
+            cmd_list,
+            creationflags=subprocess.CREATE_NO_WINDOW
+            if platform.system() == "Windows"
+            else 0,
+            shell=True if platform.system() == "Windows" else False,
+            cwd=self.opened_file.parent,
+            text=True,
+        )
 
     def focus(self) -> None:
         # window.show()

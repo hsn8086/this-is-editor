@@ -43,6 +43,7 @@ import { getLanguageProvider } from "@/lsp";
 import { debounce } from "lodash";
 import CheckerPanel from "./CheckerPanel.vue";
 import { useHotkey } from "vuetify";
+import { config } from "ace-code";
 
 const checkPanel: Ref<InstanceType<typeof CheckerPanel> | null> = ref(null);
 useHotkey("f5", () => {
@@ -104,11 +105,12 @@ async function initEditor() {
     const languageProvider = await getLanguageProvider();
     let menuKb = new HashHandler([
       {
-        bindKey: "f10",
+        bindKey: "Ctrl-Alt-L",
         name: "format", //todo: fix it
         exec: function () {
           console.log("Format command triggered");
-          languageProvider.format();
+          // languageProvider.format();
+          format();
         },
       },
       {
@@ -136,6 +138,23 @@ async function initEditor() {
     languageProvider.registerEditor(editor, sessionConfig);
   }
 }
+
+async function format() {
+  const config = await py.get_config();
+  const codeType = (await py.get_code()).type;
+  if (!config.programmingLanguages[codeType]) return;
+  const formater_cfg = config.programmingLanguages[codeType].formatter;
+  if (!formater_cfg.active.value) return;
+
+  const formatted = await py.format_code();
+  if (formater_cfg.action.value === "reload") {
+    // reload the file from disk
+    const text = (await py.get_code()).code;
+    resetCode(text);
+    return;
+  } else if (formater_cfg.action.value === "stdout") resetCode(formatted);
+}
+
 let lastModified = 0;
 function onCodeChange(newCode: string) {
   debounce(py.save_code, 500)(newCode);
@@ -162,15 +181,19 @@ window.addEventListener("file-changed", async (event) => {
   ) {
     console.log("File changed externally, updating editor content.");
 
-    const cursorPos = editor.getCursorPosition();
-    editor.setValue(text, -1); // -1 to prevent moving cursor to start
-
-    // ensure the column is within the line length
-    const lineLen = editor.session.getLine(cursorPos.row)?.length ?? 0;
-    const safeColumn = Math.min(cursorPos.column, lineLen);
-
-    editor.moveCursorToPosition({ row: cursorPos.row, column: safeColumn });
-    editor.scrollToLine(cursorPos.row, true, true, function () {});
+    resetCode(text);
   }
 });
+function resetCode(text: any) {
+  if (!editor) return;
+  const cursorPos = editor.getCursorPosition();
+  editor.setValue(text, -1); // -1 to prevent moving cursor to start
+
+  // ensure the column is within the line length
+  const lineLen = editor.session.getLine(cursorPos.row)?.length ?? 0;
+  const safeColumn = Math.min(cursorPos.column, lineLen);
+
+  editor.moveCursorToPosition({ row: cursorPos.row, column: safeColumn });
+  editor.scrollToLine(cursorPos.row, true, true, function () {});
+}
 </script>

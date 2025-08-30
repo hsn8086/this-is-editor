@@ -121,6 +121,21 @@ config_meta = {
                     "i18n": "setting.programmingLanguages.python.lsp.command",
                 },
             },
+            "formatter": {
+                "command": {
+                    "display": "Python: Formatter Command",
+                    "i18n": "setting.programmingLanguages.python.formatter.command",
+                },
+                "action": {
+                    "display": "Python: Formatter Action",
+                    "i18n": "setting.programmingLanguages.python.formatter.action",
+                    "enum": ["reload", "stdout", " none"],
+                },
+                "active": {
+                    "display": "Python: Formatter Active",
+                    "i18n": "setting.programmingLanguages.python.formatter.active",
+                },
+            },
         },
         "cpp": {
             "executable": {
@@ -147,6 +162,21 @@ config_meta = {
                 "command": {
                     "display": "C++: LSP Command",
                     "i18n": "setting.programmingLanguages.cpp.lsp.command",
+                },
+            },
+            "formatter": {
+                "command": {
+                    "display": "C++: Formatter Command",
+                    "i18n": "setting.programmingLanguages.cpp.formatter.command",
+                },
+                "action": {
+                    "display": "C++: Formatter Action",
+                    "i18n": "setting.programmingLanguages.cpp.formatter.action",
+                    "enum": ["reload", "stdout", " none"],
+                },
+                "active": {
+                    "display": "C++: Formatter Active",
+                    "i18n": "setting.programmingLanguages.cpp.formatter.active",
                 },
             },
         },
@@ -188,6 +218,11 @@ config = {
             "lsp": {
                 "command": "pylsp",
             },
+            "formatter": {
+                "active": True,
+                "command": "ruff format {file}",
+                "action": "reload",
+            },
         },
         "cpp": {
             "executable": "g++",
@@ -199,6 +234,11 @@ config = {
             "display": "C++ Source",
             "lsp": {
                 "command": "clangd",
+            },
+            "formatter": {
+                "active": True,
+                "command": "clang-format -style=file -i {file}",
+                "action": "reload",
             },
         },
     },

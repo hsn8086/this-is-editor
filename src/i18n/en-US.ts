@@ -49,6 +49,11 @@ export default {
                     alias: "Python: Alias",
                     lsp: {
                         command: "Python: LSP Command"
+                    },
+                    formatter: {
+                        active: "Python: Formatter Active",
+                        command: "Python: Formatter Command",
+                        action: "Python: Formatter Action",
                     }
                 },
                 cpp: {
@@ -59,6 +64,11 @@ export default {
                     alias: "C++: Alias",
                     lsp: {
                         command: "C++: LSP Command"
+                    },
+                    formatter: {
+                        active: "C++: Formatter Active",
+                        command: "C++: Formatter Command",
+                        action: "C++: Formatter Action",
                     }
                 }
             }
