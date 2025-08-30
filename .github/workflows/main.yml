@@ -16,6 +16,9 @@ jobs:
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
+      # 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v3
       # 从 pyproject.toml 获取版本号（支持 Poetry 的 tool.poetry.version 或 PEP621 的 project.version）
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -109,13 +112,13 @@ jobs:
             elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
               pwsh -Command "Compress-Archive -Path .dist/main.dist/* -DestinationPath main.zip"
             fi
-              else
-            if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-              tar -czf main.tar.gz -C .dist .
-            elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-              pwsh -Command "Compress-Archive -Path .dist/* -DestinationPath main.zip"
-            fi
+            else
+              if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+                tar -czf main.tar.gz -C .dist .
+              elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+                pwsh -Command "Compress-Archive -Path .dist/* -DestinationPath main.zip"
               fi
+            fi
 
       # 上传构建产物到 GitHub Release
       - name: Upload build artifacts
@@ -125,5 +128,5 @@ jobs:
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: ${{ matrix.os == 'windows-latest' && matrix.mode == 'onefile' && '.dist/main.zip' || matrix.os == 'windows-latest' && matrix.mode == 'dir' && '.dist/main.zip' || matrix.os == 'ubuntu-latest' && matrix.mode == 'onefile' && '.dist/main.tar.gz' || matrix.os == 'ubuntu-latest' && matrix.mode == 'dir' && '.dist/main.tar.gz' }}
-          asset_name: ${{ matrix.os == 'windows-latest' && matrix.mode == 'onefile' && 'main-windows-onefile.zip' || matrix.os == 'windows-latest' && matrix.mode == 'dir' && 'main-windows-dir.zip' || matrix.os == 'ubuntu-latest' && matrix.mode == 'onefile' && 'main-linux-onefile.tar.gz' || matrix.os == 'ubuntu-latest' && matrix.mode == 'dir' && 'main-linux-dir.tar.gz' }}
+          asset_name: ${{ matrix.os == 'windows-latest' && matrix.mode == 'onefile' && 'main-windows-onefile-${{ matrix.debug }}.zip' || matrix.os == 'windows-latest' && matrix.mode == 'dir' && 'main-windows-dir-${{ matrix.debug }}.zip' || matrix.os == 'ubuntu-latest' && matrix.mode == 'onefile' && 'main-linux-onefile-${{ matrix.debug }}.tar.gz' || matrix.os == 'ubuntu-latest' && matrix.mode == 'dir' && 'main-linux-dir-${{ matrix.debug }}.tar.gz' }}
           asset_content_type: ${{ matrix.os == 'windows-latest' && 'application/zip' || matrix.os == 'ubuntu-latest' && 'application/gzip' }}
