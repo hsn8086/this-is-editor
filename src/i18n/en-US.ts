@@ -6,7 +6,8 @@ export default {
         group: {
             editor: "Editor",
             programmingLanguages: "Programming Languages",
-            tie: "Tie"
+            tie: "Tie",
+            keyboardShortcuts: "Keyboard Shortcuts"
         },
         openConfigFile: "Open config file to edit",
         advance: "Advance",

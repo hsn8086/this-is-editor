@@ -5,7 +5,8 @@ export default {
         group: {
             editor: "编辑器",
             programmingLanguages: "编程语言",
-            tie: "Tie"
+            tie: "Tie",
+            keyboardShortcuts: "快捷键"
         },
         openConfigFile: "打开配置文件进行编辑",
         advance: "高级",
