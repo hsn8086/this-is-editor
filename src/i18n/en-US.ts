@@ -71,6 +71,10 @@ export default {
                         action: "C++: Formatter Action",
                     }
                 }
+            },
+            keyboardShortcuts: {
+                runJudge: "Run Judge",
+                formatCode: "Format Code",
             }
         }
     },

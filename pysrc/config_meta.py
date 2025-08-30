@@ -181,6 +181,16 @@ config_meta = {
             },
         },
     },
+    "keyboardShortcuts": {
+        "runJudge": {
+            "display": "Run Judge",
+            "i18n": "setting.keyboardShortcuts.runJudge",
+        },
+        "formatCode": {
+            "display": "Format Code",
+            "i18n": "setting.keyboardShortcuts.formatCode",
+        },
+    },
 }
 config = {
     "editor": {
@@ -241,5 +251,9 @@ config = {
                 "action": "reload",
             },
         },
+    },
+    "keyboardShortcuts": {
+        "runJudge": "F5",
+        "formatCode": "Ctrl-L Alt-L",
     },
 }

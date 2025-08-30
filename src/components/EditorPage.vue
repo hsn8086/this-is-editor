@@ -43,10 +43,12 @@ import { getLanguageProvider } from "@/lsp";
 import { debounce } from "lodash";
 import CheckerPanel from "./CheckerPanel.vue";
 import { useHotkey } from "vuetify";
-import { config } from "ace-code";
 
 const checkPanel: Ref<InstanceType<typeof CheckerPanel> | null> = ref(null);
-useHotkey("f5", () => {
+
+const runJudgeKey = ref<string | undefined>();
+
+useHotkey(runJudgeKey, async () => {
   checkPanel.value?.runAll();
 });
 
@@ -93,6 +95,7 @@ async function initEditor() {
     });
 
     const ModeConstructor = modeMP.get(initialCode.type);
+
     if (ModeConstructor) {
       editor.session.setMode(new ModeConstructor());
     } else {
@@ -103,9 +106,11 @@ async function initEditor() {
     }
 
     const languageProvider = await getLanguageProvider();
+    const keyboardCFG = config.keyboardShortcuts;
+    runJudgeKey.value = keyboardCFG.runJudge.value as string;
     let menuKb = new HashHandler([
       {
-        bindKey: "Ctrl-Alt-L",
+        bindKey: keyboardCFG.formatCode.value as string,
         name: "format", //todo: fix it
         exec: function () {
           console.log("Format command triggered");
@@ -114,22 +119,23 @@ async function initEditor() {
         },
       },
       {
-        bindKey: "f5",
+        bindKey: keyboardCFG.runJudge.value as string,
         name: "runJudge",
         exec: function () {
           checkPanel.value?.runAll();
         },
       }, // todo
     ]);
-
-    event.addCommandKeyListener(window, function (e, hashId, keyCode) {
-      let keyString = keyUtil.keyCodeToString(keyCode);
-      let command = menuKb.findKeyCommand(hashId, keyString);
-      if (command) {
-        command.exec!();
-        e.preventDefault();
-      }
-    });
+    editor.setKeyboardHandler(menuKb);
+    // event.addCommandKeyListener(window, function (e, hashId, keyCode) {
+    //   console.log("Key pressed:", hashId, keyCode);
+    //   let keyString = keyUtil.keyCodeToString(keyCode);
+    //   let command = menuKb.findKeyCommand(hashId, keyString);
+    //   if (command) {
+    //     command.exec!();
+    //     e.preventDefault();
+    //   }
+    // });
 
     const sessionConfig: SessionLspConfig = {
       filePath: (await py.get_opened_file())!,

@@ -83,7 +83,11 @@ export interface Config {
                 action: ConfigItem;
             } & { [key: string]: any };
         } & { [key: string]: any };
-    } ;
+    };
+    keyboardShortcuts: {
+        runJudge: ConfigItem;
+        formatCode: ConfigItem;
+    } & { [key: string]: any };
 }
 
 export interface TestCase {

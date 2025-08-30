@@ -70,6 +70,10 @@ export default {
                         action: "C++: 格式化后操作",
                     }
                 }
+            },
+            keyboardShortcuts: {
+                runJudge: "运行评测",
+                formatCode: "格式化代码",
             }
         }
     },

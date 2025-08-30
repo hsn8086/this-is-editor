@@ -33,8 +33,8 @@ async function initLSP() {
     let serverDataList: LanguageClientConfig[] = [];
     for (const lang of langs) {
         if (lang.lsp.length <= 0) continue;
-        let mods_lst = lang.alias
-        mods_lst.push(lang.id);
+        let mods_lst = [lang.id, ...lang.alias];
+
         serverDataList.push({
             module: () => import("ace-linters/build/language-client"),
             modes: mods_lst.join("|"),
