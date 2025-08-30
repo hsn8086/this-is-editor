@@ -28,6 +28,7 @@ import { ref, onMounted, onUnmounted } from "vue";
 import { VAceEditor } from "vue3-ace-editor";
 import { Mode as python } from "ace-code/src/mode/python";
 import { Mode as cpp } from "ace-code/src/mode/c_cpp";
+import { Mode as json } from "ace-code/src/mode/json";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/mode-c_cpp";
 import event from "ace-code/src/lib/event";
@@ -55,6 +56,7 @@ useHotkey(runJudgeKey, async () => {
 const modeMP: Map<string, new () => SyntaxMode> = new Map([
   ["python", python],
   ["cpp", cpp],
+  ["json", json],
 ]);
 
 const py: API = window.pywebview.api;
@@ -150,6 +152,7 @@ async function format() {
   const codeType = (await py.get_code()).type;
   if (!config.programmingLanguages[codeType]) return;
   const formater_cfg = config.programmingLanguages[codeType].formatter;
+  if (!formater_cfg) return;
   if (!formater_cfg.active.value) return;
 
   const formatted = await py.format_code();

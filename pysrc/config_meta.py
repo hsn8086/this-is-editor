@@ -251,6 +251,11 @@ config = {
                 "action": "reload",
             },
         },
+        "json": {
+            "alias": ["json", "JSON", "Json", "json5", "JSON5", "Json5"],
+            "fileExtensions": [".json", ".json5"],
+            "display": "JSON File",
+        },
     },
     "keyboardShortcuts": {
         "runJudge": "F5",

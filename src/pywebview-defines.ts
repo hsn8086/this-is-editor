@@ -68,16 +68,16 @@ export interface Config {
     };
     programmingLanguages: {
         [key: string]: {
-            executable: ConfigItem;
-            compileCommand: ConfigItem;
-            runCommand: ConfigItem;
+            executable?: ConfigItem;
+            compileCommand?: ConfigItem;
+            runCommand?: ConfigItem;
             fileExtensions: ConfigItem;
             alias: ConfigItem;
             display: string;
-            lsp: {
+            lsp?: {
                 command: ConfigItem;
             } & { [key: string]: any };
-            formatter: {
+            formatter?: {
                 active: ConfigItem;
                 command: ConfigItem;
                 action: ConfigItem;
