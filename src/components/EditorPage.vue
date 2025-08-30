@@ -59,7 +59,7 @@ const py: API = window.pywebview.api;
 const content = ref();
 const lang = ref("text");
 
-let editorOptions: Partial<Ace.EditorOptions> & { [key: string]: any }
+let editorOptions: Partial<Ace.EditorOptions> & { [key: string]: any };
 
 const theme = useTheme(); // useTheme must be called in setup
 let editor: Ace.Editor | undefined;
@@ -119,7 +119,7 @@ async function initEditor() {
         },
       }, // todo
     ]);
-    
+
     event.addCommandKeyListener(window, function (e, hashId, keyCode) {
       let keyString = keyUtil.keyCodeToString(keyCode);
       let command = menuKb.findKeyCommand(hashId, keyString);
@@ -136,9 +136,10 @@ async function initEditor() {
     languageProvider.registerEditor(editor, sessionConfig);
   }
 }
-
+let lastModified = 0;
 function onCodeChange(newCode: string) {
   debounce(py.save_code, 500)(newCode);
+  lastModified = performance.now();
 }
 onMounted(() => {
   initEditor();
@@ -149,5 +150,27 @@ onUnmounted(async () => {
   languageProvider.closeDocument(editor.getSession());
   editor.session.setValue(""); // Clear the editor content on unmount
   console.log("Editor unmounted and content cleared.");
+});
+window.addEventListener("file-changed", async (event) => {
+  const text = (event as CustomEvent).detail;
+
+  if (
+    editor &&
+    editor.getValue() &&
+    text !== editor.getValue() &&
+    performance.now() - lastModified > 1000
+  ) {
+    console.log("File changed externally, updating editor content.");
+
+    const cursorPos = editor.getCursorPosition();
+    editor.setValue(text, -1); // -1 to prevent moving cursor to start
+
+    // ensure the column is within the line length
+    const lineLen = editor.session.getLine(cursorPos.row)?.length ?? 0;
+    const safeColumn = Math.min(cursorPos.column, lineLen);
+
+    editor.moveCursorToPosition({ row: cursorPos.row, column: safeColumn });
+    editor.scrollToLine(cursorPos.row, true, true, function () {});
+  }
 });
 </script>

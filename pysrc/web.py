@@ -1,9 +1,9 @@
 import asyncio
 import json
 import platform
+import shlex
 import subprocess
 import sys
-import shlex
 import threading
 import time
 from pathlib import Path

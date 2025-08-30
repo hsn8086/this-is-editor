@@ -10,6 +10,7 @@ from .config_meta import config_meta
 from .judge import cph2testcase, task_checker
 from .langs import lang_compilers, lang_runners, langs, type_mp
 from .user_data import user_data_dir
+from .watch import Watcher
 
 
 class Api:
@@ -28,6 +29,27 @@ class Api:
             self.opened_file.unlink()
 
         self.opened_testcase_file = None
+        self.watcher: Watcher = Watcher(self._callback)
+
+    def _callback(self, path: str) -> None:
+        logger.debug(f"File modified: {path}")
+
+        if Path(path) != self.opened_file:
+            return
+        if not Path(path).exists():
+            return
+        from .web import window
+
+        j = json.dumps({"detail": self.opened_file.read_text(encoding="utf-8")})
+        window.run_js(
+            f"""window.dispatchEvent(
+                    new CustomEvent(
+                        'file-changed', {j}
+                    )
+                );
+            """
+        )
+        logger.debug("File change event dispatched.")
 
     def focus(self) -> None:
         # window.show()
@@ -192,7 +214,7 @@ class Api:
             p.touch()
         if not p.is_file():
             raise ValueError(f"{p} is not a file.")
-
+        self.watcher.create_observer(str(p.parent))
         self.opened_file = p
         self.opened_testcase_file = None
         self.bin_path = None
