@@ -1,7 +1,12 @@
+"""Language configuration and runner/compilation utilities for TIE.
+
+Defines language metadata, runners, compilers, and type mapping.
+"""
+
 from functools import partial
 
 from .config import config
-from .runner import compile, run
+from .runner import run, run_compilation
 
 lang_config = config["programmingLanguages"]
 lang_cfg_python = lang_config["python"]
@@ -29,7 +34,7 @@ lang_runners = {
 }
 lang_compilers = {
     key: partial(
-        compile,
+        run_compilation,
         cmd=value.get("compileCommand", ""),
         executable=value.get("executable", ""),
     )

@@ -1,3 +1,5 @@
+"""Sets up user-specific directories for data."""
+
 from pathlib import Path
 
 import appdirs

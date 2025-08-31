@@ -1,3 +1,9 @@
+"""Contains configuration metadata and default settings for the editor.
+
+- `config_meta`: Metadata for configuration options.
+- `config`: Default configuration values for the editor.
+"""
+
 config_meta = {
     "editor": {
         "aceMain": {

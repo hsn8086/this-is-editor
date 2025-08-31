@@ -1,7 +1,7 @@
 [project]
 name = "this-is-editor"
-version = "1.0.4"
-description = "Add your description here"
+version = "1.0.5"
+description = "TIE (This Is Editor) is a cross-platform competitive programming editor built with Python and Vue.js. "
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -19,22 +19,70 @@ dependencies = [
 
 
 [dependency-groups]
-dev = [
-    "nuitka>=2.7.12",
-    "pip-licenses>=5.0.0",
-    "python-lsp-server>=1.13.1",
-]
+dev = ["nuitka>=2.7.12", "pip-licenses>=5.0.0", "python-lsp-server>=1.13.1"]
 
-[tool.ruff]
-# 启用 pyright 的类型检查规则
+[tool.ruff.lint]
 select = [
-    "E",   # 启用 pycodestyle 错误
-    "F",   # 启用 Pyflakes
-    "I",   # 启用 isort
-    "UP",  # 启用 pyupgrade
-    "PYI", # 启用 flake8-pyi
-    "RUF", # 启用 Ruff 特定规则
-    "ANN", # 启用 flake8-annotations (类型注解)
-    # "TCH", # 启用 flake8-type-checking
+    "E",     # pycodestyle 
+    "ERA",   # eradicate
+    "FAST",  # fastapi-specific rules
+    "F",     # pyflakes
+    "I",     # isort
+    "RUF",   # Ruff itself
+    "UP",    # pyupgrade
+    "ANN",   # flake8-annotations
+    "PYI",   # flake8-pyi
+    "B",     # flake8-bugbear
+    "ANN",   # flake8-annotations 
+    "TCH",   # flake8-type-checking
+    "SIM",   # flake8-simplify
+    "ASYNC", # flake8-async
+    "S",     # flake8-bandit   
+    "BLE",   # flake8-blind-except
+    "FBT",   # flake8-boolean-trap
+    "A",     # flake8-builtins
+    "COM",   # flake8-commas
+    "C4",    # flake8-comprehensions
+    "DTZ",   # flake8-datetimez
+    "T10",   # flake8-debugger
+    "EM",    # flake8-errmsg
+    "EXE",   # flake8-executable
+    "FA",    # flake8-future-annotations
+    "INT",   # flake8-gettext
+    "ISC",   # flake8-implicit-str-concat
+    "ICN",   # flake8-import-conventions
+    "LOG",   # flake8-logging
+    "G",     # flake8-logging-format
+    "PIE",   # flake8-pie
+    "T20",   # flake8-print
+    "PYI",   # flake8-pyi
+    "PT",    # flake8-pytest-style
+    "Q",     # flake8-quotes
+    "RSE",   # flake8-raise
+    "RET",   # flake8-return
+    "SLF",   # flake8-self
+    "SLOT",  # flake8-slots
+    "TID",   # flake8-tidy-imports
+    "TD",    # flake8-todo
+    "TC",    # flake8-type-checking
+    "ARG",   # flake8-unused-arguments
+    "PTH",   # flake8-use-pathlib
+    "FLY",   # flynt
+    "C90",   # mccabe
+    "PERF",  # perflint
+    "D",     # pydocstyle
+    "F",     # pyflakes
+    "PGH",   # pygrep-hooks
+    "PL",    # pylint
+    "UP",    # pyupgrade
+    "FURB",  # refurb
+    "TRY",   # tryceratops
 ]
-target-version = "py313"
+ignore = [
+    "S602",    # S602 `subprocess` call with `shell=True` identified, security issue
+    "S603",    # S603 `subprocess` call without `shell=True` identified, security issue
+    "TD003",
+    "PLR0913", # Too many arguments
+]
+[tool.ruff]
+target-version = "py312"

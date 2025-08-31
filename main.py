@@ -1,3 +1,8 @@
+"""Main module for the 'this-is-editor' project.
+
+Handles the core functionality and entry point for the application.
+"""
+
 import argparse
 import logging
 import platform
@@ -23,7 +28,25 @@ logger.add(
 
 
 class InterceptHandler(logging.Handler):
+    """Logging handler to intercept standard logging and redirect to Loguru."""
+
     def emit(self, record: logging.LogRecord) -> None:
+        """Emit a log record.
+
+        This method is used to handle a log record and forward it to the Loguru logger.
+        It determines the appropriate Loguru logging level,
+        identifies the caller's frame,
+        and logs the message with the specified depth and exception information.
+
+        Args:
+            record (logging.LogRecord): The log record to be emitted, containing all
+                the information about the logging event.
+
+        Raises:
+            ValueError: If the Loguru level corresponding to the record's level name
+                does not exist.
+
+        """
         # Get corresponding Loguru level if it exists
         try:
             level = logger.level(record.levelname).name
@@ -37,7 +60,8 @@ class InterceptHandler(logging.Handler):
             depth += 1
 
         logger.opt(depth=depth, exception=record.exc_info).log(
-            level, record.getMessage()
+            level,
+            record.getMessage(),
         )
 
 

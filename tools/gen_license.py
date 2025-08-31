@@ -1,6 +1,12 @@
+"""Generates license files for Python and Node.js dependencies.
+
+It uses `pip-licenses` for Python packages and `license-checker` for Node.js packages
+to extract license information and save it in a structured format.
+"""
+
 import json
-import subprocess
 import shlex
+import subprocess
 from pathlib import Path
 
 licenses_p = Path("LICENSES")
@@ -14,25 +20,23 @@ text = subprocess.check_output(
 data = json.loads(text)
 for pkg in data:
     name = pkg["Name"]
-    license = pkg["License"]
 
     (licenses_p / f"{name}").write_text(f"{pkg['LicenseFile']}")
 
 # npm
 text = subprocess.check_output(
-    shlex.join(["npx", "license-checker", "--json"]), shell=True
+    shlex.join(["npx", "license-checker", "--json"]), shell=True,
 )
 data = json.loads(text)
 for key, pkg in data.items():
     name = key.rsplit("@", 1)[0].replace("/", "_")
-    # print(name, pkg)
     if "licenseFile" in pkg:
         license_p = Path(pkg["licenseFile"])
 
         (licenses_p / f"{name}").write_text(
-            license_p.read_text(encoding="utf-8"), encoding="utf-8"
+            license_p.read_text(encoding="utf-8"), encoding="utf-8",
         )
     else:
         (licenses_p / f"{name}").write_text(
-            f"License: {pkg.get('licenses', 'Unknown')}"
+            f"License: {pkg.get('licenses', 'Unknown')}",
         )

@@ -1,3 +1,9 @@
+"""Provides utilities for running code.
+
+It includes functions for executing Python and C/C++ code,
+monitoring memory and time usage, and handling compilation errors.
+"""
+
 import platform
 import shlex
 import subprocess
@@ -9,13 +15,23 @@ from typing import NamedTuple, TypeVar
 import psutil
 from loguru import logger
 
-from .utils import format as fmt
+from .utils import formatter as fmt
 
 T = TypeVar("T")
 
 
 # Define namedtuples
 class Result(NamedTuple):
+    """Represents the result of running code.
+
+    Attributes:
+        output (str): The output from the process.
+        type (str): The result type (e.g., 'success', 'timeout').
+        time (float): Execution time in seconds.
+        memory (float): Peak memory usage in MB.
+
+    """
+
     output: str
     type: str
     time: float
@@ -23,6 +39,17 @@ class Result(NamedTuple):
 
 
 class RunProcessResult(NamedTuple):
+    """Represents the result of running a process.
+
+    Attributes:
+        stdout (str): Standard output.
+        stderr (str): Standard error.
+        time (float): Execution time in seconds.
+        memory (float): Peak memory usage in MB.
+        status (str | None): Status string or None.
+
+    """
+
     stdout: str
     stderr: str
     time: float
@@ -31,22 +58,20 @@ class RunProcessResult(NamedTuple):
 
 
 def try_r(func: Callable[..., T], *args: any, default: T = None) -> T:
-    """
-    Executes a function with the provided arguments and returns its result.
-    If an exception occurs during execution, returns a default value.
-    Args:
-        func (Callable[..., T]): The function to execute.
-        *args (any): Arguments to pass to the function.
-        default (T, optional): The value to return if an exception occurs.
-            Defaults to None.
-    Returns:
-        T: The result of the function execution,
-            or the default value if an exception occurs.
-    """
+    """Execute a function and return its result, or a default value on exception.
 
+    Args:
+        func (Callable[..., T]): Function to execute.
+        *args (any): Arguments for the function.
+        default (T, optional): Value to return if an exception occurs.
+
+    Returns:
+        T: Result of the function or the default value.
+
+    """
     try:
         return func(*args)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return default
 
 
@@ -58,6 +83,19 @@ def run_p(
     timeout: int = 1,
     cwd: Path | None = None,
 ) -> RunProcessResult:
+    """Run a process with resource limits and capture output.
+
+    Args:
+        cmd (list): Command to execute.
+        inp (str): Input to pass to stdin.
+        memory_limit (int): Memory limit in MB.
+        timeout (int): Timeout in seconds.
+        cwd (Path | None): Working directory.
+
+    Returns:
+        RunProcessResult: Result of the process execution.
+
+    """
     logger.debug(f"Run command: {' '.join(cmd)}")
     logger.debug(f"Working directory: {cwd}")
     with psutil.Popen(
@@ -70,7 +108,7 @@ def run_p(
         creationflags=subprocess.CREATE_NO_WINDOW
         if platform.system() == "Windows"
         else 0,
-        shell=True if platform.system() == "Windows" else False,
+        shell=platform.system() == "Windows",
     ) as p:  # set stdin to -1 for input and stdout stderr to -1 for capture output.
         try:
             child_process = p
@@ -135,6 +173,20 @@ def run(
     memory_limit: int = 256,
     timeout: int = 1,
 ) -> Result:
+    """Run code with the given command and input.
+
+    Args:
+        file_path (Path): Path to the code file.
+        inp (str): Input for the code.
+        cmd (list | str): Command to execute.
+        executable (str): Executable name.
+        memory_limit (int): Memory limit in MB.
+        timeout (int): Timeout in seconds.
+
+    Returns:
+        Result: Result of code execution.
+
+    """
     if isinstance(cmd, str):
         cmd = shlex.split(cmd)
     r_cmd = []
@@ -155,13 +207,16 @@ def run(
         time = rst.time
         memory = rst.memory
         status = rst.status
-    except Exception as e:
+    except (subprocess.CalledProcessError, OSError) as e:
         return Result(output=str(e), type="runtime_error", time=0, memory=0)
     if status == "timeout":
         return Result(output=stdout, type="timeout", time=time, memory=memory)
-    elif status == "memory_limit_exceeded":
+    if status == "memory_limit_exceeded":
         return Result(
-            output=stdout, type="memory_limit_exceeded", time=time, memory=memory
+            output=stdout,
+            type="memory_limit_exceeded",
+            time=time,
+            memory=memory,
         )
 
     if stderr:
@@ -169,7 +224,18 @@ def run(
     return Result(output=stdout, type="success", time=time, memory=memory)
 
 
-def compile(file_path: Path, cmd: list | str, *, executable: str = "") -> None:
+def run_compilation(file_path: Path, cmd: list | str, *, executable: str = "") -> None:
+    """Compile code using the given command.
+
+    Args:
+        file_path (Path): Path to the code file.
+        cmd (list | str): Compilation command.
+        executable (str): Executable name.
+
+    Raises:
+        RuntimeError: If compilation fails.
+
+    """
     if isinstance(cmd, str):
         cmd = shlex.split(cmd)
     r_cmd = []
@@ -186,15 +252,30 @@ def compile(file_path: Path, cmd: list | str, *, executable: str = "") -> None:
             creationflags=subprocess.CREATE_NO_WINDOW
             if platform.system() == "Windows"
             else 0,
-            shell=True if platform.system() == "Windows" else False,
+            shell=platform.system() == "Windows",
         )
     except subprocess.CalledProcessError as e:
         raise RuntimeError(e.stderr) from e
 
 
 def compile_c_cpp_builder(
-    std: str = "c++", lang: str = "c++", flags: str = ["-O2", "-Wall", "-Wextra"]
+    std: str = "c++",
+    lang: str = "c++",
+    flags: list | None = None,
 ) -> Callable[[Path], Path]:
+    """Return a function to compile C/C++ files with given options.
+
+    Args:
+        std (str): Standard version (e.g., 'c++').
+        lang (str): Language ('c++' or 'c').
+        flags (list[str] | None): Compilation flags.
+
+    Returns:
+        Callable[[Path], Path]: Compilation function.
+
+    """
+    if flags is None:
+        flags = ["-O2", "-Wall", "-Wextra"]
     def compile_func(file_path: Path) -> Path:
         output_file = file_path.stem + ".out"
         cmd = [
@@ -213,7 +294,7 @@ def compile_c_cpp_builder(
             cwd=Path(file_path).parent,
             creationflags=subprocess.CREATE_NO_WINDOW
             if platform.system() == "Windows"
-            else 0,
+            else 0, check=True,
         )
         if result.returncode != 0:
             raise RuntimeError(result.stderr)
@@ -228,6 +309,18 @@ def run_c_cpp(
     memory_limit: int = 256,
     timeout: int = 1,
 ) -> Result:
+    """Run a compiled C/C++ binary.
+
+    Args:
+        file_path (Path): Path to the binary.
+        inp (str): Input for the program.
+        memory_limit (int): Memory limit in MB.
+        timeout (int): Timeout in seconds.
+
+    Returns:
+        Result: Result of execution.
+
+    """
     cmd = ["{file_name}"]
     return run(
         file_path,
@@ -246,5 +339,18 @@ def run_python(
     *,
     version: str = "python3.10",
 ) -> Result:
+    """Run a Python file with the specified version.
+
+    Args:
+        file_path (Path): Path to the Python file.
+        inp (str): Input for the program.
+        memory_limit (int): Memory limit in MB.
+        timeout (int): Timeout in seconds.
+        version (str): Python interpreter version.
+
+    Returns:
+        Result: Result of execution.
+
+    """
     cmd = [version, "{file_name}"]
     return run(file_path, inp, cmd, memory_limit=memory_limit, timeout=timeout)
