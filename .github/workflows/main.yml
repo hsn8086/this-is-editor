@@ -13,8 +13,8 @@ jobs:
   create-release:
     name: create-release
     runs-on: ubuntu-latest
-    # outputs:
-    #   upload_url: ${{ steps.create_release.outputs.upload_url }}
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
       # 检出代码
       - name: Checkout code
@@ -52,10 +52,7 @@ jobs:
           release_name: Release v${{ steps.version.outputs.version }}.${{ github.run_number }}
           draft: false
           prerelease: ${{ contains(github.ref, 'dev') }}
-      
-      # Set output
-      - name: Set output
-        run: echo "upload_url=${{ steps.create_release.outputs.upload_url }}" >> $GITHUB_OUTPUT
+
   build:
     name: Build
     needs: create-release
