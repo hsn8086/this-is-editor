@@ -10,11 +10,58 @@ on:
       - dev
 
 jobs:
+  create-release:
+    name: create-release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      # 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 从 pyproject.toml 获取版本号（支持 Poetry 的 tool.poetry.version 或 PEP621 的 project.version）
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Read version from pyproject.toml
+        id: version
+        run: |
+          python - <<'PY'
+          import tomllib, pathlib, os, sys
+          p = pathlib.Path('pyproject.toml')
+          if not p.exists():
+              print('pyproject.toml not found', file=sys.stderr); sys.exit(1)
+          data = tomllib.loads(p.read_text())
+          version = data.get('tool',{}).get('poetry',{}).get('version') or data.get('project',{}).get('version')
+          if not version:
+              print('version not found in pyproject.toml', file=sys.stderr); sys.exit(1)
+          print(f"version={version}", file=open(os.environ['GITHUB_OUTPUT'],'a'))
+          PY
+
+      # 发布到 GitHub Releases
+      - id: create_release
+        name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.version }}.${{ github.run_number }}
+          release_name: Release v${{ steps.version.outputs.version }}.${{ github.run_number }}
+          draft: false
+          prerelease: ${{ contains(github.ref, 'dev') }}
+
   build:
     name: Build
+    needs: create-release
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        debug: [debug, nodebug] # 定义调试模式矩阵
+        # mode: [onefile, dir] # 定义构建模式矩阵
+        mode: [onefile]
         os: [ubuntu-latest, windows-latest] # 定义操作系统矩阵
 
     steps:
@@ -55,100 +102,27 @@ jobs:
       # 构建项目
       - name: Build project
         run: |
-          yarn build
+          yarn build-${{ matrix.debug }}-${{ matrix.mode }}
 
       # 压缩构建产物
       - name: Compress build artifacts
         shell: bash
         run: |
-          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-            tar -czf main.tar.gz .dist/main.dist
-          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            powershell Compress-Archive -Path .dist\main.dist\* -DestinationPath main.zip
+          if [[ "${{ matrix.mode }}" == "dir" ]]; then
+            if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+              tar -czf main.tar.gz -C .dist/main.dist .
+            elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+              pwsh -Command "Compress-Archive -Path .dist/main.dist -DestinationPath main.zip"
+            fi
           fi
 
-      # 上传构建产物
+      # 上传构建产物到 GitHub Release
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts-${{ matrix.os }}
-          path: |
-            main.tar.gz
-            main.zip
-
-  release:
-    name: Release
-    needs: build # 依赖于 build 任务
-    runs-on: ubuntu-latest
-
-    steps:
-      # 检出代码
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      # 下载 Linux 构建产物
-      - name: Download Linux build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts-ubuntu-latest
-
-      # 下载 Windows 构建产物
-      - name: Download Windows build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts-windows-latest
-
-      # 从 pyproject.toml 获取版本号（支持 Poetry 的 tool.poetry.version 或 PEP621 的 project.version）
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.12
-
-      - name: Read version from pyproject.toml
-        id: version
-        run: |
-          python - <<'PY'
-          import tomllib, pathlib, os, sys
-          p = pathlib.Path('pyproject.toml')
-          if not p.exists():
-              print('pyproject.toml not found', file=sys.stderr); sys.exit(1)
-          data = tomllib.loads(p.read_text())
-          version = data.get('tool',{}).get('poetry',{}).get('version') or data.get('project',{}).get('version')
-          if not version:
-              print('version not found in pyproject.toml', file=sys.stderr); sys.exit(1)
-          print(f"version={version}", file=open(os.environ['GITHUB_OUTPUT'],'a'))
-          PY
-
-      # 发布到 GitHub Releases
-      - id: create_release
-        name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.version.outputs.version }}.${{ github.run_number }}
-          release_name: Release v${{ steps.version.outputs.version }}.${{ github.run_number }}
-          draft: false
-          prerelease: ${{ contains(github.ref, 'dev') }}
-
-      # 上传 Linux 构建产物到 Release
-      - name: Upload Linux Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: main.tar.gz
-          asset_name: tie-linux.tar.gz
-          asset_content_type: application/octet-stream
-
-      # 上传 Windows 构建产物到 Release
-      - name: Upload Windows Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: main.zip
-          asset_name: tie-windows.zip
-          asset_content_type: application/octet-stream
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ matrix.os == 'windows-latest' && matrix.mode == 'onefile' && '.dist/main.exe' || matrix.os == 'windows-latest' && matrix.mode == 'dir' && 'main.zip' || matrix.os == 'ubuntu-latest' && matrix.mode == 'onefile' && '.dist/main.bin' || matrix.os == 'ubuntu-latest' && matrix.mode == 'dir' && 'main.tar.gz' }}
+          asset_name: ThisIsEditor-${{ matrix.os }}-${{ matrix.debug}}.${{ matrix.os == 'windows-latest' && matrix.mode == 'onefile' && 'exe' || matrix.os == 'ubuntu-latest' && matrix.mode == 'onefile' && 'bin' || matrix.mode == 'dir' && matrix.os == 'windows-latest' && 'zip' || matrix.mode == 'dir' && matrix.os == 'ubuntu-latest' && 'tar.gz' }}
+          asset_content_type: ${{ matrix.os == 'windows-latest' && matrix.mode == 'onefile' && 'application/vnd.microsoft.portable-executable' || matrix.os == 'windows-latest' && matrix.mode == 'dir' && 'application/zip' || matrix.os == 'ubuntu-latest' && matrix.mode == 'onefile' && 'application/octet-stream' || matrix.os == 'ubuntu-latest' && matrix.mode == 'dir' && 'application/gzip' }}
