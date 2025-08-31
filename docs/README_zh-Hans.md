@@ -32,7 +32,6 @@ TIE 是 "This Is Editor" 的缩写，是一个基于 **Python** 和 **Vue.js** �
 - SPJ 支持
 - 更多语言支持
 - 配置界面优化
-- 格式化支持
 - 快速创建文件
 - 代码模板/代码片段
 - 比赛模式
@@ -51,7 +50,7 @@ ___
    - **`python-lsp-server`**：提升 Python 代码补全和错误提示体验。
    - **`clangd`**：提升 C++ 代码补全和错误提示体验。
    - **`Competitive Companion`** 浏览器插件：快速载入测试数据。
-
+   - **`clang-format` `ruff`** 等代码格式化工具：一键格式化代码。
 💡 **推荐字体**：为了获得更好的代码显示效果，建议使用 [Maple Mono](https://github.com/subframe7536/Maple-font) 字体。
 
 ---

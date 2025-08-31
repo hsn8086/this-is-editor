@@ -57,6 +57,7 @@ TIE stands for "This Is Editor," a cross-platform competitive programming code e
    - **`python-lsp-server`**: Enhance Python code completion and error hinting.
    - **`clangd`**: Enhance C++ code completion and error hinting.
    - **`Competitive Companion`** browser plugin: Quickly load test data.
+   - **`clang-format` `ruff`**: Format your code with a single command.
 
 💡 **Recommended Font**: For better code display, it is recommended to use the [Maple Mono](https://github.com/subframe7536/Maple-font) font.
 
