@@ -82,7 +82,7 @@ async function createProblem(lang: string) {
   };
 
   const workingDir = await py.get_cwd();
-  const name = prob.name.replace(/\s+/g, "_") + "." + langMp[lang];
+  const name = prob.name.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "")+"." + langMp[lang];
   const fp = await py.path_join(workingDir, name);
   await py.path_touch(fp);
   await py.set_opened_file(fp);

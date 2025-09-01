@@ -116,6 +116,9 @@ class Api:
         """
         pinned_p = user_data_dir / "pinned.txt"
         pinned_files = []
+        if not pinned_p.exists():
+            user_data_dir.mkdir(parents=True, exist_ok=True)
+            pinned_p.touch()
         for line in pinned_p.read_text(encoding="utf-8").splitlines():
             stripped_line = line.strip()
             if stripped_line:
