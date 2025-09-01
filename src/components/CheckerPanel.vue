@@ -291,7 +291,21 @@ async function runAll() {
 
   // Compile the test cases before running
   runStatus.value = 1; // Compiling...
-  await py.compile();
+  try {
+    const rst = await py.compile();
+    if (rst !== "success") throw new Error(rst);
+  } catch (error) {
+    console.error("Compilation failed:", error);
+    for (const task of tasks.value) {
+      task.status = "failed";
+      task.output = "<COMPILATION ERROR>";
+      changeExpend(task, true);
+    }
+    runStatus.value = 0;
+    runAllBtnDisabled.value = false;
+    runAllBtnIcon.value = "mdi-play";
+    return;
+  }
 
   // Run tasks with a limit on concurrent executions
   runStatus.value = 2; // Running...
@@ -336,12 +350,9 @@ async function runAll() {
   await Promise.all(executing);
 
   // Update the "Run All" button state after execution
-  runStatus.value = 3; // All Done
+  runStatus.value = 0;
   runAllBtnDisabled.value = false;
   runAllBtnIcon.value = "mdi-play";
-  setTimeout(() => {
-    runStatus.value = 0; // Reset to Run All
-  }, 2000);
 }
 
 // Create a new task with default values

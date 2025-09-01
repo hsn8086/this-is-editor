@@ -326,7 +326,7 @@ class Api:
         compile_func = lang_compilers[lang_info]
         try:
             compile_func(self.opened_file)
-        except (FileNotFoundError, ValueError) as e:
+        except (FileNotFoundError, ValueError, RuntimeError) as e:
             return str(e)
         return "success"
 
