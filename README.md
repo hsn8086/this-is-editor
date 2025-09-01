@@ -61,6 +61,21 @@ TIE stands for "This Is Editor," a cross-platform competitive programming code e
 
 💡 **Recommended Font**: For better code display, it is recommended to use the [Maple Mono](https://github.com/subframe7536/Maple-font) font.
 
+### python-lsp-server
+Please install Python and pip first. Using pipx is recommended.
+```bash
+pip install pipx
+pipx ensurepath
+pipx install python-lsp-server
+```
+
+### clangd
+See the official installation guide: https://clangd.llvm.org/installation.html
+
+### Competitive Companion
+- Chrome: https://chromewebstore.google.com/detail/competitive-companion/cjnmckjndlpiamhfimnnjmnckgghkjbl
+- Firefox: https://addons.mozilla.org/en-US/firefox/addon/competitive-companion/
+
 ---
 
 ## ⚙️ Build

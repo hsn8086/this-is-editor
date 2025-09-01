@@ -53,6 +53,22 @@ ___
    - **`clang-format` `ruff`** 等代码格式化工具：一键格式化代码。
 💡 **推荐字体**：为了获得更好的代码显示效果，建议使用 [Maple Mono](https://github.com/subframe7536/Maple-font) 字体。
 
+### python-lsp-server
+请先安装`python`环境以及`pip`。推荐使用`pipx`。
+```bash
+pip install pipx
+pipx ensurepath
+pipx install python-lsp-server
+```
+
+### clangd
+请参考[官方安装文档](https://clangd.llvm.org/installation.html)。
+
+### Competitive Companion
+- [Chrome](https://chromewebstore.google.com/detail/competitive-companion/cjnmckjndlpiamhfimnnjmnckgghkjbl)
+- [Firefox](https://addons.mozilla.org/en-US/firefox/addon/competitive-companion/)
+
+
 ---
 
 ## ⚙️ 编译
