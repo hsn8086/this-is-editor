@@ -69,7 +69,7 @@ logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
 
 server, thread, server_recver, thread_recver = start_server()
 if platform.system() == "Windows":
-    webview.start(window, gui="qt", debug=args.debug)
+    webview.start(window, gui="edgechromium", debug=args.debug)
 else:
     webview.start(window, debug=args.debug)
 

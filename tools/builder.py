@@ -41,10 +41,9 @@ if args.mode == "onefile":
 if args.debug:
     base.append("--lto=no")
     base.append("--debugger")
-# qt
-if platform.system() == "Windows":
-    base.append("--enable-plugin=pyqt6")
-    base.append("--enable-plugin=pywebview")
+base.append("--enable-plugin=pywebview")
+
+
 base.extend(
     [
         "--output-dir=.dist",
