@@ -66,6 +66,22 @@ export default {
         copied: "Copied to clipboard!",
         pasteFromClipboard: "Paste from Clipboard",
         pasteError: "Failed to paste tasks! Please ensure the clipboard contains valid task data."
+    },
+    editorPage: {
+        menu: {
+            cut: "Cut",
+            copy: "Copy",
+            paste: "Paste",
+            undo: "Undo",
+            redo: "Redo",
+            selectAll: "Select All",
+            formatCode: "Format Code",
+            find: "Find",
+            replace: "Replace",
+            goToLine: "Go to Line...",
+            toggleComment: "Toggle Comment",
+            runCode: "Run Code",
+        },
     }
 }
 

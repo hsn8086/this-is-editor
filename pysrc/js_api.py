@@ -69,7 +69,7 @@ class Api:
             """,
         )
         logger.debug("File change event dispatched.")
-
+    
     def get_pinned_files(self) -> list[str]:
         """Get a list of pinned files with metadata.
 

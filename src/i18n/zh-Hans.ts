@@ -66,6 +66,22 @@ export default {
         copied: "已复制到剪贴板！",
         pasteFromClipboard: "从剪贴板粘贴",
         pasteError: "粘贴任务失败！请确保剪贴板内容为有效的任务数据。"
+    },
+    editorPage: {
+        menu: {
+            cut: "剪切",
+            copy: "复制",
+            paste: "粘贴",
+            undo: "撤销",
+            redo: "重做",
+            selectAll: "全选",
+            formatCode: "格式化代码",
+            find: "查找",
+            replace: "替换",
+            goToLine: "跳转到行...",
+            toggleComment: "切换注释",
+            runCode: "运行代码",
+        },
     }
 }
 

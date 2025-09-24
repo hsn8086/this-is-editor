@@ -1,14 +1,44 @@
 <template>
   <CheckerPanel ref="checkPanel" v-if="enableCheckerPanel" />
-  <v-ace-editor
-    ref="aceRef"
-    v-model:value="content"
-    theme="github"
-    style="height: 100%"
-    :readonly="false"
-    :options="editorOptions"
-    :lang="lang"
-  />
+  <v-menu
+    :style="{ left: menuX + 'px', top: menuY + 'px' }"
+    v-model="showMenu"
+    absolute
+    offset-y
+  >
+    <template #activator="{ props }">
+      <v-ace-editor
+        ref="aceRef"
+        v-model:value="content"
+        theme="github"
+        style="height: 100%"
+        :readonly="false"
+        :options="editorOptions"
+        :lang="lang"
+        @contextmenu.prevent="onContextMenu"
+      />
+    </template>
+    <v-list nav density="compact">
+      <div v-for="(group, gIndex) in menuList" :key="gIndex">
+        <v-divider v-if="gIndex > 0" class="my-1" />
+        <v-list-item
+          v-for="(item, index) in group"
+          :key="index"
+          dense
+          @click="
+            () => {
+              item.action();
+              showMenu = false;
+            }
+          "
+        >
+          <v-list-item-title>{{
+            t("editorPage.menu." + item.title)
+          }}</v-list-item-title>
+        </v-list-item>
+      </div>
+    </v-list>
+  </v-menu>
 </template>
 
 <script lang="ts" setup>
@@ -36,6 +66,8 @@ import { getLanguageProvider } from "@/lsp";
 import { debounce } from "lodash";
 import CheckerPanel from "./CheckerPanel.vue";
 import { useHotkey } from "vuetify";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 
 const checkPanel: Ref<InstanceType<typeof CheckerPanel> | null> = ref(null);
 
@@ -114,6 +146,16 @@ async function initEditor() {
           // languageProvider.format();
           format();
         },
+      },
+      {
+        bindKey: "Ctrl-X",
+        name: "cut",
+        exec: cut,
+      },
+      {
+        bindKey: "Ctrl-C",
+        name: "copy",
+        exec: copy,
       },
       {
         bindKey: keyboardCFG.runJudge.value as string,
@@ -199,5 +241,64 @@ function resetCode(text: any) {
 
   editor.moveCursorToPosition({ row: cursorPos.row, column: safeColumn });
   editor.scrollToLine(cursorPos.row, true, true, function () {});
+}
+
+function cut() {
+  if (!editor) return;
+  let content;
+  if ((content = window.getSelection()?.toString())) {
+    navigator.clipboard.writeText(content);
+    editor.session.remove(editor.getSelectionRange());
+  } else {
+    const p = editor.getCursorPosition();
+    if ((content = editor.session.getLine(p?.row || 0))) {
+      navigator.clipboard.writeText(content.trim());
+      editor.session.removeFullLines(p?.row || 0, p?.row || 0);
+      editor.moveCursorTo(p?.row || 0, 0);
+    }
+  }
+}
+function copy() {
+  if (!editor) return;
+  let content;
+  if ((content = window.getSelection()?.toString())) {
+    navigator.clipboard.writeText(content);
+  } else {
+    const p = editor.getCursorPosition();
+    if ((content = editor.session.getLine(p?.row || 0))) {
+      navigator.clipboard.writeText(content.trim());
+    }
+  }
+}
+const menuList = [
+  [
+    {
+      title: "cut",
+      action: cut,
+    },
+    {
+      title: "copy",
+      action: copy,
+    },
+    {
+      title: "paste",
+      action: async () => {
+        editor?.insert(await navigator.clipboard.readText());
+      },
+    },
+  ],
+  [{ title: "formatCode", action: format }],
+];
+
+const menuX = ref(0);
+const menuY = ref(0);
+const showMenu = ref(false);
+function onContextMenu(e: MouseEvent) {
+  if (!editor) return;
+
+  e.preventDefault();
+  menuX.value = e.clientX;
+  menuY.value = e.clientY;
+  showMenu.value = true;
 }
 </script>
