@@ -27,6 +27,8 @@
     "ace-builds": "^1.43.2",
     "ace-code": "^1.43.2",
     "ace-linters": "^1.8.3",
+    "highlight.js": "^11.11.1",
+    "html2canvas": "^1.4.1",
     "lodash": "^4.17.21",
     "pinia": "^3.0.3",
     "vue": "^3.5.17",
@@ -36,6 +38,7 @@
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.0",
+    "@types/html2canvas": "^1.0.0",
     "@types/lodash": "^4.17.20",
     "@types/node": "^22.9.0",
     "@vitejs/plugin-vue": "^5.2.3",

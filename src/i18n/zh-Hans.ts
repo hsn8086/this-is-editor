@@ -80,7 +80,8 @@ export default {
             replace: "替换",
             goToLine: "跳转到行...",
             toggleComment: "切换注释",
-            runCode: "运行代码",
+            runTest: "运行测试",
+            screenshot: "截图",
         },
     }
 }

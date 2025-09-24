@@ -80,7 +80,8 @@ export default {
             replace: "Replace",
             goToLine: "Go to Line...",
             toggleComment: "Toggle Comment",
-            runCode: "Run Code",
+            runTest: "Run Test",
+            screenshot: "Take Screenshot",
         },
     }
 }

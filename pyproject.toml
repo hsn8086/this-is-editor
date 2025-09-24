@@ -19,6 +19,9 @@ dependencies = [
 
 [dependency-groups]
 dev = ["nuitka>=2.7.12", "pip-licenses>=5.0.0", "python-lsp-server>=1.13.1"]
+gtk = [
+    "pywebview[gtk]>=6.0",
+]
 
 [tool.ruff.lint]
 select = [
