@@ -385,6 +385,12 @@ const menuList = [
     {
       title: "copy",
       action: copy,
+    },{
+      title: "copyAll",
+      action: () => {
+        if (!editor) return;
+        navigator.clipboard.writeText(editor.getValue());
+      },
     },
     {
       title: "paste",

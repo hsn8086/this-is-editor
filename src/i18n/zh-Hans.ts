@@ -71,6 +71,7 @@ export default {
         menu: {
             cut: "剪切",
             copy: "复制",
+            copyAll: "复制全部",
             paste: "粘贴",
             undo: "撤销",
             redo: "重做",

@@ -71,6 +71,7 @@ export default {
         menu: {
             cut: "Cut",
             copy: "Copy",
+            copyAll: "Copy All",
             paste: "Paste",
             undo: "Undo",
             redo: "Redo",
