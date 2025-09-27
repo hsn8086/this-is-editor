@@ -11,6 +11,7 @@ dependencies = [
     "psutil>=7.0.0",
     "pydantic>=2.11.7",
     "pywebview>=6.0",
+    "pywebview[gtk]>=6.0 ; sys_platform == 'linux'",
     "uvicorn>=0.35.0",
     "watchfiles>=1.1.0",
     "websockets>=15.0.1",
@@ -19,9 +20,7 @@ dependencies = [
 
 [dependency-groups]
 dev = ["nuitka>=2.7.12", "pip-licenses>=5.0.0", "python-lsp-server>=1.13.1"]
-gtk = [
-    "pywebview[gtk]>=6.0",
-]
+gtk = []
 
 [tool.ruff.lint]
 select = [
