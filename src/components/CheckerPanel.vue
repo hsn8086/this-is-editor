@@ -370,6 +370,7 @@ async function createTask() {
     status: "null",
     expend: true,
   });
+  changRail(false);
 }
 
 // Save the current state of tasks to the backend
