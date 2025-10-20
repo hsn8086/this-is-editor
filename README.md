@@ -44,7 +44,6 @@ TIE stands for "This Is Editor," a cross-platform competitive programming code e
 - Code templates/snippets
 - Contest mode
 - Problem time and space limit modification
-- One-click code copying
 - gdb
 - Automatic environment setup
 
