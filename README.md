@@ -29,6 +29,8 @@ TIE stands for "This Is Editor," a cross-platform competitive programming code e
 - **📂 Quick Test Data Loading**: Integrates with the `Competitive Companion` plugin to directly import test data, compatible with the `CPH` data format. It also supports importing test data from the clipboard, automatically filling the first empty slot or fetching the full problem statement to improve efficiency.
 - **🔍 Code Completion and Error Hints**: Integrates the Language Server Protocol (LSP) to provide intelligent code completion and real-time error hints.
 - **🛠️ Highly Configurable**: Allows customization of compile and run commands to meet various contest requirements.
+- **🖼️ Code Visualization**: Built-in code visualization features to help analyze algorithm behavior and execution flow.
+- **🌐 i18n Support**: Full internationalization support — UI and documentation available in multiple languages.
 
 ---
 
@@ -42,10 +44,9 @@ TIE stands for "This Is Editor," a cross-platform competitive programming code e
 - Code templates/snippets
 - Contest mode
 - Problem time and space limit modification
-- Code visualization
 - One-click code copying
-- i18n
 - gdb
+- Automatic environment setup
 
 ---
 

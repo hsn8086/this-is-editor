@@ -2,7 +2,7 @@
   <v-app>
     <router-view />
     <!-- center -->
-    <v-dialog v-model="probCreateDialog" width="auto" persistent>
+    <v-dialog v-model="probCreateDialog" width="auto">
       <!-- Sel prog lang -->
 
       <v-card max-width="600" min-width="400">
@@ -82,7 +82,10 @@ async function createProblem(lang: string) {
   };
 
   const workingDir = await py.get_cwd();
-  const name = prob.name.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "")+"." + langMp[lang];
+  const name =
+    prob.name.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "") +
+    "." +
+    langMp[lang];
   const fp = await py.path_join(workingDir, name);
   await py.path_touch(fp);
   await py.set_opened_file(fp);
