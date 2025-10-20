@@ -19,8 +19,13 @@
           <v-icon> {{ runAllBtnIcon }} </v-icon>
         </template>
       </v-list-item>
-
-      <v-divider />
+      <v-progress-linear
+        v-model="progressOfTasks"
+        height="1"
+        v-if="runStatus === 2"
+        stream
+      />
+      <v-divider v-else />
 
       <v-slide-y-transition class="py-0" tag="v-list" group>
         <div v-for="item in tasks" :key="item.id">
@@ -180,6 +185,7 @@ import { useI18n } from "vue-i18n";
 const { t } = useI18n();
 
 import { ref } from "vue";
+import { ceil, round } from "lodash";
 
 defineExpose({
   runAll,
@@ -275,12 +281,17 @@ const runAllBtnDisabled = ref(false);
 const runAllBtnIcon = ref("mdi-play");
 const runStatus = ref(0); // 0: Run All, 1: Compiling..., 2: Running..., 3: All Done
 
+const completedOfTasks = ref(0);
+const progressOfTasks = computed(() => {
+  if (tasks.value.length === 0) return 0;
+  return ceil((completedOfTasks.value / tasks.value.length) * 100);
+});
 // Execute all tasks sequentially or in parallel based on the thread limit
 async function runAll() {
   runAllBtnDisabled.value = true;
   runAllBtnIcon.value = "mdi-pause";
   const limit = judgeThread;
-
+  completedOfTasks.value = 0;
   // Reset task statuses and outputs
   for (const task of tasks.value) {
     task.status = "pending";
@@ -344,7 +355,13 @@ async function runAll() {
         console.error(`Task ${task.id} encountered an error: ${error.message}`);
       })
       .finally(() => {
+        completedOfTasks.value += 1;
         executing.delete(promise);
+        console.log(
+          `Task ${task.id} completed. ${completedOfTasks.value}/${
+            tasks.value.length
+          } ${(completedOfTasks.value / tasks.value.length) * 100}`
+        );
       });
   }
   await Promise.all(executing);
