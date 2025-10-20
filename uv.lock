@@ -634,7 +634,6 @@ dev = [
     { name = "pip-licenses", specifier = ">=5.0.0" },
     { name = "python-lsp-server", specifier = ">=1.13.1" },
 ]
-gtk = []
 
 [[package]]
 name = "tomli"
