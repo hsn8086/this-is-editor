@@ -436,6 +436,64 @@ async function CopyAll() {
 // Paste tasks from the clipboard, handling both JSON and plain text formats
 const pasteErrorDisplay = ref(false);
 async function PasteFromClipboard() {
+  console.log(navigator.clipboard);
+  const items = await navigator.clipboard.read();
+  if (items.length && items[0].types.includes("text/uri-list")) {
+    const files = (await navigator.clipboard.readText())
+      .split("\n")
+      .filter((f) => f.trim().length > 0);
+    interface FileType {
+      in: string;
+      out: string;
+    }
+    let fileRec: Record<string, FileType> = {};
+    for (const file of files) {
+      console.log(`Opening file from clipboard: ${file}`);
+      console.log(await py.path_get_text(file));
+      const info = await py.path_get_info(file);
+      if (fileRec[info.stem] === undefined)
+        fileRec[info.stem] = { in: "", out: "" };
+
+      if (info.name.endsWith(".in")) {
+        fileRec[info.stem].in = await py.path_get_text(file);
+      } else if (info.name.endsWith(".out") || info.name.endsWith(".ans")) {
+        fileRec[info.stem].out = await py.path_get_text(file);
+      }
+    }
+    for (const key in fileRec) {
+      const firstEmptyTask = tasks.value.find(
+        (task) => !task.input || !task.answer
+      );
+
+      if (firstEmptyTask) {
+        if (!firstEmptyTask.input) {
+          firstEmptyTask.input = fileRec[key].in;
+        }
+        if (!firstEmptyTask.answer) {
+          firstEmptyTask.answer = fileRec[key].out;
+        }
+      } else {
+        const newId = tasks.value.length
+          ? Math.max(...tasks.value.map((t) => t.id)) + 1
+          : 1;
+        tasks.value.push({
+          id: newId,
+          input: fileRec[key].in,
+          output: "",
+          answer: fileRec[key].out,
+          disabledInput: false,
+          disabledAnswer: false,
+          status: "null",
+          expend: true,
+        });
+      }
+    }
+    await saveTasks();
+    // await loadTestcase();
+    await changRail(false);
+
+    return;
+  }
   const text = await navigator.clipboard.readText();
   try {
     const parsed = JSON.parse(text);
