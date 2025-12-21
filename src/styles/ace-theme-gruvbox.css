@@ -37,7 +37,7 @@
   color: #b8bb26;
 } */
 
-.ace-tie .ace_variable.ace_language {
+.ace-tie .ace_variable{
   color: #8ec07c;
 }
 .ace-tie .ace_storage.ace_type {
