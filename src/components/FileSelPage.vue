@@ -120,7 +120,36 @@
     </v-dialog>
     <v-card class="base" density="compact" nav style="min-height: 100%">
       <v-list>
-        <v-virtual-scroll :items="ls">
+                <v-menu v-for="file in ls">
+          <template #activator="{ props }">
+            <v-list-item
+              :key="folder + '/' + file.name"
+              @click.left="fileClick(file)"
+              @click.right.prevent.stop="props.onClick"
+              :prepend-icon="file.is_dir ? 'mdi-folder' : 'mdi-file'"
+              :title="file.name"
+              :value="file.name"
+            >
+              <div style="display: flex; gap: 4px">
+                <v-chip label size="x-small">{{ file.type }}</v-chip>
+                <v-chip label size="x-small">{{ file.last_modified }}</v-chip>
+              </div>
+            </v-list-item>
+          </template>
+          <v-list>
+            <v-list-item
+              @click="
+                async () => {
+                  await py.add_pinned_file(file.path);
+                  await fetchPinnedFiles();
+                }
+              "
+            >
+              <v-list-item-title>Pin</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+        <!-- <v-virtual-scroll :items="ls">
           <template v-slot="{ item }">
             <v-menu>
               <template #activator="{ props }">
@@ -154,7 +183,7 @@
               </v-list>
             </v-menu>
           </template>
-        </v-virtual-scroll>
+        </v-virtual-scroll> -->
       </v-list>
     </v-card>
   </div>
