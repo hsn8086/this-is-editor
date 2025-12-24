@@ -19,8 +19,13 @@
           <v-icon> {{ runAllBtnIcon }} </v-icon>
         </template>
       </v-list-item>
-
-      <v-divider />
+      <v-progress-linear
+        v-model="progressOfTasks"
+        height="1"
+        v-if="runStatus === 2"
+        stream
+      />
+      <v-divider v-else />
 
       <v-slide-y-transition class="py-0" tag="v-list" group>
         <div v-for="item in tasks" :key="item.id">
@@ -180,6 +185,7 @@ import { useI18n } from "vue-i18n";
 const { t } = useI18n();
 
 import { ref } from "vue";
+import { ceil, round } from "lodash";
 
 defineExpose({
   runAll,
@@ -275,12 +281,17 @@ const runAllBtnDisabled = ref(false);
 const runAllBtnIcon = ref("mdi-play");
 const runStatus = ref(0); // 0: Run All, 1: Compiling..., 2: Running..., 3: All Done
 
+const completedOfTasks = ref(0);
+const progressOfTasks = computed(() => {
+  if (tasks.value.length === 0) return 0;
+  return ceil((completedOfTasks.value / tasks.value.length) * 100);
+});
 // Execute all tasks sequentially or in parallel based on the thread limit
 async function runAll() {
   runAllBtnDisabled.value = true;
   runAllBtnIcon.value = "mdi-pause";
   const limit = judgeThread;
-
+  completedOfTasks.value = 0;
   // Reset task statuses and outputs
   for (const task of tasks.value) {
     task.status = "pending";
@@ -344,7 +355,13 @@ async function runAll() {
         console.error(`Task ${task.id} encountered an error: ${error.message}`);
       })
       .finally(() => {
+        completedOfTasks.value += 1;
         executing.delete(promise);
+        console.log(
+          `Task ${task.id} completed. ${completedOfTasks.value}/${
+            tasks.value.length
+          } ${(completedOfTasks.value / tasks.value.length) * 100}`
+        );
       });
   }
   await Promise.all(executing);
@@ -370,6 +387,7 @@ async function createTask() {
     status: "null",
     expend: true,
   });
+  changRail(false);
 }
 
 // Save the current state of tasks to the backend
@@ -418,6 +436,64 @@ async function CopyAll() {
 // Paste tasks from the clipboard, handling both JSON and plain text formats
 const pasteErrorDisplay = ref(false);
 async function PasteFromClipboard() {
+  console.log(navigator.clipboard);
+  const items = await navigator.clipboard.read();
+  if (items.length && items[0].types.includes("text/uri-list")) {
+    const files = (await navigator.clipboard.readText())
+      .split("\n")
+      .filter((f) => f.trim().length > 0);
+    interface FileType {
+      in: string;
+      out: string;
+    }
+    let fileRec: Record<string, FileType> = {};
+    for (const file of files) {
+      console.log(`Opening file from clipboard: ${file}`);
+      console.log(await py.path_get_text(file));
+      const info = await py.path_get_info(file);
+      if (fileRec[info.stem] === undefined)
+        fileRec[info.stem] = { in: "", out: "" };
+
+      if (info.name.endsWith(".in")) {
+        fileRec[info.stem].in = await py.path_get_text(file);
+      } else if (info.name.endsWith(".out") || info.name.endsWith(".ans")) {
+        fileRec[info.stem].out = await py.path_get_text(file);
+      }
+    }
+    for (const key in fileRec) {
+      const firstEmptyTask = tasks.value.find(
+        (task) => !task.input || !task.answer
+      );
+
+      if (firstEmptyTask) {
+        if (!firstEmptyTask.input) {
+          firstEmptyTask.input = fileRec[key].in;
+        }
+        if (!firstEmptyTask.answer) {
+          firstEmptyTask.answer = fileRec[key].out;
+        }
+      } else {
+        const newId = tasks.value.length
+          ? Math.max(...tasks.value.map((t) => t.id)) + 1
+          : 1;
+        tasks.value.push({
+          id: newId,
+          input: fileRec[key].in,
+          output: "",
+          answer: fileRec[key].out,
+          disabledInput: false,
+          disabledAnswer: false,
+          status: "null",
+          expend: true,
+        });
+      }
+    }
+    await saveTasks();
+    // await loadTestcase();
+    await changRail(false);
+
+    return;
+  }
   const text = await navigator.clipboard.readText();
   try {
     const parsed = JSON.parse(text);

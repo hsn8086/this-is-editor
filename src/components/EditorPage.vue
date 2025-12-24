@@ -265,7 +265,8 @@ function cut() {
 function copy() {
   if (!editor) return;
   let content;
-  if ((content = window.getSelection()?.toString())) {
+  
+  if ((content = editor.getSelectedText())) {
     navigator.clipboard.writeText(content);
   } else {
     const p = editor.getCursorPosition();

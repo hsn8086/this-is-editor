@@ -171,3 +171,8 @@
   border: none !important;
   cursor: pointer !important;
 }
+
+.ace-tie .ace_cursor {
+  transition: transform 0.1s ease !important;
+  will-change: transform, top, left !important;
+}

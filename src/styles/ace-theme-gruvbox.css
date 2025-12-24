@@ -12,7 +12,7 @@
 }
 
 .ace-tie .ace_marker-layer .ace_selection {
-  background: rgba(250, 166, 26, 0.14); 
+  background: rgba(250, 166, 26, 0.14);
 }
 
 .ace-tie.ace_multiselect .ace_selection.ace_start {
@@ -20,60 +20,67 @@
 }
 
 .ace-tie .ace_keyword {
-  color: #fabd2f; 
+  color: #f7768e;
   font-weight: 600;
 }
 
 .ace-tie .ace_comment {
   font-style: italic;
-  color: #928374; 
+  color: #565f89;
 }
 
 .ace-tie .ace-statement {
   color: #fe8019;
 }
 
-.ace-tie .ace_variable {
+/* .ace-tie .ace_variable {
   color: #b8bb26;
-}
+} */
 
-.ace-tie .ace_variable.ace_language {
+.ace-tie .ace_variable{
   color: #8ec07c;
 }
-
-.ace-tie .ace_constant {
-  color: #d3869b; 
+.ace-tie .ace_storage.ace_type {
+  color: #bb9af7;
 }
-
-.ace-tie .ace_constant.ace_language {
-  color: #d3869b; 
+.ace-tie .ace_constant {
+  color: #d3869b;
 }
 
 .ace-tie .ace_constant.ace_numeric {
-  color: #d75f5f; 
+  color: #d75f5f;
 }
 
 .ace-tie .ace_string {
-  color: #b8bb26; 
+  color: #9ece6a;
+}
+.ace-tie .ace_constant.ace_numeric .ace-tie .ace_constant.ace_language {
+  color: #ff9e64;
+}
+.ace-tie .ace_identifier {
+  color: #c0caf5;
+}
+.ace-tie .ace_entity.ace_name.ace_function{
+  color: #7aa2f7;
+  font-weight: 500; /* exp */
 }
 
-.ace-tie .ace_support {
-  color: #83a598; 
+/* .ace-tie .ace_support {
+  color: #83a598;
 }
-
+*/
 .ace-tie .ace_support.ace_function {
-  color: #83a598; 
+  color: #2ac3ed;
   font-weight: 500;
-}
+} 
 
 .ace-tie .ace_storage {
-  color: #fe8019; 
+  color: #fe8019;
 }
-
 
 .ace-tie .ace_keyword.ace_operator,
 .ace-tie .ace_punctuation.ace_operator {
-  color: #83a598; 
+  color: #bb9af7;
 }
 
 .ace-tie .ace_marker-layer .ace_active-line {

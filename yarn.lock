@@ -28,6 +28,13 @@
   resolved "https://registry.npmjs.org/@babel/helper-validator-identifier/-/helper-validator-identifier-7.27.1.tgz"
   integrity sha512-D2hP9eA+Sqx1kBZgzxZh0y1trbuU+JoDkiEwqhQ36nodYqJwyEIhPSdMNd7lOm/4io72luTPWH20Yda0xOuUow==
 
+"@babel/parser@^7.23.5":
+  version "7.28.4"
+  resolved "https://registry.yarnpkg.com/@babel/parser/-/parser-7.28.4.tgz#da25d4643532890932cc03f7705fe19637e03fa8"
+  integrity sha512-yZbBqeM6TkpP9du/I2pUZnJsRMGGvOuIrhjzC1AwHwW+6he4mni6Bp/m8ijn0iOuZuPI2BfkCoSRunpyjnrQKg==
+  dependencies:
+    "@babel/types" "^7.28.4"
+
 "@babel/parser@^7.28.0", "@babel/parser@^7.28.3":
   version "7.28.3"
   resolved "https://registry.npmjs.org/@babel/parser/-/parser-7.28.3.tgz"
@@ -39,6 +46,14 @@
   version "7.28.2"
   resolved "https://registry.npmjs.org/@babel/types/-/types-7.28.2.tgz"
   integrity sha512-ruv7Ae4J5dUYULmeXw1gmb7rYRz57OWCPM57pHojnLq/3Z1CK2lNSLTCVjxVk1F/TZHwOZZrOWi0ur95BbLxNQ==
+  dependencies:
+    "@babel/helper-string-parser" "^7.27.1"
+    "@babel/helper-validator-identifier" "^7.27.1"
+
+"@babel/types@^7.28.4":
+  version "7.28.4"
+  resolved "https://registry.yarnpkg.com/@babel/types/-/types-7.28.4.tgz#0a4e618f4c60a7cd6c11cb2d48060e4dbe38ac3a"
+  integrity sha512-bkFqkLhh3pMBUQQkpVgWDWq/lqzc2678eUyDlTBhRqhCHFguYYGM0Efga7tYk4TogG/3x0EEl66/OQ+WGbWB/Q==
   dependencies:
     "@babel/helper-string-parser" "^7.27.1"
     "@babel/helper-validator-identifier" "^7.27.1"
@@ -689,6 +704,13 @@
   resolved "https://registry.npmjs.org/@types/normalize-package-data/-/normalize-package-data-2.4.4.tgz"
   integrity sha512-37i+OaWTh9qeK4LSHPsyRC7NahnGotNuZvjLSgcPzblpHB3rrCJxAOgI5gCdKm7coonsaX1Of0ILiTcnZjbfxA==
 
+"@types/splitpanes@^2.2.6":
+  version "2.2.6"
+  resolved "https://registry.yarnpkg.com/@types/splitpanes/-/splitpanes-2.2.6.tgz#4f3509f12557549239131b053ca2ababeaa45668"
+  integrity sha512-3dV5sO1Ht74iER4jJU03mreL3f+Q2h47ZqXS6Sfbqc6hkCvsDrX1GA0NbYWRdNvZemPyTDzUoApWKeoGbALwkQ==
+  dependencies:
+    vue "^2.0.0"
+
 "@typescript-eslint/eslint-plugin@8.40.0":
   version "8.40.0"
   resolved "https://registry.npmjs.org/@typescript-eslint/eslint-plugin/-/eslint-plugin-8.40.0.tgz"
@@ -939,6 +961,17 @@
   dependencies:
     "@vue/compiler-core" "3.5.18"
     "@vue/shared" "3.5.18"
+
+"@vue/compiler-sfc@2.7.16":
+  version "2.7.16"
+  resolved "https://registry.yarnpkg.com/@vue/compiler-sfc/-/compiler-sfc-2.7.16.tgz#ff81711a0fac9c68683d8bb00b63f857de77dc83"
+  integrity sha512-KWhJ9k5nXuNtygPU7+t1rX6baZeqOYLEforUPjgNDBnLicfHCoi48H87Q8XyLZOrNNsmhuwKqtpDQWjEFe6Ekg==
+  dependencies:
+    "@babel/parser" "^7.23.5"
+    postcss "^8.4.14"
+    source-map "^0.6.1"
+  optionalDependencies:
+    prettier "^1.18.2 || ^2.0.0"
 
 "@vue/compiler-sfc@3.5.18", "@vue/compiler-sfc@^3.5.17":
   version "3.5.18"
@@ -1398,7 +1431,7 @@ cssesc@^3.0.0:
   resolved "https://registry.npmjs.org/cssesc/-/cssesc-3.0.0.tgz"
   integrity sha512-/Tb/JcjK111nNScGob5MNtsntNM1aCNUDipB/TkwZFhyDrrE47SOx/18wF2bbjgc3ZzCSKW1T5nt5EbFoAz/Vg==
 
-csstype@^3.1.3:
+csstype@^3.1.0, csstype@^3.1.3:
   version "3.1.3"
   resolved "https://registry.npmjs.org/csstype/-/csstype-3.1.3.tgz"
   integrity sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw==
@@ -2629,7 +2662,7 @@ postcss-selector-parser@^6.0.15:
     cssesc "^3.0.0"
     util-deprecate "^1.0.2"
 
-postcss@^8.5.3, postcss@^8.5.6:
+postcss@^8.4.14, postcss@^8.5.3, postcss@^8.5.6:
   version "8.5.6"
   resolved "https://registry.npmjs.org/postcss/-/postcss-8.5.6.tgz"
   integrity sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==
@@ -2642,6 +2675,11 @@ prelude-ls@^1.2.1:
   version "1.2.1"
   resolved "https://registry.npmjs.org/prelude-ls/-/prelude-ls-1.2.1.tgz"
   integrity sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==
+
+"prettier@^1.18.2 || ^2.0.0":
+  version "2.8.8"
+  resolved "https://registry.yarnpkg.com/prettier/-/prettier-2.8.8.tgz#e8c5d7e98a4305ffe3de2e1fc4aca1a71c28b1da"
+  integrity sha512-tdN8qQGvNjw4CHbY+XXk0JgCXn9QiF21a55rBe5LJAU+kDyC4WQn4+awm2Xfk2lQMk5fKup9XgzTZtGkjBdP9Q==
 
 punycode@^2.1.0:
   version "2.3.1"
@@ -3030,6 +3068,11 @@ slide@~1.1.3:
   resolved "https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.1.tgz"
   integrity sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==
 
+source-map@^0.6.1:
+  version "0.6.1"
+  resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.6.1.tgz#74722af32e9614e9c287a8d0bbde48b5e2f1a263"
+  integrity sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==
+
 spdx-compare@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/spdx-compare/-/spdx-compare-1.0.0.tgz#2c55f117362078d7409e6d7b08ce70a857cd3ed7"
@@ -3083,6 +3126,11 @@ speakingurl@^14.0.1:
   version "14.0.1"
   resolved "https://registry.npmjs.org/speakingurl/-/speakingurl-14.0.1.tgz"
   integrity sha512-1POYv7uv2gXoyGFpBCmpDVSNV74IfsWlDW216UPjbWufNf+bSU6GdbDsxdcxtfwb4xlI3yxzOTKClUosxARYrQ==
+
+splitpanes@^4.0.4:
+  version "4.0.4"
+  resolved "https://registry.yarnpkg.com/splitpanes/-/splitpanes-4.0.4.tgz#e8dfbbef4e93853ea336dc43f903e20946b42c1d"
+  integrity sha512-RbysugZhjbCw5fgplvk3hOXr41stahQDtZhHVkhnnJI6H4wlGDhM2kIpbehy7v92duy9GnMa8zIhHigIV1TWtg==
 
 stable-hash-x@^0.2.0:
   version "0.2.0"
@@ -3523,6 +3571,14 @@ vue3-ace-editor@^2.2.4:
   integrity sha512-FZkEyfpbH068BwjhMyNROxfEI8135Sc+x8ouxkMdCNkuj/Tuw83VP/gStFQqZHqljyX9/VfMTCdTqtOnJZGN8g==
   dependencies:
     resize-observer-polyfill "^1.5.1"
+
+vue@^2.0.0:
+  version "2.7.16"
+  resolved "https://registry.yarnpkg.com/vue/-/vue-2.7.16.tgz#98c60de9def99c0e3da8dae59b304ead43b967c9"
+  integrity sha512-4gCtFXaAA3zYZdTp5s4Hl2sozuySsgz4jy1EnpBHNfpMa9dK1ZCG7viqBPCwXtmgc8nHqUsAu3G4gtmXkkY3Sw==
+  dependencies:
+    "@vue/compiler-sfc" "2.7.16"
+    csstype "^3.1.0"
 
 vue@^3.5.17:
   version "3.5.18"

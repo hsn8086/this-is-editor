@@ -75,6 +75,28 @@ def try_r(func: Callable[..., T], *args: any, default: T = None) -> T:
         return default
 
 
+def get_time(child_process: psutil.Popen) -> float:
+    """Get the elapsed time of a child process.
+
+    Args:
+        child_process (psutil.Process): The child process to monitor.
+
+    Returns:
+        float: The elapsed time in seconds.
+
+    """
+    try:
+        cpu_times = child_process.cpu_times()
+        return (
+            cpu_times.children_user
+            + cpu_times.children_system
+            + cpu_times.user
+            + cpu_times.system
+        )
+    except psutil.NoSuchProcess:
+        return 0.0
+
+
 def run_p(
     cmd: list,
     inp: str = "",
@@ -118,14 +140,15 @@ def run_p(
             p.stdin.flush()
             p.stdin.close()
             max_memory = 0
-
+            cpu_time = 0
             while True:
                 state = p.poll()  # check process state
+                cpu_time = max(get_time(child_process), cpu_time)
                 if state is not None:
                     return RunProcessResult(
                         stdout=p.stdout.read(),
                         stderr=p.stderr.read(),
-                        time=time.monotonic() - start,
+                        time=cpu_time,
                         memory=max_memory,
                         status=None,
                     )
@@ -141,18 +164,20 @@ def run_p(
                         status="memory_limit_exceeded",
                         stdout=p.stdout.read(),
                         stderr=p.stderr.read(),
-                        time=time.monotonic() - start,
+                        time=cpu_time,
                         memory=max_memory,
                     )
 
-                if time.monotonic() - start >= timeout:  # check timeout
+                if (
+                    time.monotonic() - start >= timeout * 2 or cpu_time >= timeout
+                ):  # check timeout
                     try_r(child_process.kill)
                     try_r(child_process.terminate)
                     return RunProcessResult(
                         status="timeout",
                         stdout=p.stdout.read(),
                         stderr=p.stderr.read(),
-                        time=time.monotonic() - start,
+                        time=cpu_time,
                         memory=max_memory,
                     )
         finally:
@@ -276,6 +301,7 @@ def compile_c_cpp_builder(
     """
     if flags is None:
         flags = ["-O2", "-Wall", "-Wextra"]
+
     def compile_func(file_path: Path) -> Path:
         output_file = file_path.stem + ".out"
         cmd = [
@@ -294,7 +320,8 @@ def compile_c_cpp_builder(
             cwd=Path(file_path).parent,
             creationflags=subprocess.CREATE_NO_WINDOW
             if platform.system() == "Windows"
-            else 0, check=True,
+            else 0,
+            check=True,
         )
         if result.returncode != 0:
             raise RuntimeError(result.stderr)
