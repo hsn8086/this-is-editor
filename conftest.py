@@ -23,6 +23,7 @@ def temp_dir(tmp_path: Path) -> Path:
 
     Returns:
         Path to a temporary directory.
+
     """
     return tmp_path
 
@@ -33,6 +34,7 @@ def sample_code() -> str:
 
     Returns:
         A simple Python code string.
+
     """
     return "print('Hello, World!')"
 
@@ -43,6 +45,7 @@ def sample_config() -> dict[str, object]:
 
     Returns:
         A dictionary representing a minimal configuration.
+
     """
     return {
         "editor": {
