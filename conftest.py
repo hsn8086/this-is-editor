@@ -8,10 +8,10 @@ from pathlib import Path
 
 import pytest
 
-# Add pysrc to the Python path
-pysrc_path = Path(__file__).parent.parent / "pysrc"
-if str(pysrc_path) not in sys.path:
-    sys.path.insert(0, str(pysrc_path))
+# Add project root to the Python path
+project_root = Path(__file__).parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 
 @pytest.fixture
