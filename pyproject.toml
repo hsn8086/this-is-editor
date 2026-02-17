@@ -103,3 +103,14 @@ ignore = [
 [tool.ruff]
 target-version = "py312"
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101",   # Assert statements allowed in tests
+    "SIM117", # Multiple context managers allowed in tests for clarity
+    "PLR2004", # Magic value comparisons common in tests
+    "ARG001",  # Unused arguments in mock functions
+    "TRY003",  # Exception message outside class allowed in tests
+    "EM101",   # String literal in exception allowed in tests
+    "PLC0415", # Import inside function allowed in tests for lazy loading
+]
+
