@@ -27,7 +27,14 @@ include-package-data = true
 "this_is_editor" = ["web/*"]
 
 [dependency-groups]
-dev = ["nuitka>=2.7.12", "pip-licenses>=5.0.0", "python-lsp-server>=1.13.1"]
+dev = [
+    "nuitka>=2.7.12",
+    "pip-licenses>=5.0.0",
+    "python-lsp-server>=1.13.1",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.25.2",
+    "pytest-cov>=6.1.1",
+]
 
 
 [tool.ruff.lint]
