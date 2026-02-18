@@ -291,6 +291,59 @@ class TestApiPathOperations:
         assert result["status"] == "success"
         assert new_dir.exists()
 
+    def test_path_save_text_success(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test path_save_text writes content to file."""
+        test_file = tmp_path / "test.txt"
+        test_content = "Hello, World!"
+
+        api_with_tmp_path.path_save_text(str(test_file), test_content)
+
+        assert test_file.read_text(encoding="utf-8") == test_content
+
+    def test_path_save_text_raises_on_directory(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test path_save_text raises ValueError for directory path."""
+        test_dir = tmp_path / "testdir"
+        test_dir.mkdir()
+
+        with pytest.raises(ValueError, match="is a directory"):
+            api_with_tmp_path.path_save_text(str(test_dir), "some text")
+
+    def test_path_save_text_creates_parent_directories(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test path_save_text creates parent directories if they don't exist."""
+        test_file = tmp_path / "subdir1" / "subdir2" / "test.txt"
+        test_content = "nested content"
+
+        api_with_tmp_path.path_save_text(str(test_file), test_content)
+
+        assert test_file.exists()
+        assert test_file.read_text(encoding="utf-8") == test_content
+
+    def test_path_save_text_overwrites_existing(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test path_save_text overwrites existing file."""
+        test_file = tmp_path / "existing.txt"
+        test_file.write_text("old content", encoding="utf-8")
+        new_content = "new content"
+
+        api_with_tmp_path.path_save_text(str(test_file), new_content)
+
+        assert test_file.read_text(encoding="utf-8") == new_content
+
 
 class TestApiCompile:
     """Tests for compile method."""

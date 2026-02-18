@@ -69,7 +69,7 @@ class Api:
             """,
         )
         logger.debug("File change event dispatched.")
-    
+
     def get_pinned_files(self) -> list[str]:
         """Get a list of pinned files with metadata.
 
@@ -653,6 +653,25 @@ class Api:
             msg = f"{p} is not a file."
             raise ValueError(msg)
         return p.read_text(encoding="utf-8")
+
+    def path_save_text(self, path: str, text: str) -> None:
+        """Save text content to a file.
+
+        Args:
+            path (str): Path to the file.
+            text (str): Text content to save.
+
+        Raises:
+            ValueError: If path points to a directory.
+
+        """
+        p = Path(path)
+        if p.is_dir():
+            msg = f"{p} is a directory, not a file."
+            raise ValueError(msg)
+        if not p.parent.exists():
+            p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(text, encoding="utf-8")
 
     def path_touch(self, path: str) -> dict:
         """Create an empty file at the given path.
