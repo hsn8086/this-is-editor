@@ -51,9 +51,24 @@ this-is-editor/
 | `src/plugins/` | Vuetify / i18n 插件注册 | 
 | `src/i18n/` | 国际化语言包 | 
 | `src/styles/` | 全局样式与 Ace 主题样式 | 
+| `src/services/` | 前端服务层：API 客户端与业务服务封装 | 
 | `src/lsp.ts` | LSP 客户端集成 | 
 | `src/pywebview-defines.ts` | 前端调用 pywebview API 的类型声明 | 
 | `src/ace-theme-tie*.ts` | Ace 主题定制 | 
+
+**服务层 `src/services/`**
+
+前端 API 调用的封装层，统一管理 pywebview 交互：
+
+| 路径 | 作用 |
+| --- | --- |
+| `base/api-client.ts` | 统一 API 客户端，封装 pywebview 调用，支持缓存 |
+| `base/error-handler.ts` | API 错误类与统一错误处理 |
+| `base/cache.ts` | 简单内存缓存实现 |
+| `modules/config-service.ts` | 配置服务：获取/设置配置 |
+| `modules/file-service.ts` | 文件服务：目录浏览、文件读写 |
+| `modules/code-service.ts` | 代码服务：代码存取、格式化、语言列表 |
+| `modules/task-service.ts` | 任务服务：编译、运行测试用例 |
 
 **关键组件**
 
