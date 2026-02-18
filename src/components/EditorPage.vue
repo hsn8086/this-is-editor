@@ -57,20 +57,15 @@ import "ace-builds/src-noconflict/ext-language_tools";
 import "@/ace-theme-tie"; // 自定义主题
 import "@/ace-theme-tie-light";
 import "ace-builds/src-noconflict/theme-github"; // 亮色主题基础
-import { useTheme } from "vuetify";
 // Phase 2.2: 使用 LSP composable
 import { useEditorLsp } from "@/composables/editor";
 import { debounce } from "lodash";
 import CheckerPanel from "./CheckerPanel.vue";
 import { useHotkey } from "vuetify";
 import { useI18n } from "vue-i18n";
-import html2canvas from "html2canvas";
-import hljs from "highlight.js";
-import hljs_github_dark from "highlight.js/styles/github-dark.css?url";
-import hljs_github_light from "highlight.js/styles/github.css?url";
 import { codeService, configService, fileService } from "@/services";
-// Phase 2A/B: 引入新的 composables
-import { useAceEditor, useEditorTheme, useEditorClipboard, useEditorContextMenu, useEditorKeyboard, useEditorFormat } from "@/composables/editor";
+// Phase 2A/B/2.3: 引入新的 composables
+import { useAceEditor, useEditorTheme, useEditorClipboard, useEditorContextMenu, useEditorKeyboard, useEditorFormat, useEditorScreenshot } from "@/composables/editor";
 const { t } = useI18n();
 
 // Editor store
@@ -93,8 +88,6 @@ const modeMP: Map<string, new () => SyntaxMode> = new Map([
 
 let editorOptions: Partial<Ace.EditorOptions> & { [key: string]: any };
 
-const theme = useTheme(); // useTheme must be called in setup
-
 // Phase 2A: 使用 composables 管理编辑器实例和主题
 const { aceRef, editor, ready: editorReady, initEditor: initAceEditor, setValue, getValue, dispose: disposeEditor } = useAceEditor();
 const { isDark, currentTheme, syncTheme } = useEditorTheme({ editor, autoWatch: true });
@@ -115,6 +108,8 @@ const { bindKeyboard, unbindKeyboard } = useEditorKeyboard({
   onCopy: copy,
 });
 const { format } = useEditorFormat();
+// Phase 2.3: 截图功能
+const { takeScreenshot: takeCodeScreenshot, isCapturing: isScreenshotCapturing } = useEditorScreenshot({ editor, useVuetifyTheme: true });
 
 // Phase 2.2: LSP 集成
 const filePath = ref<string | undefined>(undefined);
@@ -225,99 +220,6 @@ function resetCode(text: string) {
   if (!editor.value) return;
   // Phase 2A: 使用 composable 的 setValue（它会在内部保持光标位置）
   setValue(text, -1);
-}
-
-async function takeCodeScreenshot() {
-  if (!editor.value) return;
-  try {
-    const text = editor.value.getSelectedText() || editor.value.getValue();
-    const lines = text.split("\n");
-
-    const cs = getComputedStyle(editor.value.container);
-    const fontSize = cs.fontSize || "13px";
-    const fontFamily = cs.fontFamily || "monospace";
-    const background = cs.backgroundColor || "#fff";
-    const color = cs.color || "#000";
-    const lineHeight =
-      cs.lineHeight && cs.lineHeight !== "normal" ? cs.lineHeight : "1.4";
-
-    const wrapper = document.createElement("div");
-    wrapper.style.position = "absolute";
-    wrapper.style.left = "-9999px";
-    wrapper.style.top = "0px";
-    wrapper.style.background = background;
-    wrapper.style.color = color;
-    wrapper.style.display = "flex";
-    wrapper.style.padding = "12px";
-    wrapper.style.boxSizing = "border-box";
-    wrapper.style.borderRadius = "4px";
-    wrapper.style.fontSize = fontSize;
-    wrapper.style.fontFamily = fontFamily;
-    wrapper.style.lineHeight = lineHeight;
-
-    const gutter = document.createElement("div");
-    gutter.style.userSelect = "none";
-    gutter.style.textAlign = "right";
-    gutter.style.paddingRight = "12px";
-    gutter.style.marginRight = "12px";
-    gutter.style.opacity = "0.6";
-    gutter.style.fontSize = fontSize;
-    gutter.style.fontFamily = fontFamily;
-    gutter.style.lineHeight = lineHeight;
-    gutter.style.whiteSpace = "pre";
-    gutter.textContent = lines.map((_, i) => (i + 1).toString()).join("\n");
-
-    const code = document.createElement("pre");
-    code.style.margin = "0";
-    code.style.whiteSpace = "pre";
-    code.style.fontFamily = fontFamily;
-    code.style.fontSize = fontSize;
-    code.style.lineHeight = lineHeight;
-    code.style.background = "transparent";
-    code.style.color = color;
-    code.style.overflow = "visible";
-    code.innerHTML = hljs.highlightAuto(text).value;
-
-    const style = document.createElement("link");
-    style.rel = "stylesheet";
-    style.href = theme.global.current.value.dark
-      ? hljs_github_dark
-      : hljs_github_light;
-    document.head.appendChild(style);
-    wrapper.appendChild(gutter);
-    wrapper.appendChild(code);
-    document.body.appendChild(wrapper);
-
-    const canvas = await html2canvas(wrapper, {
-      backgroundColor: null,
-      scale: 2,
-    });
-
-    document.body.removeChild(wrapper);
-    document.head.removeChild(style);
-
-    if (navigator.clipboard && (navigator.clipboard as any).write) {
-      const blob: Blob | null = await new Promise((res) =>
-        canvas.toBlob((b) => res(b), "image/png")
-      );
-      if (blob) {
-        await (navigator.clipboard as any).write([
-          new (window as any).ClipboardItem({ "image/png": blob }),
-        ]);
-        return;
-      }
-    }
-
-    const url = canvas.toDataURL("image/png");
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "code-screenshot.png";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  } catch (err) {
-    console.error("Failed to take screenshot:", err);
-  }
 }
 
 const menuList = [

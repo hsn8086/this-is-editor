@@ -9,6 +9,7 @@
  * - useEditorKeyboard: 键盘快捷键管理（Phase 2.1）
  * - useEditorFormat: 代码格式化（Phase 2.1）
  * - useEditorLsp: LSP 集成管理（Phase 2.2）
+ * - useEditorScreenshot: 代码截图（Phase 2.3）
  */
 
 export { useAceEditor, type UseAceEditorOptions, type UseAceEditorReturn } from './useAceEditor'
@@ -18,3 +19,4 @@ export { useEditorContextMenu, type UseEditorContextMenuOptions, type UseEditorC
 export { useEditorKeyboard, type UseEditorKeyboardOptions, type UseEditorKeyboardReturn, type KeyboardShortcut } from './useEditorKeyboard'
 export { useEditorFormat, type UseEditorFormatOptions, type UseEditorFormatReturn, type FormatAction, type FormatterConfig } from './useEditorFormat'
 export { useEditorLsp, type UseEditorLspOptions, type UseEditorLspReturn } from './useEditorLsp'
+export { useEditorScreenshot, type UseEditorScreenshotOptions, type UseEditorScreenshotReturn } from './useEditorScreenshot'
