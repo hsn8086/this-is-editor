@@ -43,7 +43,7 @@
 
 <script lang="ts" setup>
 import type { SyntaxMode } from "ace-code/src/ext/static_highlight";
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, type Ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useEditorStore } from "@/stores/editor";
 import { VAceEditor } from "vue3-ace-editor";
@@ -59,13 +59,12 @@ import "@/ace-theme-tie-light";
 import "ace-builds/src-noconflict/theme-github"; // 亮色主题基础
 // Phase 2.2: 使用 LSP composable
 import { useEditorLsp } from "@/composables/editor";
-import { debounce } from "lodash";
 import CheckerPanel from "./CheckerPanel.vue";
 import { useHotkey } from "vuetify";
 import { useI18n } from "vue-i18n";
 import { codeService, configService, fileService } from "@/services";
-// Phase 2A/B/2.3: 引入新的 composables
-import { useAceEditor, useEditorTheme, useEditorClipboard, useEditorContextMenu, useEditorKeyboard, useEditorFormat, useEditorScreenshot } from "@/composables/editor";
+// Phase 2A/B/2.3/2.4: 引入新的 composables
+import { useAceEditor, useEditorTheme, useEditorClipboard, useEditorContextMenu, useEditorKeyboard, useEditorFormat, useEditorScreenshot, useEditorFileSync } from "@/composables/editor";
 const { t } = useI18n();
 
 // Editor store
@@ -89,7 +88,7 @@ const modeMP: Map<string, new () => SyntaxMode> = new Map([
 let editorOptions: Partial<Ace.EditorOptions> & { [key: string]: any };
 
 // Phase 2A: 使用 composables 管理编辑器实例和主题
-const { aceRef, editor, ready: editorReady, initEditor: initAceEditor, setValue, getValue, dispose: disposeEditor } = useAceEditor();
+const { aceRef, editor, ready: editorReady, initEditor: initAceEditor, setValue, getValue, onChange, dispose: disposeEditor } = useAceEditor();
 const { isDark, currentTheme, syncTheme } = useEditorTheme({ editor, autoWatch: true });
 // Phase 2B: 使用 composables 管理剪贴板、右键菜单、键盘快捷键和格式化
 const { cut, copy, copyAll, paste } = useEditorClipboard({ editor });
@@ -110,6 +109,19 @@ const { bindKeyboard, unbindKeyboard } = useEditorKeyboard({
 const { format } = useEditorFormat();
 // Phase 2.3: 截图功能
 const { takeScreenshot: takeCodeScreenshot, isCapturing: isScreenshotCapturing } = useEditorScreenshot({ editor, useVuetifyTheme: true });
+
+// Phase 2.4: 文件同步与自动保存
+const { onCodeChange, handleExternalChange, resetCode } = useEditorFileSync({
+  saveCode: codeService.saveCode,
+  setValue,
+  getValue,
+  debounceMs: 500,
+  cooldownMs: 1000,
+  editorReady,
+});
+
+// Phase 2.4: 编辑器 change 监听器引用（用于清理）
+let editorChangeListener: ((e: Ace.Delta) => void) | null = null;
 
 // Phase 2.2: LSP 集成
 const filePath = ref<string | undefined>(undefined);
@@ -156,14 +168,18 @@ async function initEditor() {
   ed.renderer.updateFontSize();
 
   // editor.setKeyboardHandler("ace/keyboard/vscode");
-  ed.on("change", (e) => {
-    onCodeChange(ed.getValue());
-  });
+  // Phase 2.4: 使用 useAceEditor 的 onChange 绑定，便于清理
+  editorChangeListener = () => {
+    onCodeChange(getValue());
+  };
+  onChange(editorChangeListener);
 
   const ModeConstructor = modeMP.get(initialCode.type);
 
   if (ModeConstructor) {
-    ed.session.setMode(new ModeConstructor());
+    // 类型桥接: ace-code 的 SyntaxMode 与 ace-builds 的 SyntaxMode 结构相同但类型定义不兼容
+    // 两者运行时兼容，通过 unknown 断言绕过 TS 类型检查
+    ed.session.setMode(new ModeConstructor() as unknown as Ace.SyntaxMode);
   } else {
     console.warn(
       `No mode found for type: ${initialCode.type}, using default mode.`
@@ -185,42 +201,38 @@ async function initEditor() {
   await registerLsp();
 }
 
-let lastModified = 0;
-function onCodeChange(newCode: string) {
-  debounce(codeService.saveCode, 500)(newCode);
-  lastModified = performance.now();
-}
+// Phase 2.4: 外部文件变更监听（使用 composable 创建）
+const handleFileChanged = (event: Event) => {
+  const text = (event as CustomEvent).detail;
+  const applied = handleExternalChange(text);
+  if (applied) {
+    console.log("File changed externally, updating editor content.");
+  }
+};
+
 onMounted(() => {
   initEditor();
+  // Phase 2.4: 注册文件变更监听
+  window.addEventListener("file-changed", handleFileChanged);
 });
 onUnmounted(async () => {
   // Phase 2.2: 注销 LSP
   await unregisterLsp();
   // Phase 2.1: 解绑键盘快捷键
   unbindKeyboard();
+  // Phase 2.4: 清理编辑器 change 监听
+  if (editorChangeListener && editor.value) {
+    editor.value.off("change", editorChangeListener);
+    editorChangeListener = null;
+  }
   // Phase 2A: 使用 composable 的 dispose 方法
   disposeEditor();
+  // Phase 2.4: 移除文件变更监听
+  window.removeEventListener("file-changed", handleFileChanged);
   console.log("Editor unmounted and content cleared.");
 });
-window.addEventListener("file-changed", async (event) => {
-  const text = (event as CustomEvent).detail;
 
-  if (
-    editor.value &&
-    editor.value.getValue() &&
-    text !== editor.value.getValue() &&
-    performance.now() - lastModified > 1000
-  ) {
-    console.log("File changed externally, updating editor content.");
 
-    resetCode(text);
-  }
-});
-function resetCode(text: string) {
-  if (!editor.value) return;
-  // Phase 2A: 使用 composable 的 setValue（它会在内部保持光标位置）
-  setValue(text, -1);
-}
 
 const menuList = [
   [

@@ -96,7 +96,9 @@ export function useEditorLsp(options: UseEditorLspOptions): UseEditorLspReturn {
     }
 
     try {
-      provider.registerEditor(ed, sessionConfig)
+      // 类型桥接: ace-linters 使用 ace-code 类型定义，但编辑器实例来自 ace-builds
+      // 两者运行时兼容，仅 TS 类型定义冲突，通过 unknown 断言绕过
+      provider.registerEditor(ed as unknown as import('ace-code/src/editor').Editor, sessionConfig)
       isRegistered = true
       isReady.value = true
       console.log('[useEditorLsp] LSP registered for file:', fp)
@@ -127,7 +129,9 @@ export function useEditorLsp(options: UseEditorLspOptions): UseEditorLspReturn {
     }
 
     try {
-      provider.closeDocument(ed.getSession())
+      // 类型桥接: ace-linters 使用 ace-code 的 EditSession 类型，但编辑器返回的是 ace-builds 类型
+      // 两者运行时兼容，仅 TS 类型定义冲突，通过 unknown 断言绕过
+      provider.closeDocument(ed.getSession() as unknown as import('ace-code/src/edit_session').EditSession)
       console.log('[useEditorLsp] LSP unregistered for editor')
     } catch (err) {
       console.error('[useEditorLsp] Failed to close document:', err)

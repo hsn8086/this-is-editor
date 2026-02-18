@@ -1,6 +1,6 @@
 /**
  * Editor Composables
- * 
+ *
  * 此目录包含与 Ace Editor 相关的可复用逻辑：
  * - useAceEditor: 编辑器实例管理
  * - useEditorTheme: 主题管理
@@ -10,6 +10,10 @@
  * - useEditorFormat: 代码格式化（Phase 2.1）
  * - useEditorLsp: LSP 集成管理（Phase 2.2）
  * - useEditorScreenshot: 代码截图（Phase 2.3）
+ * - useEditorFileSync: 文件同步与自动保存（Phase 2.4）
+ *   - 单次 debounce（500ms）保存
+ *   - 输入变更时立即更新 lastModified（用于 1000ms 冷却判断）
+ *   - 基础函数无副作用，事件监听在 useEditorFileSyncWithListener 中管理
  */
 
 export { useAceEditor, type UseAceEditorOptions, type UseAceEditorReturn } from './useAceEditor'
@@ -20,3 +24,11 @@ export { useEditorKeyboard, type UseEditorKeyboardOptions, type UseEditorKeyboar
 export { useEditorFormat, type UseEditorFormatOptions, type UseEditorFormatReturn, type FormatAction, type FormatterConfig } from './useEditorFormat'
 export { useEditorLsp, type UseEditorLspOptions, type UseEditorLspReturn } from './useEditorLsp'
 export { useEditorScreenshot, type UseEditorScreenshotOptions, type UseEditorScreenshotReturn } from './useEditorScreenshot'
+export {
+  useEditorFileSync,
+  useEditorFileSyncWithListener,
+  type UseEditorFileSyncOptions,
+  type UseEditorFileSyncReturn,
+  type UseEditorFileSyncWithListenerOptions,
+  type UseEditorFileSyncWithListenerReturn,
+} from './useEditorFileSync'

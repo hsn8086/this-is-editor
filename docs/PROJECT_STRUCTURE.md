@@ -84,6 +84,7 @@ Vue 3 Composition API 的可复用逻辑封装（Phase 2A/B/2.1 新增）：
 | `editor/useEditorFormat.ts` | 代码格式化：读取配置、执行 format action（Phase 2.1） |
 | `editor/useEditorLsp.ts` | LSP 集成管理：registerEditor/closeDocument、isReady 状态（Phase 2.2） |
 | `editor/useEditorScreenshot.ts` | 代码截图：html2canvas + highlight.js，剪贴板/下载（Phase 2.3） |
+| `editor/useEditorFileSync.ts` | 文件同步与自动保存：debounce 保存、外部变更监听、冷却机制（Phase 2.4） |
 | `editor/index.ts` | Composables 统一导出 |
 
 **关键组件**
