@@ -70,8 +70,8 @@ import hljs from "highlight.js";
 import hljs_github_dark from "highlight.js/styles/github-dark.css?url";
 import hljs_github_light from "highlight.js/styles/github.css?url";
 import { codeService, configService, fileService } from "@/services";
-// Phase 2A: 引入新的 composables
-import { useAceEditor, useEditorTheme } from "@/composables/editor";
+// Phase 2A/B: 引入新的 composables
+import { useAceEditor, useEditorTheme, useEditorClipboard, useEditorContextMenu } from "@/composables/editor";
 const { t } = useI18n();
 
 // Editor store
@@ -99,6 +99,9 @@ const theme = useTheme(); // useTheme must be called in setup
 // Phase 2A: 使用 composables 管理编辑器实例和主题
 const { aceRef, editor, ready: editorReady, initEditor: initAceEditor, setValue, getValue, dispose: disposeEditor } = useAceEditor();
 const { isDark, currentTheme, syncTheme } = useEditorTheme({ editor, autoWatch: true });
+// Phase 2B: 使用 composables 管理剪贴板和右键菜单
+const { cut, copy, copyAll, paste } = useEditorClipboard({ editor });
+const { menuX, menuY, showMenu, onContextMenu, closeMenu } = useEditorContextMenu({ editor });
 
 async function initEditor() {
   // Phase 2A: 首先使用 composable 初始化基础编辑器实例
@@ -245,35 +248,6 @@ function resetCode(text: string) {
   setValue(text, -1);
 }
 
-function cut() {
-  if (!editor.value) return;
-  let content;
-  if ((content = window.getSelection()?.toString())) {
-    navigator.clipboard.writeText(content);
-    editor.value.session.remove(editor.value.getSelectionRange());
-  } else {
-    const p = editor.value.getCursorPosition();
-    if ((content = editor.value.session.getLine(p?.row || 0))) {
-      navigator.clipboard.writeText(content.trim());
-      editor.value.session.removeFullLines(p?.row || 0, p?.row || 0);
-      editor.value.moveCursorTo(p?.row || 0, 0);
-    }
-  }
-}
-function copy() {
-  if (!editor.value) return;
-  let content;
-  
-  if ((content = editor.value.getSelectedText())) {
-    navigator.clipboard.writeText(content);
-  } else {
-    const p = editor.value.getCursorPosition();
-    if ((content = editor.value.session.getLine(p?.row || 0))) {
-      navigator.clipboard.writeText(content.trim());
-    }
-  }
-}
-
 async function takeCodeScreenshot() {
   if (!editor.value) return;
   try {
@@ -387,16 +361,11 @@ const menuList = [
     },
     {
       title: "copyAll",
-      action: () => {
-        if (!editor.value) return;
-        navigator.clipboard.writeText(editor.value.getValue());
-      },
+      action: copyAll,
     },
     {
       title: "paste",
-      action: async () => {
-        editor.value?.insert(await navigator.clipboard.readText());
-      },
+      action: paste,
     },
   ],
   [
@@ -407,16 +376,4 @@ const menuList = [
     },
   ],
 ];
-
-const menuX = ref(0);
-const menuY = ref(0);
-const showMenu = ref(false);
-function onContextMenu(e: MouseEvent) {
-  if (!editor.value) return;
-
-  e.preventDefault();
-  menuX.value = e.clientX;
-  menuY.value = e.clientY;
-  showMenu.value = true;
-}
 </script>
