@@ -218,8 +218,11 @@ fileSelector {
 
 <script lang="ts" setup>
 import type { FuncResponse_ls_dir, FileInfo, API } from "@/pywebview-defines";
+import type { FileItem } from "@/stores/file";
 
 import { ref } from "vue";
+import { storeToRefs } from "pinia";
+import { useFileStore } from "@/stores/file";
 import { debounce } from "lodash";
 
 import router from "@/router";
@@ -228,6 +231,11 @@ const fabOpen = ref(false);
 const folderLoading = ref(false);
 
 const py: API = window.pywebview.api;
+
+// File store
+const fileStore = useFileStore();
+const { folder, pinnedFiles, ls, disks } = storeToRefs(fileStore);
+
 onMounted(() => {
   init();
   fetchDisks();
@@ -239,16 +247,8 @@ async function init() {
   await fetchPinnedFiles();
 }
 
-const pinnedFiles = ref<FileInfo[]>([]);
 async function fetchPinnedFiles() {
-  pinnedFiles.value = await py.get_pinned_files();
-}
-const folder = ref<string>();
-const ls = ref<File[]>([]);
-const disks = ref<FileInfo[]>([]);
-
-interface File extends FileInfo {
-  isReturn: boolean;
+  fileStore.setPinnedFiles(await py.get_pinned_files());
 }
 
 async function changeDirectory(path: string) {
@@ -258,7 +258,7 @@ async function changeDirectory(path: string) {
 
 async function fetchFiles(path: string | null = null) {
   const response: FuncResponse_ls_dir = await py.path_ls(path);
-  ls.value = [
+  const newLs = [
     {
       name: "...",
       stem: "...",
@@ -273,16 +273,17 @@ async function fetchFiles(path: string | null = null) {
     }, // todo: 会不会有更优雅的方式?
   ];
   for (const file of response.files)
-    ls.value.push({ ...file, isReturn: false });
-  folder.value = response.now_path;
+    newLs.push({ ...file, isReturn: false });
+  fileStore.setLs(newLs);
+  fileStore.setFolder(response.now_path);
 }
 
 async function fetchDisks() {
-  disks.value = await py.get_disks();
+  fileStore.setDisks(await py.get_disks());
 }
 
 // file click
-async function fileClick(file: File | FileInfo) {
+async function fileClick(file: FileItem | FileInfo) {
   folderLoading.value = true;
   if ("isReturn" in file && file.isReturn) {
     // If it is return

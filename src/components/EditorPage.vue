@@ -47,6 +47,8 @@ import type { SyntaxMode } from "ace-code/src/ext/static_highlight";
 import type { SessionLspConfig } from "ace-linters/build/ace-language-client";
 import type { VAceEditorInstance } from "vue3-ace-editor/types";
 import { ref, onMounted, onUnmounted, nextTick } from "vue";
+import { storeToRefs } from "pinia";
+import { useEditorStore } from "@/stores/editor";
 import { VAceEditor } from "vue3-ace-editor";
 import { Mode as python } from "ace-code/src/mode/python";
 import { Mode as cpp } from "ace-code/src/mode/c_cpp";
@@ -73,6 +75,10 @@ import hljs_github_dark from "highlight.js/styles/github-dark.css?url";
 import hljs_github_light from "highlight.js/styles/github.css?url";
 const { t } = useI18n();
 
+// Editor store
+const editorStore = useEditorStore();
+const { lang, content, enableCheckerPanel } = storeToRefs(editorStore);
+
 const checkPanel: Ref<InstanceType<typeof CheckerPanel> | null> = ref(null);
 
 const runJudgeKey = ref<string | undefined>();
@@ -89,9 +95,6 @@ const modeMP: Map<string, new () => SyntaxMode> = new Map([
 
 const py: API = window.pywebview.api;
 
-const content = ref();
-const lang = ref("text");
-const enableCheckerPanel = ref(false);
 let editorOptions: Partial<Ace.EditorOptions> & { [key: string]: any };
 
 const theme = useTheme(); // useTheme must be called in setup
@@ -103,8 +106,9 @@ async function initEditor() {
     if (theme.global.current.value.dark) editor.setTheme("ace/theme/tie");
     else editor.setTheme("ace/theme/tie-light");
     const initialCode = await py.get_code();
-    lang.value = initialCode.type;
-    content.value = initialCode.code || ""; // Set initial code from backend
+    const langType = initialCode.type as import("@/stores/editor").EditorLang;
+    editorStore.setLanguage(langType);
+    editorStore.setContent(initialCode.code || ""); // Set initial code from backend
 
     // config
     const config = await py.get_config();
@@ -115,9 +119,10 @@ async function initEditor() {
         config.editor.aceMain[key].value
       );
     if (config.programmingLanguages[initialCode.type])
-      enableCheckerPanel.value =
+      editorStore.setEnableCheckerPanel(
         config.programmingLanguages[initialCode.type].enableCheckerPanel ||
-        false;
+        false
+      );
     // set line height
     editor.container.style.lineHeight = "2"; // todo: make configurable
     editor.renderer.updateFontSize();
