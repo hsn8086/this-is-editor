@@ -11,11 +11,12 @@ import shlex
 import subprocess
 import threading
 from pathlib import Path
+from typing import cast
 
-import starlette
 import uvicorn
 import webview
 from fastapi import FastAPI, WebSocket
+from starlette.websockets import WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
@@ -92,16 +93,17 @@ async def start_lsp_process(websocket: WebSocket, lang: str) -> subprocess.Popen
         return None
     if isinstance(cmd, str):
         cmd = shlex.split(cmd)
+    creationflags = 0
+    if platform.system() == "Windows":
+        creationflags = cast(int, getattr(subprocess, "CREATE_NO_WINDOW", 0))
     try:
         p = subprocess.Popen(  # noqa: ASYNC220
             cmd,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            creationflags=subprocess.CREATE_NO_WINDOW
-            if platform.system() == "Windows"
-            else 0,
-            shell=True if platform.system() == "Windows" else 0,
+            creationflags=creationflags,
+            shell=bool(platform.system() == "Windows"),
         )
     except (FileNotFoundError, PermissionError, OSError) as e:
         logger.error(f"Failed to start LSP for language: {lang}")
@@ -112,7 +114,8 @@ async def start_lsp_process(websocket: WebSocket, lang: str) -> subprocess.Popen
     await asyncio.sleep(0.1)
     if p.poll() is not None:
         logger.error(f"Failed to start LSP for language: {lang}")
-        logger.error(p.stderr.read().decode("utf-8"))
+        if p.stderr is not None:
+            logger.error(p.stderr.read().decode("utf-8"))
         await websocket.close()
         return None
 
@@ -138,6 +141,8 @@ async def handle_websocket(
     try:
         while True:
             data = (await websocket.receive_text()).encode("utf-8")
+            if p.stdin is None:
+                return
             await asyncio.to_thread(
                 p.stdin.write,
                 f"Content-Length: {len(data)}\r\n\r\n".encode(),
@@ -146,7 +151,7 @@ async def handle_websocket(
             await asyncio.to_thread(p.stdin.flush)
     except (asyncio.CancelledError, ConnectionError) as e:
         logger.opt(exception=e).error(f"{lang} LS websocket error")
-    except starlette.websockets.WebSocketDisconnect as e:
+    except WebSocketDisconnect as e:
         if not should_exit:
             logger.opt(exception=e).error(f"{lang} LS websocket disconnected")
     finally:
@@ -173,9 +178,12 @@ async def handle_process_output(
     buffer = b""
     try:
         while True:
-            await asyncio.to_thread(p.stdout.read, 16)
+            stdout = p.stdout
+            if stdout is None:
+                return
+            await asyncio.to_thread(stdout.read, 16)
             while b"\r\n\r\n" not in buffer:
-                buffer += p.stdout.read(1)
+                buffer += stdout.read(1)
 
             header_end = buffer.find(b"\r\n\r\n")
 
@@ -188,7 +196,7 @@ async def handle_process_output(
             buffer = buffer[header_end + 4 :]  # skip \r\n\r\n
             while len(buffer) < content_length:
                 chunk = await asyncio.to_thread(
-                    p.stdout.read,
+                    stdout.read,
                     content_length - len(buffer),
                 )
                 buffer += chunk
@@ -222,7 +230,10 @@ async def handle_process_error(p: subprocess.Popen, lang: str) -> None:
     """
     try:
         while True:
-            error_chunk = await asyncio.to_thread(p.stderr.readline)
+            stderr = p.stderr
+            if stderr is None:
+                return
+            error_chunk = await asyncio.to_thread(stderr.readline)
             if not error_chunk:
                 break
             logger.error(
@@ -293,27 +304,31 @@ async def receive_problem(problem: Problem) -> dict:
             },
         )
 
-    window.run_js(
-        f"""
-        window.dispatchEvent(
-            new CustomEvent(
-                'problem-received', 
-                {{ detail: {json.dumps({"name": problem.name, "tests": tests})} }}
-            )
-        );
-        """,
-    )
+    if window is not None:
+        window.run_js(
+            f"""
+            window.dispatchEvent(
+                new CustomEvent(
+                    'problem-received', 
+                    {{ detail: {json.dumps({"name": problem.name, "tests": tests})} }}
+                )
+            );
+            """,
+        )
 
     return {"status": "success", "message": f"Problem {problem.name} received."}
 
 
+_js_api = Api()
 window = webview.create_window(
     "TIE",
     f"http://127.0.0.1:{port}",
-    js_api=Api(),
+    js_api=_js_api,
     width=800,
     height=600,
 )
+if window is not None:
+    window.state._hash = _js_api._path_hashes
 
 
 def start_server() -> tuple[

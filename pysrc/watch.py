@@ -5,6 +5,7 @@ and triggers a callback function when changes are detected.
 """
 
 import threading
+from collections.abc import Callable
 
 from loguru import logger
 from watchfiles import watch
@@ -18,7 +19,7 @@ class Watcher:
 
     """
 
-    def __init__(self, callback: callable) -> None:
+    def __init__(self, callback: Callable[[str], None]) -> None:
         """Initialize the Watcher.
 
         Args:

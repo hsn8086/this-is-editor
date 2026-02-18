@@ -57,16 +57,16 @@ class RunProcessResult(NamedTuple):
     status: str | None
 
 
-def try_r(func: Callable[..., T], *args: any, default: T = None) -> T:
+def try_r(func: Callable[..., T], *args: object, default: T | None = None) -> T | None:
     """Execute a function and return its result, or a default value on exception.
 
     Args:
         func (Callable[..., T]): Function to execute.
-        *args (any): Arguments for the function.
-        default (T, optional): Value to return if an exception occurs.
+        *args (object): Arguments for the function.
+        default (T | None, optional): Value to return if an exception occurs.
 
     Returns:
-        T: Result of the function or the default value.
+        T | None: Result of the function or the default value.
 
     """
     try:
@@ -120,6 +120,9 @@ def run_p(
     """
     logger.debug(f"Run command: {' '.join(cmd)}")
     logger.debug(f"Working directory: {cwd}")
+    creationflags = 0
+    if platform.system() == "Windows":
+        creationflags = int(getattr(subprocess, "CREATE_NO_WINDOW", 0))
     with psutil.Popen(
         cmd,
         text=True,
@@ -127,27 +130,27 @@ def run_p(
         stdout=-1,
         stderr=-1,
         cwd=cwd,
-        creationflags=subprocess.CREATE_NO_WINDOW
-        if platform.system() == "Windows"
-        else 0,
+        creationflags=creationflags,
         shell=platform.system() == "Windows",
     ) as p:  # set stdin to -1 for input and stdout stderr to -1 for capture output.
+        child_process = p
         try:
-            child_process = p
-
             start = time.monotonic()
-            p.stdin.write(inp)
-            p.stdin.flush()
-            p.stdin.close()
+            if p.stdin is not None:
+                p.stdin.write(inp)
+                p.stdin.flush()
+                p.stdin.close()
             max_memory = 0
             cpu_time = 0
             while True:
                 state = p.poll()  # check process state
                 cpu_time = max(get_time(child_process), cpu_time)
                 if state is not None:
+                    stdout = p.stdout.read() if p.stdout is not None else ""
+                    stderr = p.stderr.read() if p.stderr is not None else ""
                     return RunProcessResult(
-                        stdout=p.stdout.read(),
-                        stderr=p.stderr.read(),
+                        stdout=stdout,
+                        stderr=stderr,
                         time=cpu_time,
                         memory=max_memory,
                         status=None,
@@ -160,10 +163,12 @@ def run_p(
                 if mem_use > memory_limit:  # check memory
                     try_r(child_process.kill)
                     try_r(child_process.terminate)
+                    stdout = p.stdout.read() if p.stdout is not None else ""
+                    stderr = p.stderr.read() if p.stderr is not None else ""
                     return RunProcessResult(
                         status="memory_limit_exceeded",
-                        stdout=p.stdout.read(),
-                        stderr=p.stderr.read(),
+                        stdout=stdout,
+                        stderr=stderr,
                         time=cpu_time,
                         memory=max_memory,
                     )
@@ -173,19 +178,24 @@ def run_p(
                 ):  # check timeout
                     try_r(child_process.kill)
                     try_r(child_process.terminate)
+                    stdout = p.stdout.read() if p.stdout is not None else ""
+                    stderr = p.stderr.read() if p.stderr is not None else ""
                     return RunProcessResult(
                         status="timeout",
-                        stdout=p.stdout.read(),
-                        stderr=p.stderr.read(),
+                        stdout=stdout,
+                        stderr=stderr,
                         time=cpu_time,
                         memory=max_memory,
                     )
         finally:
-            p.stdin.close()
-            p.stdout.close()
-            p.stderr.close()
-            try_r(child_process.kill)
-            try_r(child_process.terminate)
+            if p.stdin is not None:
+                p.stdin.close()
+            if p.stdout is not None:
+                p.stdout.close()
+            if p.stderr is not None:
+                p.stderr.close()
+            try_r(p.kill)
+            try_r(p.terminate)
             p.wait()  # wait for process to terminate
 
 
@@ -270,13 +280,14 @@ def run_compilation(file_path: Path, cmd: list | str, *, executable: str = "") -
         r_cmd.append(fmt(c, file_path=file_path, executable=executable))
     logger.debug(f"Compile command: {' '.join(r_cmd)}")
     try:
+        creationflags = 0
+        if platform.system() == "Windows":
+            creationflags = int(getattr(subprocess, "CREATE_NO_WINDOW", 0))
         subprocess.run(
             r_cmd,
             check=True,
             cwd=file_path.parent,
-            creationflags=subprocess.CREATE_NO_WINDOW
-            if platform.system() == "Windows"
-            else 0,
+            creationflags=creationflags,
             shell=platform.system() == "Windows",
         )
     except subprocess.CalledProcessError as e:
@@ -313,14 +324,15 @@ def compile_c_cpp_builder(
             "-std=" + std,
             *flags,
         ]
+        creationflags = 0
+        if platform.system() == "Windows":
+            creationflags = int(getattr(subprocess, "CREATE_NO_WINDOW", 0))
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             cwd=Path(file_path).parent,
-            creationflags=subprocess.CREATE_NO_WINDOW
-            if platform.system() == "Windows"
-            else 0,
+            creationflags=creationflags,
             check=True,
         )
         if result.returncode != 0:
