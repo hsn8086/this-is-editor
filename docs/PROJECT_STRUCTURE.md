@@ -70,6 +70,16 @@ this-is-editor/
 | `modules/code-service.ts` | 代码服务：代码存取、格式化、语言列表 |
 | `modules/task-service.ts` | 任务服务：编译、运行测试用例 |
 
+**Composables `src/composables/`**
+
+Vue 3 Composition API 的可复用逻辑封装（Phase 2A 新增）：
+
+| 路径 | 作用 |
+| --- | --- |
+| `editor/useAceEditor.ts` | Ace Editor 实例管理：初始化、setValue/getValue、ready 状态 |
+| `editor/useEditorTheme.ts` | 编辑器主题管理：监听 Vuetify 主题，同步 Ace 主题 |
+| `editor/index.ts` | Composables 统一导出 |
+
 **关键组件**
 
 - `EditorPage.vue`：编辑器主界面（Ace + LSP）
