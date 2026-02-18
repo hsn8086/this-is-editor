@@ -180,7 +180,7 @@
   </v-navigation-drawer>
 </template>
 <script lang="ts" setup>
-import type { API, TaskResult, TestCase } from "@/pywebview-defines";
+import type { TaskResult, TestCase } from "@/pywebview-defines";
 import { useI18n } from "vue-i18n";
 const { t } = useI18n();
 
@@ -188,6 +188,7 @@ import { ref, computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useCheckerStore } from "@/stores/checker";
 import { ceil, round } from "lodash";
+import { taskService, fileService } from "@/services";
 
 // Checker store
 const checkerStore = useCheckerStore();
@@ -207,9 +208,6 @@ const colors: Record<string, string> = {
   running: "orange",
 };
 
-// Access the Python API exposed via pywebview
-const py: API = window.pywebview.api;
-
 // Initialize the component when mounted
 onMounted(() => {
   init();
@@ -223,7 +221,7 @@ async function init() {
 
 // Load test cases from the backend and initialize tasks
 async function loadTestcase() {
-  const newTestcaseInfo = await py.get_testcase();
+  const newTestcaseInfo = await taskService.getTestcase();
   checkerStore.setTestcaseInfo(newTestcaseInfo);
   checkerStore.setTestcaseName(newTestcaseInfo.name);
   const newTasks = newTestcaseInfo.tests.map((test) => ({
@@ -259,10 +257,7 @@ function changeExpend(item: typeof tasks.value[0], value: boolean) {
 // Initialize the number of judge threads based on CPU count
 let judgeThread = 1; // Default to 1 thread until initialized
 async function initJudgeThread() {
-  const [cpu_count, cpu_count_logical] = await py.get_cpu_count();
-  if (cpu_count == cpu_count_logical)
-    judgeThread = Math.max(Math.floor((cpu_count * 3) / 2), 1);
-  else judgeThread = cpu_count;
+  judgeThread = await taskService.getRecommendedJudgeThread();
 }
 
 // Manage the state of the "Run All" button
@@ -279,7 +274,7 @@ async function runAll() {
   // Compile the test cases before running
   checkerStore.setRunStatus(1); // Compiling...
   try {
-    const rst = await py.compile();
+    const rst = await taskService.compile();
     if (rst !== "success") throw new Error(rst);
   } catch (error) {
     console.error("Compilation failed:", error);
@@ -305,7 +300,7 @@ async function runAll() {
   for (const task of tasks.value) {
     if (executing.size >= limit) await Promise.race(executing);
     checkerStore.updateTask(task.id, { status: "running" });
-    const promise = py.run_task(
+    const promise = taskService.runTask(
       task.id,
       currentTestcaseInfo.memoryLimit,
       currentTestcaseInfo.timeLimit
@@ -388,7 +383,7 @@ async function saveTasks() {
   const currentTestcaseInfo = testcaseInfo.value;
   if (currentTestcaseInfo) {
     const updatedTestcaseInfo = { ...currentTestcaseInfo, tests };
-    await py.save_testcase(updatedTestcaseInfo);
+    await taskService.saveTestcase(updatedTestcaseInfo);
   }
 }
 
@@ -440,15 +435,15 @@ async function PasteFromClipboard() {
     let fileRec: Record<string, FileType> = {};
     for (const file of files) {
       console.log(`Opening file from clipboard: ${file}`);
-      console.log(await py.path_get_text(file));
-      const info = await py.path_get_info(file);
+      console.log(await fileService.getText(file));
+      const info = await fileService.getInfo(file);
       if (fileRec[info.stem] === undefined)
         fileRec[info.stem] = { in: "", out: "" };
 
       if (info.name.endsWith(".in")) {
-        fileRec[info.stem].in = await py.path_get_text(file);
+        fileRec[info.stem].in = await fileService.getText(file);
       } else if (info.name.endsWith(".out") || info.name.endsWith(".ans")) {
-        fileRec[info.stem].out = await py.path_get_text(file);
+        fileRec[info.stem].out = await fileService.getText(file);
       }
     }
     for (const key in fileRec) {
@@ -507,7 +502,7 @@ async function PasteFromClipboard() {
     const currentTestcaseInfo = testcaseInfo.value;
     if (currentTestcaseInfo) {
       const updatedTestcaseInfo = { ...currentTestcaseInfo, tests: parsed };
-      await py.save_testcase(updatedTestcaseInfo);
+      await taskService.saveTestcase(updatedTestcaseInfo);
     }
     await loadTestcase();
   } catch (error) {

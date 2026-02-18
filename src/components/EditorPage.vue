@@ -42,7 +42,6 @@
 </template>
 
 <script lang="ts" setup>
-import type { API } from "@/pywebview-defines";
 import type { SyntaxMode } from "ace-code/src/ext/static_highlight";
 import type { SessionLspConfig } from "ace-linters/build/ace-language-client";
 import type { VAceEditorInstance } from "vue3-ace-editor/types";
@@ -73,6 +72,7 @@ import html2canvas from "html2canvas";
 import hljs from "highlight.js";
 import hljs_github_dark from "highlight.js/styles/github-dark.css?url";
 import hljs_github_light from "highlight.js/styles/github.css?url";
+import { codeService, configService, fileService } from "@/services";
 const { t } = useI18n();
 
 // Editor store
@@ -93,8 +93,6 @@ const modeMP: Map<string, new () => SyntaxMode> = new Map([
   ["json", json],
 ]);
 
-const py: API = window.pywebview.api;
-
 let editorOptions: Partial<Ace.EditorOptions> & { [key: string]: any };
 
 const theme = useTheme(); // useTheme must be called in setup
@@ -105,13 +103,13 @@ async function initEditor() {
     editor = aceRef.value.getAceInstance();
     if (theme.global.current.value.dark) editor.setTheme("ace/theme/tie");
     else editor.setTheme("ace/theme/tie-light");
-    const initialCode = await py.get_code();
+    const initialCode = await codeService.getCode();
     const langType = initialCode.type as import("@/stores/editor").EditorLang;
     editorStore.setLanguage(langType);
     editorStore.setContent(initialCode.code || ""); // Set initial code from backend
 
     // config
-    const config = await py.get_config();
+    const config = await configService.getConfig();
     console.log("Editor config:", config);
     for (const key in config.editor.aceMain)
       editor.setOption(
@@ -186,7 +184,7 @@ async function initEditor() {
     // });
 
     const sessionConfig: SessionLspConfig = {
-      filePath: (await py.get_opened_file())!,
+      filePath: (await fileService.getOpenedFile())!,
       joinWorkspaceURI: true,
     };
     languageProvider.registerEditor(editor, sessionConfig);
@@ -194,17 +192,17 @@ async function initEditor() {
 }
 
 async function format() {
-  const config = await py.get_config();
-  const codeType = (await py.get_code()).type;
+  const config = await configService.getConfig();
+  const codeType = (await codeService.getCode()).type;
   if (!config.programmingLanguages[codeType]) return;
   const formater_cfg = config.programmingLanguages[codeType].formatter;
   if (!formater_cfg) return;
   if (!formater_cfg.active.value) return;
 
-  const formatted = await py.format_code();
+  const formatted = await codeService.formatCode();
   if (formater_cfg.action.value === "reload") {
     // reload the file from disk
-    const text = (await py.get_code()).code;
+    const text = (await codeService.getCode()).code;
     resetCode(text);
     return;
   } else if (formater_cfg.action.value === "stdout") resetCode(formatted);
@@ -212,7 +210,7 @@ async function format() {
 
 let lastModified = 0;
 function onCodeChange(newCode: string) {
-  debounce(py.save_code, 500)(newCode);
+  debounce(codeService.saveCode, 500)(newCode);
   lastModified = performance.now();
 }
 onMounted(() => {

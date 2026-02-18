@@ -22,14 +22,14 @@
           />
         </template>
         <v-list>
-          <v-list-item
-            @click="
-              async () => {
-                await py.remove_pinned_file(pinned.path);
-                await fetchPinnedFiles();
-              }
-            "
-          >
+            <v-list-item
+              @click="
+                async () => {
+                  await fileService.removePinnedFile(pinned.path);
+                  await fetchPinnedFiles();
+                }
+              "
+            >
             <v-list-item-title>Unpin</v-list-item-title>
           </v-list-item>
         </v-list>
@@ -140,7 +140,7 @@
             <v-list-item
               @click="
                 async () => {
-                  await py.add_pinned_file(file.path);
+                  await fileService.addPinnedFile(file.path);
                   await fetchPinnedFiles();
                 }
               "
@@ -217,20 +217,19 @@ fileSelector {
 </style>
 
 <script lang="ts" setup>
-import type { FuncResponse_ls_dir, FileInfo, API } from "@/pywebview-defines";
+import type { FuncResponse_ls_dir, FileInfo } from "@/pywebview-defines";
 import type { FileItem } from "@/stores/file";
 
 import { ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useFileStore } from "@/stores/file";
 import { debounce } from "lodash";
+import { fileService } from "@/services";
 
 import router from "@/router";
 
 const fabOpen = ref(false);
 const folderLoading = ref(false);
-
-const py: API = window.pywebview.api;
 
 // File store
 const fileStore = useFileStore();
@@ -248,16 +247,16 @@ async function init() {
 }
 
 async function fetchPinnedFiles() {
-  fileStore.setPinnedFiles(await py.get_pinned_files());
+  fileStore.setPinnedFiles(await fileService.getPinnedFiles());
 }
 
 async function changeDirectory(path: string) {
-  await py.set_cwd(path);
+  await fileService.setCwd(path);
   await fetchFiles(path);
 }
 
 async function fetchFiles(path: string | null = null) {
-  const response: FuncResponse_ls_dir = await py.path_ls(path);
+  const response: FuncResponse_ls_dir = await fileService.lsDir(path);
   const newLs = [
     {
       name: "...",
@@ -279,7 +278,7 @@ async function fetchFiles(path: string | null = null) {
 }
 
 async function fetchDisks() {
-  fileStore.setDisks(await py.get_disks());
+  fileStore.setDisks(await fileService.getDisks());
 }
 
 // file click
@@ -287,16 +286,16 @@ async function fileClick(file: FileItem | FileInfo) {
   folderLoading.value = true;
   if ("isReturn" in file && file.isReturn) {
     // If it is return
-    const parentPath = await py.path_parent(folder.value!);
+    const parentPath = await fileService.getParent(folder.value!);
     await changeDirectory(parentPath);
   } else if (file.is_dir) {
     // If open dir
     changeDirectory(file.path);
   } else {
     // If open file
-    await py.set_opened_file(file.path);
+    await fileService.setOpenedFile(file.path);
     router.push("/editor");
-    await py.set_cwd(folder.value!);
+    await fileService.setCwd(folder.value!);
   }
   folderLoading.value = false;
 }
@@ -305,9 +304,9 @@ const dialog = ref(false);
 const dialogType = ref<"file" | "folder">("file");
 const createName = ref<string>("");
 async function createItem() {
-  const p = await py.path_join(folder.value!, createName.value);
-  if (dialogType.value === "file") await py.path_touch(p);
-  else if (dialogType.value === "folder") await py.path_mkdir(p);
+  const p = await fileService.join(folder.value!, createName.value);
+  if (dialogType.value === "file") await fileService.touch(p);
+  else if (dialogType.value === "folder") await fileService.mkdir(p);
   dialog.value = false; // Close dialog
   createName.value = ""; // Reset textfield
   fetchFiles(folder.value);
@@ -317,14 +316,14 @@ async function createItem() {
 const scrollTop = ref(0);
 const scrollContainer: Ref<HTMLElement | null> = ref(null);
 async function initScrool() {
-  const savedScroll = await py.get_scoll();
+  const savedScroll = await fileService.getScroll();
   if (scrollContainer.value) {
     scrollContainer.value.scrollTop = savedScroll;
     scrollTop.value = savedScroll;
   }
 }
 const saveScrollDebounced = debounce(
-  (scrollValue: number) => py.save_scoll(scrollValue),
+  (scrollValue: number) => fileService.saveScroll(scrollValue),
   500
 );
 
@@ -336,7 +335,7 @@ async function onScroll(event: Event) {
 async function scrollToTop() {
   if (scrollContainer.value) {
     scrollContainer.value.scrollTop = 0;
-    await py.save_scoll(0);
+    await fileService.saveScroll(0);
   }
 }
 </script>

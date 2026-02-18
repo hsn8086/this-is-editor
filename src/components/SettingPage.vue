@@ -123,20 +123,20 @@
   </v-card>
 </template>
 <script lang="ts" setup>
-import { type API } from "@/pywebview-defines";
 import { ref } from "vue";
 import { type Config } from "@/pywebview-defines";
 import { useTheme } from "vuetify";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import type { I18nType } from "@/plugins/i18n";
+import { configService, fileService } from "@/services";
 
 const { locale, t } = useI18n();
 const theme = useTheme();
 
 const config = ref<[string, ConfigItem[]][]>([]);
 const search = ref("");
-const py: API = window.pywebview.api;
+
 onMounted(() => {
   init();
 });
@@ -181,10 +181,10 @@ function* parseConfig(
   }
 }
 async function changeConfig(id: string, value: any): Promise<void> {
-  await py.set_config(id, value);
+  await configService.setConfig(id, value);
   switch (id) {
     case "editor.tie.theme": {
-      const cfg = await py.get_config();
+      const cfg = await configService.getConfig();
       if (cfg.editor.tie.theme.value === "dark")
         theme.global.name.value = "dark";
       else if (cfg.editor.tie.theme.value === "light")
@@ -193,22 +193,24 @@ async function changeConfig(id: string, value: any): Promise<void> {
       break;
     }
     case "editor.tie.language": {
-      const cfg = await py.get_config();
+      const cfg = await configService.getConfig();
       locale.value = cfg.editor.tie.language.value as I18nType;
       break;
     }
   }
 }
 async function init() {
-  const cfg = await py.get_config();
-  config.value = sortConfig(Array.from(parseConfig(cfg)));
+  const cfg = await configService.getConfig();
+  config.value = configService.sortConfig(
+    Array.from(configService.parseConfig(cfg))
+  );
   console.log("config", config.value);
 }
 
 const router = useRouter();
 async function openConfigFile() {
-  const path = await py.get_config_path();
-  await py.set_opened_file(path);
+  const path = await configService.getConfigPath();
+  await fileService.setOpenedFile(path);
   await router.push("/editor");
 }
 </script>
