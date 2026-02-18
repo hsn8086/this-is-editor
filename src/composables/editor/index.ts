@@ -8,6 +8,7 @@
  * - useEditorContextMenu: 右键菜单控制
  * - useEditorKeyboard: 键盘快捷键管理（Phase 2.1）
  * - useEditorFormat: 代码格式化（Phase 2.1）
+ * - useEditorLsp: LSP 集成管理（Phase 2.2）
  */
 
 export { useAceEditor, type UseAceEditorOptions, type UseAceEditorReturn } from './useAceEditor'
@@ -16,3 +17,4 @@ export { useEditorClipboard, type UseEditorClipboardOptions, type UseEditorClipb
 export { useEditorContextMenu, type UseEditorContextMenuOptions, type UseEditorContextMenuReturn } from './useEditorContextMenu'
 export { useEditorKeyboard, type UseEditorKeyboardOptions, type UseEditorKeyboardReturn, type KeyboardShortcut } from './useEditorKeyboard'
 export { useEditorFormat, type UseEditorFormatOptions, type UseEditorFormatReturn, type FormatAction, type FormatterConfig } from './useEditorFormat'
+export { useEditorLsp, type UseEditorLspOptions, type UseEditorLspReturn } from './useEditorLsp'

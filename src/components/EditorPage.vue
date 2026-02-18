@@ -43,7 +43,6 @@
 
 <script lang="ts" setup>
 import type { SyntaxMode } from "ace-code/src/ext/static_highlight";
-import type { SessionLspConfig } from "ace-linters/build/ace-language-client";
 import { ref, onMounted, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
 import { useEditorStore } from "@/stores/editor";
@@ -59,7 +58,8 @@ import "@/ace-theme-tie"; // 自定义主题
 import "@/ace-theme-tie-light";
 import "ace-builds/src-noconflict/theme-github"; // 亮色主题基础
 import { useTheme } from "vuetify";
-import { getLanguageProvider } from "@/lsp";
+// Phase 2.2: 使用 LSP composable
+import { useEditorLsp } from "@/composables/editor";
 import { debounce } from "lodash";
 import CheckerPanel from "./CheckerPanel.vue";
 import { useHotkey } from "vuetify";
@@ -116,6 +116,14 @@ const { bindKeyboard, unbindKeyboard } = useEditorKeyboard({
 });
 const { format } = useEditorFormat();
 
+// Phase 2.2: LSP 集成
+const filePath = ref<string | undefined>(undefined);
+const { isReady: lspReady, register: registerLsp, unregister: unregisterLsp } = useEditorLsp({
+  editor,
+  filePath,
+  joinWorkspaceURI: true,
+});
+
 async function initEditor() {
   // Phase 2A: 首先使用 composable 初始化基础编辑器实例
   await initAceEditor();
@@ -168,7 +176,6 @@ async function initEditor() {
     ed.session.setMode("ace/mode/text");
   }
 
-  const languageProvider = await getLanguageProvider();
   const keyboardCFG = config.keyboardShortcuts;
   runJudgeKey.value = keyboardCFG.runJudge.value as string;
   // Phase 2.1: 更新键盘快捷键配置并绑定
@@ -178,11 +185,9 @@ async function initEditor() {
   };
   bindKeyboard();
 
-  const sessionConfig: SessionLspConfig = {
-    filePath: (await fileService.getOpenedFile())!,
-    joinWorkspaceURI: true,
-  };
-  languageProvider.registerEditor(ed, sessionConfig);
+  // Phase 2.2: 设置文件路径并注册 LSP
+  filePath.value = await fileService.getOpenedFile() || undefined;
+  await registerLsp();
 }
 
 let lastModified = 0;
@@ -194,9 +199,8 @@ onMounted(() => {
   initEditor();
 });
 onUnmounted(async () => {
-  if (editor.value === undefined) return;
-  const languageProvider = await getLanguageProvider();
-  languageProvider.closeDocument(editor.value.getSession());
+  // Phase 2.2: 注销 LSP
+  await unregisterLsp();
   // Phase 2.1: 解绑键盘快捷键
   unbindKeyboard();
   // Phase 2A: 使用 composable 的 dispose 方法
