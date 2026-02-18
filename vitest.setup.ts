@@ -1,5 +1,33 @@
 import { beforeAll, vi } from 'vitest'
 
+// Mock localStorage for Pinia
+const localStorageMock = {
+  getItem: vi.fn().mockReturnValue(null),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  key: vi.fn().mockReturnValue(null),
+  length: 0,
+}
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+})
+
+// Mock sessionStorage
+const sessionStorageMock = {
+  getItem: vi.fn().mockReturnValue(null),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  key: vi.fn().mockReturnValue(null),
+  length: 0,
+}
+Object.defineProperty(window, 'sessionStorage', {
+  value: sessionStorageMock,
+  writable: true,
+})
+
 // Mock Ace editor
 vi.mock('ace-builds', () => ({
   Ace: {
@@ -196,17 +224,13 @@ vi.mock('vue', async (importOriginal) => {
   const actual = await importOriginal() as any
   return {
     ...actual,
-    ref: (val: any) => ({ value: val }),
-    computed: (fn: any) => fn(),
+    // Use actual ref/computed for Pinia stores to work correctly
     onMounted: actual?.onMounted || vi.fn(),
     onUnmounted: actual?.onUnmounted || vi.fn(),
     nextTick: actual?.nextTick || vi.fn().mockResolvedValue(undefined),
     defineExpose: actual?.defineExpose || vi.fn(),
     watch: actual?.watch || vi.fn(),
-    reactive: actual?.reactive || ((val: any) => val),
-    toRaw: actual?.toRaw || ((val: any) => val),
     triggerRef: actual?.triggerRef || vi.fn(),
-    isRef: actual?.isRef || ((val: any) => false),
   }
 })
 vi.mock('vuetify', () => {
