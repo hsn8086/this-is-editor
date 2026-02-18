@@ -148,38 +148,6 @@ type ConfigItem = {
   i18n: string;
   enum?: readonly any[];
 };
-function sortConfig(config: ConfigItem[]): [string, ConfigItem[]][] {
-  const groupMap: Record<string, ConfigItem[]> = {};
-  for (const item of config) {
-    if (!groupMap[item.group]) {
-      groupMap[item.group] = [];
-    }
-    groupMap[item.group].push(item);
-  }
-  for (const group in groupMap) {
-    groupMap[group].sort((a, b) => a.display.localeCompare(b.display));
-  }
-  let sortedConfig: [string, ConfigItem[]][] = Object.keys(groupMap)
-    .map((group): [string, ConfigItem[]] => [group, groupMap[group]]);
-  return sortedConfig;
-}
-function* parseConfig(
-  cfg: Config,
-  shuffix: string[] = []
-): Generator<ConfigItem> {
-  for (const [key, value] of Object.entries(cfg)) {
-    const id = [...shuffix, key];
-    if ("value" in value) {
-      yield {
-        ...value,
-        id: id.join("."),
-        group: id[0],
-      };
-    } else {
-      yield* parseConfig(value, id);
-    }
-  }
-}
 async function changeConfig(id: string, value: any): Promise<void> {
   await configService.setConfig(id, value);
   switch (id) {

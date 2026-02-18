@@ -73,6 +73,46 @@ export class Cache {
 
     return true;
   }
+
+  /**
+   * 获取所有缓存键（仅返回未过期的）
+   * @returns 缓存键数组
+   */
+  keys(): string[] {
+    const validKeys: string[] = [];
+    const now = Date.now();
+
+    for (const [key, entry] of this.store.entries()) {
+      if (now - entry.timestamp <= entry.ttl) {
+        validKeys.push(key);
+      } else {
+        this.store.delete(key);
+      }
+    }
+
+    return validKeys;
+  }
+
+  /**
+   * 按前缀删除缓存
+   * @param prefix 前缀字符串
+   */
+  deleteByPrefix(prefix: string): void {
+    const now = Date.now();
+
+    for (const [key, entry] of this.store.entries()) {
+      // 先清理过期缓存
+      if (now - entry.timestamp > entry.ttl) {
+        this.store.delete(key);
+        continue;
+      }
+
+      // 匹配前缀则删除
+      if (key.startsWith(prefix)) {
+        this.store.delete(key);
+      }
+    }
+  }
 }
 
 // 全局缓存实例

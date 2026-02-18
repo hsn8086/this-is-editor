@@ -33,6 +33,7 @@ export class ConfigService {
     await this.client.call<void>("set_config", id, value);
     // 清除配置相关的缓存
     this.client.invalidateCache("get_config");
+    this.client.invalidateCache("get_langs");
   }
 
   /**

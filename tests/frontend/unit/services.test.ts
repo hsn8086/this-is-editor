@@ -72,6 +72,56 @@ describe("services", () => {
       expect(cache.get("key1")).toBeUndefined();
       expect(cache.get("key2")).toBeUndefined();
     });
+
+    it("should return all valid keys", () => {
+      cache.set("key1", "value1");
+      cache.set("key2", "value2");
+      cache.set("prefix:key3", "value3");
+
+      const keys = cache.keys();
+      expect(keys).toContain("key1");
+      expect(keys).toContain("key2");
+      expect(keys).toContain("prefix:key3");
+      expect(keys).toHaveLength(3);
+    });
+
+    it("should delete by prefix", () => {
+      cache.set("method1:args1", "value1");
+      cache.set("method1:args2", "value2");
+      cache.set("method2:args1", "value3");
+      cache.set("method1", "value4"); // no args
+
+      cache.deleteByPrefix("method1:");
+
+      expect(cache.get("method1:args1")).toBeUndefined();
+      expect(cache.get("method1:args2")).toBeUndefined();
+      expect(cache.get("method2:args1")).toBe("value3");
+      expect(cache.get("method1")).toBe("value4"); // exact match should remain
+    });
+
+    it("should expire keys when calling keys()", async () => {
+      cache.set("key1", "value1", 10); // 10ms TTL
+      cache.set("key2", "value2", 60000); // 60s TTL
+
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      const keys = cache.keys();
+      expect(keys).not.toContain("key1");
+      expect(keys).toContain("key2");
+    });
+
+    it("should expire keys when calling deleteByPrefix()", async () => {
+      cache.set("prefix:key1", "value1", 10); // 10ms TTL
+      cache.set("prefix:key2", "value2", 60000); // 60s TTL
+
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      cache.deleteByPrefix("prefix:");
+
+      // Both should be undefined - key1 expired, key2 deleted by prefix
+      expect(cache.get("prefix:key1")).toBeUndefined();
+      expect(cache.get("prefix:key2")).toBeUndefined();
+    });
   });
 
   describe("ApiClient", () => {
@@ -146,6 +196,65 @@ describe("services", () => {
       await client.call<Config>("get_config");
 
       expect(getMockApi().get_config).toHaveBeenCalledTimes(2);
+    });
+
+    it("should invalidate cache by method only, not affecting other methods", async () => {
+      const mockConfig: Partial<Config> = { editor: {} as any };
+      const mockLangs = [{ id: "python", display: "Python" }] as any;
+      vi.mocked(getMockApi().get_config!).mockResolvedValue(mockConfig);
+      vi.mocked(getMockApi().get_langs!).mockResolvedValue(mockLangs);
+
+      // 调用两个不同的缓存方法
+      await client.call<Config>("get_config");
+      await client.call<typeof mockLangs>("get_langs");
+
+      // 只清除 get_config 缓存
+      client.invalidateCache("get_config");
+
+      // get_langs 应该仍从缓存返回，不再调用 API
+      await client.call<typeof mockLangs>("get_langs");
+
+      // get_config 应该重新调用 API
+      await client.call<Config>("get_config");
+
+      expect(getMockApi().get_config).toHaveBeenCalledTimes(2);
+      expect(getMockApi().get_langs).toHaveBeenCalledTimes(1);
+    });
+
+    it("should handle JSON.stringify failure gracefully", async () => {
+      const mockConfig: Partial<Config> = { editor: {} as any };
+      vi.mocked(getMockApi().get_config!).mockResolvedValue(mockConfig);
+
+      // 创建带有循环引用的对象会导致 JSON.stringify 失败
+      const circularObj: any = { a: 1 };
+      circularObj.self = circularObj;
+
+      // 调用应该成功，只是跳过缓存
+      const result = await client.call<Config>("get_config", circularObj);
+      expect(result).toEqual(mockConfig);
+
+      // 应该调用两次 API（因为没有缓存）
+      await client.call<Config>("get_config", circularObj);
+      expect(getMockApi().get_config).toHaveBeenCalledTimes(2);
+    });
+
+    it("should invalidate cache with specific args", async () => {
+      const mockFileInfo: Partial<FileInfo> = { name: "test.txt" };
+      vi.mocked(getMockApi().path_get_info!).mockResolvedValue(mockFileInfo);
+
+      // 调用两次，参数不同
+      await client.call<FileInfo>("path_get_info", "/path1");
+      await client.call<FileInfo>("path_get_info", "/path2");
+
+      // 只清除 /path1 的缓存
+      client.invalidateCache("path_get_info", ["/path1"]);
+
+      // /path1 应该重新调用 API
+      await client.call<FileInfo>("path_get_info", "/path1");
+      // /path2 应该仍从缓存获取
+      await client.call<FileInfo>("path_get_info", "/path2");
+
+      expect(getMockApi().path_get_info).toHaveBeenCalledTimes(3);
     });
   });
 

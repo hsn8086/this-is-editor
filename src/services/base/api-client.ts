@@ -52,9 +52,14 @@ export class ApiClient {
   /**
    * 生成缓存键
    */
-  private generateCacheKey(method: string, args: unknown[]): string {
+  private generateCacheKey(method: string, args: unknown[]): string | null {
     if (args.length === 0) return method;
-    return `${method}:${JSON.stringify(args)}`;
+    try {
+      return `${method}:${JSON.stringify(args)}`;
+    } catch {
+      // JSON.stringify 失败（如循环引用），返回 null 表示跳过缓存
+      return null;
+    }
   }
 
   /**
@@ -72,9 +77,10 @@ export class ApiClient {
    */
   async call<T>(method: keyof API, ...args: unknown[]): Promise<T> {
     const cacheKey = this.generateCacheKey(method as string, args);
+    const canUseCache = cacheKey !== null && this.shouldCache(method as string);
 
     // 尝试从缓存获取
-    if (this.shouldCache(method as string)) {
+    if (canUseCache) {
       const cached = this.cache.get<T>(cacheKey);
       if (cached !== undefined) {
         return cached;
@@ -93,7 +99,7 @@ export class ApiClient {
       const result = await fn.apply(this.api, args);
 
       // 存入缓存
-      if (this.shouldCache(method as string)) {
+      if (canUseCache) {
         this.cache.set(cacheKey, result, this.defaultCacheTtl);
       }
 
@@ -111,11 +117,15 @@ export class ApiClient {
   invalidateCache(method: string, args?: unknown[]): void {
     if (args) {
       const cacheKey = this.generateCacheKey(method, args);
-      this.cache.delete(cacheKey);
+      if (cacheKey !== null) {
+        this.cache.delete(cacheKey);
+      }
     } else {
       // 清除该方法的所有缓存（通过前缀匹配）
-      // 注意：这里简单实现，实际可能需要更复杂的匹配逻辑
-      this.cache.clear();
+      // 匹配 "method:" 前缀或精确匹配 "method"
+      this.cache.deleteByPrefix(`${method}:`);
+      // 同时检查精确匹配（无参数的情况）
+      this.cache.delete(method);
     }
   }
 

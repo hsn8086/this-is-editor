@@ -132,6 +132,10 @@ export class FileService {
    */
   async setOpenedFile(path: string): Promise<void> {
     await this.client.call<void>("set_opened_file", path);
+    // 清理与文件相关的缓存
+    this.client.invalidateCache("path_get_info");
+    this.client.invalidateCache("get_code");
+    this.client.invalidateCache("get_testcase");
   }
 
   /**
