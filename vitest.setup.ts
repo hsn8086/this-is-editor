@@ -1,6 +1,56 @@
 import { beforeAll, vi } from 'vitest'
 
-// Mock window.pywebview
+// Mock Ace editor
+vi.mock('ace-builds', () => ({
+  Ace: {
+    Edit: vi.fn().mockImplementation(() => ({
+      setTheme: vi.fn(),
+      setOption: vi.fn(),
+      getValue: vi.fn().mockReturnValue(''),
+      setValue: vi.fn(),
+      getCursorPosition: vi.fn().mockReturnValue({ row: 0, column: 0 }),
+      moveCursorToPosition: vi.fn(),
+      scrollToLine: vi.fn(),
+      session: {
+        setMode: vi.fn(),
+        setValue: vi.fn(),
+        getLine: vi.fn().mockReturnValue(''),
+        remove: vi.fn(),
+        removeFullLines: vi.fn(),
+        getSelectionRange: vi.fn(),
+      },
+      container: {
+        style: {},
+      },
+      renderer: {
+        updateFontSize: vi.fn(),
+      },
+      on: vi.fn(),
+      setKeyboardHandler: vi.fn(),
+      getSelectedText: vi.fn().mockReturnValue(''),
+    })),
+  },
+}))
+
+// Mock ace-linters
+vi.mock('ace-linters/build/ace-language-client', () => ({
+  AceLanguageClient: {
+    for: vi.fn().mockImplementation((_serverDataList: any[], _options: any[]) => ({
+      registerEditor: vi.fn(),
+      closeDocument: vi.fn(),
+      format: vi.fn(),
+    })),
+  },
+}))
+
+// Mock vue3-ace-editor
+vi.mock('vue3-ace-editor', () => ({
+  VAceEditor: {
+    name: 'VAceEditor',
+  },
+}))
+
+// Mock pywebview
 beforeAll(() => {
   // Mock pywebview API
   const mockApi = {
@@ -87,6 +137,114 @@ beforeAll(() => {
     },
     writable: true,
   })
+})
+
+// Mock WebSocket
+class MockWebSocket {
+  static CONNECTING = 0
+  static OPEN = 1
+  static CLOSING = 2
+  static CLOSED = 3
+  
+  readyState = MockWebSocket.CONNECTING
+  onopen: ((event: any) => void) | null = null
+  onclose: ((event: any) => void) | null = null
+  onmessage: ((event: any) => void) | null = null
+  onerror: ((event: any) => void) | null = null
+  
+  constructor(public url: string) {
+    setTimeout(() => {
+      this.readyState = MockWebSocket.OPEN
+      if (this.onopen) this.onopen({})
+    }, 0)
+  }
+  
+  send = vi.fn()
+  close = vi.fn()
+}
+
+vi.stubGlobal('WebSocket', MockWebSocket)
+
+// Mock html2canvas
+vi.mock('html2canvas', () => ({
+  default: vi.fn().mockImplementation(() => 
+    Promise.resolve({
+      toBlob: vi.fn((callback) => callback(null)),
+      toDataURL: vi.fn().mockReturnValue('data:image/png;base64,mock'),
+    })
+  ),
+}))
+
+// Mock highlight.js
+vi.mock('highlight.js', () => ({
+  default: {
+    highlightAuto: vi.fn().mockReturnValue({ value: '<code>test</code>' }),
+  },
+  highlightAuto: vi.fn().mockReturnValue({ value: '<code>test</code>' }),
+}))
+
+// Mock vue-i18n
+vi.mock('vue-i18n', () => ({
+  useI18n: vi.fn().mockReturnValue({
+    t: vi.fn((key: string) => key),
+    locale: { value: 'en-US' },
+  }),
+}))
+
+// Mock Vue hooks - use importOriginal to get actual Vue exports
+vi.mock('vue', async (importOriginal) => {
+  const actual = await importOriginal() as any
+  return {
+    ...actual,
+    ref: (val: any) => ({ value: val }),
+    computed: (fn: any) => fn(),
+    onMounted: actual?.onMounted || vi.fn(),
+    onUnmounted: actual?.onUnmounted || vi.fn(),
+    nextTick: actual?.nextTick || vi.fn().mockResolvedValue(undefined),
+    defineExpose: actual?.defineExpose || vi.fn(),
+    watch: actual?.watch || vi.fn(),
+    reactive: actual?.reactive || ((val: any) => val),
+    toRaw: actual?.toRaw || ((val: any) => val),
+    triggerRef: actual?.triggerRef || vi.fn(),
+    isRef: actual?.isRef || ((val: any) => false),
+  }
+})
+vi.mock('vuetify', () => {
+  const VComponent = {
+    name: 'VComponent',
+    props: {
+      modelValue: Boolean,
+    },
+    emits: ['update:modelValue'],
+  }
+  return {
+    useTheme: vi.fn().mockReturnValue({
+      global: {
+        current: {
+          value: {
+            dark: true,
+          },
+        },
+      },
+    }),
+    useHotkey: vi.fn().mockReturnValue({
+      use: vi.fn(),
+    }),
+    VApp: VComponent,
+    VMain: VComponent,
+    VNavigationDrawer: VComponent,
+    VList: VComponent,
+    VListItem: VComponent,
+    VMenu: VComponent,
+    VIcon: VComponent,
+    VDivider: VComponent,
+    VTextarea: VComponent,
+    VChip: VComponent,
+    VAvatar: VComponent,
+    VProgressLinear: VComponent,
+    VTooltip: VComponent,
+    VAlert: VComponent,
+  }
 })
 
 // Mock matchMedia
