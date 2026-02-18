@@ -72,12 +72,16 @@ this-is-editor/
 
 **Composables `src/composables/`**
 
-Vue 3 Composition API 的可复用逻辑封装（Phase 2A 新增）：
+Vue 3 Composition API 的可复用逻辑封装（Phase 2A/B/2.1 新增）：
 
 | 路径 | 作用 |
 | --- | --- |
 | `editor/useAceEditor.ts` | Ace Editor 实例管理：初始化、setValue/getValue、ready 状态 |
 | `editor/useEditorTheme.ts` | 编辑器主题管理：监听 Vuetify 主题，同步 Ace 主题 |
+| `editor/useEditorClipboard.ts` | 剪贴板操作：cut/copy/copyAll/paste |
+| `editor/useEditorContextMenu.ts` | 右键菜单控制：菜单位置、显示状态 |
+| `editor/useEditorKeyboard.ts` | 键盘快捷键管理：HashHandler 绑定/解绑（Phase 2.1） |
+| `editor/useEditorFormat.ts` | 代码格式化：读取配置、执行 format action（Phase 2.1） |
 | `editor/index.ts` | Composables 统一导出 |
 
 **关键组件**

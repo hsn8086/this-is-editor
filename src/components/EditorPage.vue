@@ -55,7 +55,6 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/mode-c_cpp";
 import { Ace } from "ace-builds";
 import "ace-builds/src-noconflict/ext-language_tools";
-import { HashHandler } from "ace-code/src/keyboard/hash_handler";
 import "@/ace-theme-tie"; // 自定义主题
 import "@/ace-theme-tie-light";
 import "ace-builds/src-noconflict/theme-github"; // 亮色主题基础
@@ -71,7 +70,7 @@ import hljs_github_dark from "highlight.js/styles/github-dark.css?url";
 import hljs_github_light from "highlight.js/styles/github.css?url";
 import { codeService, configService, fileService } from "@/services";
 // Phase 2A/B: 引入新的 composables
-import { useAceEditor, useEditorTheme, useEditorClipboard, useEditorContextMenu } from "@/composables/editor";
+import { useAceEditor, useEditorTheme, useEditorClipboard, useEditorContextMenu, useEditorKeyboard, useEditorFormat } from "@/composables/editor";
 const { t } = useI18n();
 
 // Editor store
@@ -99,9 +98,23 @@ const theme = useTheme(); // useTheme must be called in setup
 // Phase 2A: 使用 composables 管理编辑器实例和主题
 const { aceRef, editor, ready: editorReady, initEditor: initAceEditor, setValue, getValue, dispose: disposeEditor } = useAceEditor();
 const { isDark, currentTheme, syncTheme } = useEditorTheme({ editor, autoWatch: true });
-// Phase 2B: 使用 composables 管理剪贴板和右键菜单
+// Phase 2B: 使用 composables 管理剪贴板、右键菜单、键盘快捷键和格式化
 const { cut, copy, copyAll, paste } = useEditorClipboard({ editor });
 const { menuX, menuY, showMenu, onContextMenu, closeMenu } = useEditorContextMenu({ editor });
+// Phase 2.1: 键盘快捷键和格式化
+const keyboardShortcuts = ref({
+  formatCode: { value: 'Ctrl-Shift-F' },
+  runJudge: { value: 'F5' },
+});
+const { bindKeyboard, unbindKeyboard } = useEditorKeyboard({
+  editor,
+  keyboardShortcuts,
+  onFormat: () => format((code) => resetCode(code)),
+  onRunJudge: () => checkPanel.value?.runAll(),
+  onCut: cut,
+  onCopy: copy,
+});
+const { format } = useEditorFormat();
 
 async function initEditor() {
   // Phase 2A: 首先使用 composable 初始化基础编辑器实例
@@ -158,58 +171,18 @@ async function initEditor() {
   const languageProvider = await getLanguageProvider();
   const keyboardCFG = config.keyboardShortcuts;
   runJudgeKey.value = keyboardCFG.runJudge.value as string;
-  let menuKb = new HashHandler([
-    {
-      bindKey: keyboardCFG.formatCode.value as string,
-      name: "format", //todo: fix it
-      exec: function () {
-        console.log("Format command triggered");
-        // languageProvider.format();
-        format();
-      },
-    },
-    {
-      bindKey: "Ctrl-X",
-      name: "cut",
-      exec: cut,
-    },
-    {
-      bindKey: "Ctrl-C",
-      name: "copy",
-      exec: copy,
-    },
-    {
-      bindKey: keyboardCFG.runJudge.value as string,
-      name: "runJudge",
-      exec: function () {
-        checkPanel.value?.runAll();
-      },
-    }, // todo
-  ]);
-  ed.setKeyboardHandler(menuKb);
+  // Phase 2.1: 更新键盘快捷键配置并绑定
+  keyboardShortcuts.value = keyboardCFG as {
+    formatCode: { value: string };
+    runJudge: { value: string };
+  };
+  bindKeyboard();
 
   const sessionConfig: SessionLspConfig = {
     filePath: (await fileService.getOpenedFile())!,
     joinWorkspaceURI: true,
   };
   languageProvider.registerEditor(ed, sessionConfig);
-}
-
-async function format() {
-  const config = await configService.getConfig();
-  const codeType = (await codeService.getCode()).type;
-  if (!config.programmingLanguages[codeType]) return;
-  const formater_cfg = config.programmingLanguages[codeType].formatter;
-  if (!formater_cfg) return;
-  if (!formater_cfg.active.value) return;
-
-  const formatted = await codeService.formatCode();
-  if (formater_cfg.action.value === "reload") {
-    // reload the file from disk
-    const text = (await codeService.getCode()).code;
-    resetCode(text);
-    return;
-  } else if (formater_cfg.action.value === "stdout") resetCode(formatted);
 }
 
 let lastModified = 0;
@@ -224,6 +197,8 @@ onUnmounted(async () => {
   if (editor.value === undefined) return;
   const languageProvider = await getLanguageProvider();
   languageProvider.closeDocument(editor.value.getSession());
+  // Phase 2.1: 解绑键盘快捷键
+  unbindKeyboard();
   // Phase 2A: 使用 composable 的 dispose 方法
   disposeEditor();
   console.log("Editor unmounted and content cleared.");
@@ -369,7 +344,7 @@ const menuList = [
     },
   ],
   [
-    { title: "formatCode", action: format },
+    { title: "formatCode", action: () => format((code) => resetCode(code)) },
     {
       title: "screenshot",
       action: takeCodeScreenshot,
