@@ -103,12 +103,14 @@
             v-if="dialogType === 'file'"
             label="File Name"
             :rules="[(value) => !!value || 'File name is required']"
+            @keydown="onCreateInputKeydown"
           />
           <v-text-field
             v-model="createName"
             v-else-if="dialogType === 'folder'"
             label="Folder Name"
             :rules="[(value) => !!value || 'Folder name is required']"
+            @keydown="onCreateInputKeydown"
           />
         </v-card-text>
         <v-card-actions>
@@ -225,6 +227,7 @@ import { storeToRefs } from "pinia";
 import { useFileStore } from "@/stores/file";
 import { debounce } from "lodash";
 import { fileService } from "@/services";
+import { handleCreateInputKeydown } from "@/components/file-sel-create";
 
 import router from "@/router";
 
@@ -303,6 +306,11 @@ async function fileClick(file: FileItem | FileInfo) {
 const dialog = ref(false);
 const dialogType = ref<"file" | "folder">("file");
 const createName = ref<string>("");
+
+async function onCreateInputKeydown(event: KeyboardEvent) {
+  await handleCreateInputKeydown(event, createItem);
+}
+
 async function createItem() {
   const p = await fileService.join(folder.value!, createName.value);
   if (dialogType.value === "file") await fileService.touch(p);
