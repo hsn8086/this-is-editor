@@ -1,6 +1,6 @@
-import { ref, computed, type Ref } from 'vue'
+import type { Ace } from 'ace-builds'
 import type { VAceEditorInstance } from 'vue3-ace-editor/types'
-import { Ace } from 'ace-builds'
+import { computed, ref, type Ref } from 'vue'
 
 export interface UseAceEditorOptions {
   /** 初始内容 */
@@ -46,15 +46,15 @@ export interface UseAceEditorReturn {
 
 /**
  * Ace Editor 实例管理 Composable
- * 
+ *
  * 负责：
  * - aceRef、editor 实例获取
  * - 初始化基本选项
  * - 暴露 setValue/getValue/ready 状态
- * 
+ *
  * 注意：不涉及 LSP、快捷键、格式化、截图、右键菜单等逻辑
  */
-export function useAceEditor(options: UseAceEditorOptions = {}): UseAceEditorReturn {
+export function useAceEditor (options: UseAceEditorOptions = {}): UseAceEditorReturn {
   const { initialContent = '', editorOptions = {} } = options
 
   // Refs
@@ -71,7 +71,7 @@ export function useAceEditor(options: UseAceEditorOptions = {}): UseAceEditorRet
   /**
    * 获取编辑器实例（带安全检查）
    */
-  function getEditor(): Ace.Editor | undefined {
+  function getEditor (): Ace.Editor | undefined {
     return editor.value
   }
 
@@ -79,7 +79,7 @@ export function useAceEditor(options: UseAceEditorOptions = {}): UseAceEditorRet
    * 初始化编辑器
    * 需在组件 mounted 后调用
    */
-  async function initEditor(): Promise<Ace.Editor | undefined> {
+  async function initEditor (): Promise<Ace.Editor | undefined> {
     if (!aceRef.value) {
       console.warn('[useAceEditor] aceRef is not ready, cannot initialize editor')
       return undefined
@@ -98,7 +98,7 @@ export function useAceEditor(options: UseAceEditorOptions = {}): UseAceEditorRet
     for (const key in editorOptions) {
       aceInstance.setOption(
         key as keyof Ace.EditorOptions,
-        editorOptions[key]
+        editorOptions[key],
       )
     }
 
@@ -118,7 +118,7 @@ export function useAceEditor(options: UseAceEditorOptions = {}): UseAceEditorRet
    * @param value 新内容
    * @param cursorPos 光标位置，-1 表示保持当前位置
    */
-  function setValue(value: string, cursorPos: number = -1): void {
+  function setValue (value: string, cursorPos = -1): void {
     const ed = editor.value
     if (!ed) {
       console.warn('[useAceEditor] Cannot setValue: editor not initialized')
@@ -127,7 +127,7 @@ export function useAceEditor(options: UseAceEditorOptions = {}): UseAceEditorRet
 
     // 保存当前光标位置
     const savedPos = ed.getCursorPosition()
-    
+
     // 设置内容
     ed.setValue(value, cursorPos)
 
@@ -144,7 +144,7 @@ export function useAceEditor(options: UseAceEditorOptions = {}): UseAceEditorRet
   /**
    * 获取编辑器内容
    */
-  function getValue(): string {
+  function getValue (): string {
     const ed = editor.value
     if (!ed) {
       console.warn('[useAceEditor] Cannot getValue: editor not initialized')
@@ -156,35 +156,35 @@ export function useAceEditor(options: UseAceEditorOptions = {}): UseAceEditorRet
   /**
    * 获取光标位置
    */
-  function getCursorPosition(): Ace.Point | undefined {
+  function getCursorPosition (): Ace.Point | undefined {
     return editor.value?.getCursorPosition()
   }
 
   /**
    * 移动光标到指定位置
    */
-  function moveCursorToPosition(pos: Ace.Point): void {
+  function moveCursorToPosition (pos: Ace.Point): void {
     editor.value?.moveCursorToPosition(pos)
   }
 
   /**
    * 滚动到指定行
    */
-  function scrollToLine(row: number, center: boolean = true): void {
+  function scrollToLine (row: number, center = true): void {
     editor.value?.scrollToLine(row, center, true, () => {})
   }
 
   /**
    * 获取选中的文本
    */
-  function getSelectedText(): string {
+  function getSelectedText (): string {
     return editor.value?.getSelectedText() ?? ''
   }
 
   /**
    * 设置编辑器模式（语言）
    */
-  function setMode(mode: string | Ace.SyntaxMode): void {
+  function setMode (mode: string | Ace.SyntaxMode): void {
     if (!editor.value) {
       console.warn('[useAceEditor] Cannot setMode: editor not initialized')
       return
@@ -195,7 +195,7 @@ export function useAceEditor(options: UseAceEditorOptions = {}): UseAceEditorRet
   /**
    * 设置编辑器主题
    */
-  function setTheme(theme: string): void {
+  function setTheme (theme: string): void {
     if (!editor.value) {
       console.warn('[useAceEditor] Cannot setTheme: editor not initialized')
       return
@@ -206,9 +206,9 @@ export function useAceEditor(options: UseAceEditorOptions = {}): UseAceEditorRet
   /**
    * 设置编辑器选项
    */
-  function setOption<K extends keyof Ace.EditorOptions>(
+  function setOption<K extends keyof Ace.EditorOptions> (
     key: K,
-    value: Ace.EditorOptions[K]
+    value: Ace.EditorOptions[K],
   ): void {
     editor.value?.setOption(key, value)
   }
@@ -216,14 +216,14 @@ export function useAceEditor(options: UseAceEditorOptions = {}): UseAceEditorRet
   /**
    * 监听编辑器内容变化
    */
-  function onChange(callback: (e: Ace.Delta) => void): void {
+  function onChange (callback: (e: Ace.Delta) => void): void {
     editor.value?.on('change', callback as any)
   }
 
   /**
    * 销毁编辑器，清理资源
    */
-  function dispose(): void {
+  function dispose (): void {
     if (editor.value) {
       // 清除内容
       editor.value.session.setValue('')

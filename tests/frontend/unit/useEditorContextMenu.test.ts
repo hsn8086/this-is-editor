@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { ref, nextTick } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick, ref } from 'vue'
 import { useEditorContextMenu, type UseEditorContextMenuOptions } from '@/composables/editor/useEditorContextMenu'
 
 // Mock ace-builds
@@ -180,7 +180,7 @@ describe('useEditorContextMenu Composable', () => {
       const { showMenu, closeMenu } = useEditorContextMenu({ editor: editorRef })
 
       expect(showMenu.value).toBe(false)
-      
+
       // Should not throw
       closeMenu()
       expect(showMenu.value).toBe(false)

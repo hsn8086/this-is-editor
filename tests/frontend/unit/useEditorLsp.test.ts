@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { ref, nextTick } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick, ref } from 'vue'
 import { useEditorLsp, type UseEditorLspOptions } from '@/composables/editor/useEditorLsp'
 
 // Mock @/lsp module
@@ -95,7 +95,7 @@ describe('useEditorLsp Composable', () => {
         expect.objectContaining({
           filePath: '/test/file.py',
           joinWorkspaceURI: true,
-        })
+        }),
       )
     })
 
@@ -112,7 +112,7 @@ describe('useEditorLsp Composable', () => {
         expect.objectContaining({
           filePath: '/test/file.py',
           joinWorkspaceURI: false,
-        })
+        }),
       )
     })
 
@@ -276,7 +276,7 @@ describe('useEditorLsp Composable', () => {
         mockEditor,
         expect.objectContaining({
           filePath: '/test/file2.py',
-        })
+        }),
       )
     })
 
@@ -309,7 +309,7 @@ describe('useEditorLsp Composable', () => {
         mockEditor,
         expect.objectContaining({
           filePath: '/test/file.py',
-        })
+        }),
       )
     })
   })

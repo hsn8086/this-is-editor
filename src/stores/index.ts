@@ -1,9 +1,9 @@
 // Utilities
 import { createPinia } from 'pinia'
 
+export { type RunStatus, type TaskItem, type TaskStatus, useCheckerStore } from './checker'
 // Export stores
-export { useEditorStore, type EditorLang } from './editor'
-export { useFileStore, type FileItem } from './file'
-export { useCheckerStore, type TaskItem, type TaskStatus, type RunStatus } from './checker'
+export { type EditorLang, useEditorStore } from './editor'
+export { type FileItem, useFileStore } from './file'
 
 export default createPinia()

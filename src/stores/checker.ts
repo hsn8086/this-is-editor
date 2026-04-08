@@ -1,6 +1,6 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
 import type { TestCase } from '@/pywebview-defines'
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
 
 export type TaskStatus = 'null' | 'pending' | 'completed' | 'failed' | 'running'
 
@@ -8,6 +8,7 @@ export interface TaskItem {
   id: number
   input: string
   output: string
+  stderr: string
   answer: string
   status: TaskStatus
   expend: boolean
@@ -29,7 +30,9 @@ export const useCheckerStore = defineStore('checker', () => {
 
   // Getters
   const progress = computed(() => {
-    if (tasks.value.length === 0) return 0
+    if (tasks.value.length === 0) {
+      return 0
+    }
     return Math.ceil((completedTasks.value / tasks.value.length) * 100)
   })
 
@@ -42,88 +45,89 @@ export const useCheckerStore = defineStore('checker', () => {
   const hasTasks = computed(() => tasks.value.length > 0)
 
   const pendingTasks = computed(() =>
-    tasks.value.filter(t => t.status === 'pending').length
+    tasks.value.filter(t => t.status === 'pending').length,
   )
 
   const completedCount = computed(() =>
-    tasks.value.filter(t => t.status === 'completed').length
+    tasks.value.filter(t => t.status === 'completed').length,
   )
 
   const failedCount = computed(() =>
-    tasks.value.filter(t => t.status === 'failed').length
+    tasks.value.filter(t => t.status === 'failed').length,
   )
 
   // Actions
-  function setTasks(newTasks: TaskItem[]) {
+  function setTasks (newTasks: TaskItem[]) {
     tasks.value = newTasks
     completedTasks.value = 0
   }
 
-  function addTask(task: TaskItem) {
+  function addTask (task: TaskItem) {
     tasks.value.push(task)
   }
 
-  function updateTask(id: number, updates: Partial<TaskItem>) {
+  function updateTask (id: number, updates: Partial<TaskItem>) {
     const task = tasks.value.find(t => t.id === id)
     if (task) {
       Object.assign(task, updates)
     }
   }
 
-  function deleteTask(id: number) {
+  function deleteTask (id: number) {
     tasks.value = tasks.value.filter(t => t.id !== id)
   }
 
-  function clearTasks() {
+  function clearTasks () {
     tasks.value = []
     completedTasks.value = 0
   }
 
-  function setTestcaseName(name: string) {
+  function setTestcaseName (name: string) {
     testcaseName.value = name
   }
 
-  function setTestcaseInfo(info: TestCase) {
+  function setTestcaseInfo (info: TestCase) {
     testcaseInfo.value = info
   }
 
-  function setRunStatus(status: RunStatus) {
+  function setRunStatus (status: RunStatus) {
     runStatus.value = status
   }
 
-  function resetRunStatus() {
+  function resetRunStatus () {
     runStatus.value = 0
     completedTasks.value = 0
   }
 
-  function incrementCompleted() {
+  function incrementCompleted () {
     completedTasks.value += 1
   }
 
-  function resetAllTasksStatus() {
-    tasks.value.forEach(task => {
+  function resetAllTasksStatus () {
+    for (const task of tasks.value) {
       task.status = 'pending'
       task.output = ''
+      task.stderr = ''
       task.time = undefined
       task.memory = undefined
-    })
+    }
     completedTasks.value = 0
   }
 
-  function collapseAllTasks() {
-    tasks.value.forEach(task => {
+  function collapseAllTasks () {
+    for (const task of tasks.value) {
       task.expend = false
-    })
+    }
   }
 
-  function expandTask(id: number) {
+  function expandTask (id: number) {
     const task = tasks.value.find(t => t.id === id)
     if (task) {
       task.expend = true
     }
   }
 
-  function resetCheckerState() {
+  function resetCheckerState () {
     tasks.value = []
     testcaseName.value = ''
     runStatus.value = 0

@@ -1,14 +1,14 @@
 <template>
-  <v-navigation-drawer :rail="true" permanent>
+  <v-navigation-drawer permanent :rail="true">
     <v-list density="compact" nav>
       <v-list-item
         v-for="item in menu"
         :key="item.value"
-        :value="item.value"
+        :active="selected === item.value"
         :prepend-icon="item.icon"
         :title="item.title"
+        :value="item.value"
         @click="list_click(item.value)"
-        :active="selected === item.value"
       />
     </v-list>
   </v-navigation-drawer>
@@ -58,32 +58,31 @@
 </style> -->
 
 <script lang="ts" setup>
-import { useRouter, useRoute } from "vue-router";
+  import { useRoute, useRouter } from 'vue-router'
 
-const router = useRouter();
-const route = useRoute();
+  const router = useRouter()
+  const route = useRoute()
 
+  const selected = ref(route.path.replace('/', '') || 'editor')
 
-const selected = ref(route.path.replace("/", "") || "editor");
+  const menu = [
+    { title: 'Editor', icon: 'mdi-code-braces', value: 'editor' },
+    { title: 'Setting', icon: 'mdi-cog', value: 'setting' },
+    { title: 'File Selector', icon: 'mdi-folder', value: 'file-sel' },
+  ]
 
-const menu = [
-  { title: "Editor", icon: "mdi-code-braces", value: "editor" },
-  { title: "Setting", icon: "mdi-cog", value: "setting" },
-  { title: "File Selector", icon: "mdi-folder", value: "file-sel" },
-];
+  watch(
+    () => route.path,
+    newPath => {
+      selected.value = newPath.replace('/', '') || 'editor'
+    },
+  )
 
-watch(
-  () => route.path,
-  (newPath) => {
-    selected.value = newPath.replace("/", "") || "editor";
+  function list_click (value: string) {
+    // 处理列表项点击事件
+    console.log('List item clicked:', value)
+
+    router.push(`/${value}`)
   }
-);
-
-function list_click(value: string) {
-  // 处理列表项点击事件
-  console.log("List item clicked:", value);
-
-  router.push(`/${value}`);
-}
 
 </script>

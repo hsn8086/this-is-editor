@@ -1,5 +1,5 @@
-import { ref, type Ref } from 'vue'
 import type { Ace } from 'ace-builds'
+import { ref, type Ref } from 'vue'
 
 export interface UseEditorClipboardOptions {
   /** Ace Editor 实例 Ref */
@@ -21,23 +21,23 @@ export interface UseEditorClipboardReturn {
 
 /**
  * 编辑器剪贴板操作 Composable
- * 
+ *
  * 负责：
  * - cut: 优先选区，否则当前行
  * - copy: 优先选区，否则当前行
  * - copyAll: 复制全部内容
  * - paste: 读取剪贴板并插入
- * 
+ *
  * 注意：所有操作都有 guard，editor 未初始化时不执行
  */
-export function useEditorClipboard(options: UseEditorClipboardOptions): UseEditorClipboardReturn {
+export function useEditorClipboard (options: UseEditorClipboardOptions): UseEditorClipboardReturn {
   const { editor } = options
   const isProcessing = ref(false)
 
   /**
    * 安全获取编辑器实例
    */
-  function getEditor(): Ace.Editor | undefined {
+  function getEditor (): Ace.Editor | undefined {
     return editor.value
   }
 
@@ -45,7 +45,7 @@ export function useEditorClipboard(options: UseEditorClipboardOptions): UseEdito
    * 剪切操作
    * 优先选区，否则当前行
    */
-  async function cut(): Promise<void> {
+  async function cut (): Promise<void> {
     const ed = getEditor()
     if (!ed) {
       console.warn('[useEditorClipboard] Cannot cut: editor not initialized')
@@ -55,7 +55,7 @@ export function useEditorClipboard(options: UseEditorClipboardOptions): UseEdito
     isProcessing.value = true
     try {
       const selectedText = ed.getSelectedText()
-      
+
       if (selectedText) {
         // 有选区：复制选区并删除
         await navigator.clipboard.writeText(selectedText)
@@ -64,15 +64,15 @@ export function useEditorClipboard(options: UseEditorClipboardOptions): UseEdito
         // 无选区：复制当前行并删除该行
         const pos = ed.getCursorPosition()
         const lineContent = ed.session.getLine(pos.row)
-        
+
         if (lineContent !== undefined) {
           await navigator.clipboard.writeText(lineContent.trim())
           ed.session.removeFullLines(pos.row, pos.row)
           ed.moveCursorTo(pos.row, 0)
         }
       }
-    } catch (err) {
-      console.error('[useEditorClipboard] Cut failed:', err)
+    } catch (error) {
+      console.error('[useEditorClipboard] Cut failed:', error)
     } finally {
       isProcessing.value = false
     }
@@ -82,7 +82,7 @@ export function useEditorClipboard(options: UseEditorClipboardOptions): UseEdito
    * 复制操作
    * 优先选区，否则当前行
    */
-  async function copy(): Promise<void> {
+  async function copy (): Promise<void> {
     const ed = getEditor()
     if (!ed) {
       console.warn('[useEditorClipboard] Cannot copy: editor not initialized')
@@ -92,7 +92,7 @@ export function useEditorClipboard(options: UseEditorClipboardOptions): UseEdito
     isProcessing.value = true
     try {
       const selectedText = ed.getSelectedText()
-      
+
       if (selectedText) {
         // 有选区：复制选区
         await navigator.clipboard.writeText(selectedText)
@@ -100,13 +100,13 @@ export function useEditorClipboard(options: UseEditorClipboardOptions): UseEdito
         // 无选区：复制当前行
         const pos = ed.getCursorPosition()
         const lineContent = ed.session.getLine(pos.row)
-        
+
         if (lineContent !== undefined) {
           await navigator.clipboard.writeText(lineContent.trim())
         }
       }
-    } catch (err) {
-      console.error('[useEditorClipboard] Copy failed:', err)
+    } catch (error) {
+      console.error('[useEditorClipboard] Copy failed:', error)
     } finally {
       isProcessing.value = false
     }
@@ -115,7 +115,7 @@ export function useEditorClipboard(options: UseEditorClipboardOptions): UseEdito
   /**
    * 复制全部内容
    */
-  async function copyAll(): Promise<void> {
+  async function copyAll (): Promise<void> {
     const ed = getEditor()
     if (!ed) {
       console.warn('[useEditorClipboard] Cannot copyAll: editor not initialized')
@@ -126,8 +126,8 @@ export function useEditorClipboard(options: UseEditorClipboardOptions): UseEdito
     try {
       const allContent = ed.getValue()
       await navigator.clipboard.writeText(allContent)
-    } catch (err) {
-      console.error('[useEditorClipboard] CopyAll failed:', err)
+    } catch (error) {
+      console.error('[useEditorClipboard] CopyAll failed:', error)
     } finally {
       isProcessing.value = false
     }
@@ -137,7 +137,7 @@ export function useEditorClipboard(options: UseEditorClipboardOptions): UseEdito
    * 粘贴操作
    * 读取剪贴板并插入光标位置
    */
-  async function paste(): Promise<void> {
+  async function paste (): Promise<void> {
     const ed = getEditor()
     if (!ed) {
       console.warn('[useEditorClipboard] Cannot paste: editor not initialized')
@@ -148,8 +148,8 @@ export function useEditorClipboard(options: UseEditorClipboardOptions): UseEdito
     try {
       const clipboardText = await navigator.clipboard.readText()
       ed.insert(clipboardText)
-    } catch (err) {
-      console.error('[useEditorClipboard] Paste failed:', err)
+    } catch (error) {
+      console.error('[useEditorClipboard] Paste failed:', error)
     } finally {
       isProcessing.value = false
     }

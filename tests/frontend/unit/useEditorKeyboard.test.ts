@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import { useEditorKeyboard } from '@/composables/editor/useEditorKeyboard'
 
@@ -7,7 +7,7 @@ let lastHashHandlerInstance: { commands: any[] } | null = null
 
 // Mock ace-code HashHandler
 vi.mock('ace-code/src/keyboard/hash_handler', () => ({
-  HashHandler: vi.fn().mockImplementation(function(this: any, commands: any[]) {
+  HashHandler: vi.fn().mockImplementation(function (this: any, commands: any[]) {
     this.commands = commands || []
     lastHashHandlerInstance = this
   }),
@@ -29,7 +29,7 @@ describe('useEditorKeyboard Composable', () => {
 
   beforeEach(() => {
     lastHashHandlerInstance = null
-    
+
     // 创建模拟的 Ace Editor 实例
     mockEditor = {
       setKeyboardHandler: vi.fn(),
@@ -184,7 +184,7 @@ describe('useEditorKeyboard Composable', () => {
       // 验证 HashHandler 被调用并保存了实例
       expect(lastHashHandlerInstance).not.toBeNull()
       const commands = lastHashHandlerInstance!.commands
-      
+
       // 验证命令配置
       expect(commands).toHaveLength(4)
       expect(commands[0].bindKey).toBe('Ctrl-Alt-F')
@@ -209,11 +209,11 @@ describe('useEditorKeyboard Composable', () => {
       bindKeyboard()
 
       const commands = lastHashHandlerInstance!.commands
-      
+
       // 验证默认快捷键
       const cutCommand = commands.find((c: any) => c.name === 'cut')
       const copyCommand = commands.find((c: any) => c.name === 'copy')
-      
+
       expect(cutCommand).toBeDefined()
       expect(cutCommand.bindKey).toBe('Ctrl-X')
       expect(copyCommand).toBeDefined()
@@ -239,7 +239,7 @@ describe('useEditorKeyboard Composable', () => {
 
       const commands = lastHashHandlerInstance!.commands
       const formatCommand = commands.find((c: any) => c.name === 'format')
-      
+
       // 执行 format 命令
       formatCommand.exec()
       expect(mockCallbacks.onFormat).toHaveBeenCalled()
@@ -262,7 +262,7 @@ describe('useEditorKeyboard Composable', () => {
 
       const commands = lastHashHandlerInstance!.commands
       const runJudgeCommand = commands.find((c: any) => c.name === 'runJudge')
-      
+
       // 执行 runJudge 命令
       runJudgeCommand.exec()
       expect(mockCallbacks.onRunJudge).toHaveBeenCalled()
@@ -285,7 +285,7 @@ describe('useEditorKeyboard Composable', () => {
 
       const commands = lastHashHandlerInstance!.commands
       const cutCommand = commands.find((c: any) => c.name === 'cut')
-      
+
       // 执行 cut 命令
       cutCommand.exec()
       expect(mockCallbacks.onCut).toHaveBeenCalled()
@@ -308,7 +308,7 @@ describe('useEditorKeyboard Composable', () => {
 
       const commands = lastHashHandlerInstance!.commands
       const copyCommand = commands.find((c: any) => c.name === 'copy')
-      
+
       // 执行 copy 命令
       copyCommand.exec()
       expect(mockCallbacks.onCopy).toHaveBeenCalled()

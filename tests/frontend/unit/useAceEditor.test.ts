@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { ref, nextTick } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick, ref } from 'vue'
 import { useAceEditor, type UseAceEditorOptions } from '@/composables/editor/useAceEditor'
 
 // Mock ace-builds
@@ -140,21 +140,21 @@ describe('useAceEditor Composable', () => {
   describe('Edge Cases', () => {
     it('should handle setValue when editor not initialized', () => {
       const { setValue } = useAceEditor()
-      
+
       // Should not throw
       expect(() => setValue('test')).not.toThrow()
     })
 
     it('should handle getValue when editor not initialized', () => {
       const { getValue } = useAceEditor()
-      
+
       const value = getValue()
       expect(value).toBe('')
     })
 
     it('should handle setTheme when editor not initialized', () => {
       const { setTheme } = useAceEditor()
-      
+
       // Should not throw
       expect(() => setTheme('ace/theme/tie')).not.toThrow()
     })

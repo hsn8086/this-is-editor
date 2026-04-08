@@ -1,6 +1,6 @@
-import { ref, type Ref, watch, unref } from 'vue'
 import type { Ace } from 'ace-builds'
 import type { SessionLspConfig } from 'ace-linters/build/ace-language-client'
+import { ref, type Ref, unref, watch } from 'vue'
 import { getLanguageProvider, type LanguageProvider } from '@/lsp'
 
 export interface UseEditorLspOptions {
@@ -37,7 +37,7 @@ export interface UseEditorLspReturn {
  * - 组件卸载时应调用 unregister() 清理资源
  * - filePath 为 undefined 时无法注册
  */
-export function useEditorLsp(options: UseEditorLspOptions): UseEditorLspReturn {
+export function useEditorLsp (options: UseEditorLspOptions): UseEditorLspReturn {
   const { editor, filePath, joinWorkspaceURI = true } = options
 
   // State
@@ -48,15 +48,15 @@ export function useEditorLsp(options: UseEditorLspOptions): UseEditorLspReturn {
   /**
    * 获取 LanguageProvider（带缓存）
    */
-  async function getProvider(): Promise<LanguageProvider | undefined> {
+  async function getProvider (): Promise<LanguageProvider | undefined> {
     if (languageProvider) {
       return languageProvider
     }
     try {
       languageProvider = await getLanguageProvider()
       return languageProvider
-    } catch (err) {
-      console.error('[useEditorLsp] Failed to get language provider:', err)
+    } catch (error) {
+      console.error('[useEditorLsp] Failed to get language provider:', error)
       return undefined
     }
   }
@@ -65,7 +65,7 @@ export function useEditorLsp(options: UseEditorLspOptions): UseEditorLspReturn {
    * 注册 LSP 到编辑器
    * @returns 是否成功注册
    */
-  async function register(): Promise<boolean> {
+  async function register (): Promise<boolean> {
     const ed = unref(editor)
     const fp = unref(filePath)
 
@@ -103,8 +103,8 @@ export function useEditorLsp(options: UseEditorLspOptions): UseEditorLspReturn {
       isReady.value = true
       console.log('[useEditorLsp] LSP registered for file:', fp)
       return true
-    } catch (err) {
-      console.error('[useEditorLsp] Failed to register editor:', err)
+    } catch (error) {
+      console.error('[useEditorLsp] Failed to register editor:', error)
       isReady.value = false
       return false
     }
@@ -113,7 +113,7 @@ export function useEditorLsp(options: UseEditorLspOptions): UseEditorLspReturn {
   /**
    * 注销 LSP（关闭 document）
    */
-  async function unregister(): Promise<void> {
+  async function unregister (): Promise<void> {
     const ed = unref(editor)
 
     if (!ed || !isRegistered) {
@@ -133,8 +133,8 @@ export function useEditorLsp(options: UseEditorLspOptions): UseEditorLspReturn {
       // 两者运行时兼容，仅 TS 类型定义冲突，通过 unknown 断言绕过
       provider.closeDocument(ed.getSession() as unknown as import('ace-code/src/edit_session').EditSession)
       console.log('[useEditorLsp] LSP unregistered for editor')
-    } catch (err) {
-      console.error('[useEditorLsp] Failed to close document:', err)
+    } catch (error) {
+      console.error('[useEditorLsp] Failed to close document:', error)
     } finally {
       isRegistered = false
       isReady.value = false
@@ -151,7 +151,7 @@ export function useEditorLsp(options: UseEditorLspOptions): UseEditorLspReturn {
           await register()
         }
       },
-      { immediate: false }
+      { immediate: false },
     )
   }
 

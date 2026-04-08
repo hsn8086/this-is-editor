@@ -1,6 +1,6 @@
-import { ref, type Ref } from 'vue'
 import type { Ace } from 'ace-builds'
 import { HashHandler } from 'ace-code/src/keyboard/hash_handler'
+import { ref, type Ref } from 'vue'
 
 export interface KeyboardShortcut {
   bindKey: string
@@ -47,7 +47,7 @@ export interface UseEditorKeyboardReturn {
  *
  * 注意：editor 未初始化时无法绑定
  */
-export function useEditorKeyboard(options: UseEditorKeyboardOptions): UseEditorKeyboardReturn {
+export function useEditorKeyboard (options: UseEditorKeyboardOptions): UseEditorKeyboardReturn {
   const { editor, keyboardShortcuts, onFormat, onRunJudge, onCut, onCopy } = options
 
   const isBound = ref(false)
@@ -56,7 +56,7 @@ export function useEditorKeyboard(options: UseEditorKeyboardOptions): UseEditorK
   /**
    * 创建键盘处理器
    */
-  function createHandler(): InstanceType<typeof HashHandler> {
+  function createHandler (): InstanceType<typeof HashHandler> {
     const shortcuts: KeyboardShortcut[] = [
       {
         bindKey: keyboardShortcuts.value.formatCode.value as string,
@@ -92,7 +92,7 @@ export function useEditorKeyboard(options: UseEditorKeyboardOptions): UseEditorK
   /**
    * 绑定键盘快捷键
    */
-  function bindKeyboard(): void {
+  function bindKeyboard (): void {
     const ed = editor.value
     if (!ed) {
       console.warn('[useEditorKeyboard] Cannot bind: editor not initialized')
@@ -106,12 +106,12 @@ export function useEditorKeyboard(options: UseEditorKeyboardOptions): UseEditorK
 
     try {
       handler.value = createHandler()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       ed.setKeyboardHandler(handler.value as any)
       isBound.value = true
       console.log('[useEditorKeyboard] Keyboard shortcuts bound successfully')
-    } catch (err) {
-      console.error('[useEditorKeyboard] Failed to bind keyboard:', err)
+    } catch (error) {
+      console.error('[useEditorKeyboard] Failed to bind keyboard:', error)
       isBound.value = false
     }
   }
@@ -119,7 +119,7 @@ export function useEditorKeyboard(options: UseEditorKeyboardOptions): UseEditorK
   /**
    * 解绑键盘快捷键
    */
-  function unbindKeyboard(): void {
+  function unbindKeyboard (): void {
     const ed = editor.value
     if (!ed) {
       console.warn('[useEditorKeyboard] Cannot unbind: editor not initialized')
@@ -136,8 +136,8 @@ export function useEditorKeyboard(options: UseEditorKeyboardOptions): UseEditorK
       handler.value = undefined
       isBound.value = false
       console.log('[useEditorKeyboard] Keyboard shortcuts unbound successfully')
-    } catch (err) {
-      console.error('[useEditorKeyboard] Failed to unbind keyboard:', err)
+    } catch (error) {
+      console.error('[useEditorKeyboard] Failed to unbind keyboard:', error)
     }
   }
 

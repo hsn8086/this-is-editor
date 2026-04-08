@@ -96,12 +96,13 @@ export interface Config {
 
 export interface TestCase {
   name: string
-  tests: { id: number; input: string; answer: string }[]
+  tests: { id: number, input: string, answer: string }[]
   memoryLimit: number
   timeLimit: number
 }
 export interface TaskResult {
   result: string
+  stderr: string
   status: string
   time: number
   memory: number

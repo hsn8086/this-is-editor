@@ -1,6 +1,6 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
 import type { FileInfo } from '@/pywebview-defines'
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
 
 export interface FileItem extends FileInfo {
   isReturn?: boolean
@@ -16,40 +16,42 @@ export const useFileStore = defineStore('file', () => {
   // Getters
   const hasPinnedFiles = computed(() => pinnedFiles.value.length > 0)
   const currentFolderName = computed(() => {
-    if (!folder.value) return ''
+    if (!folder.value) {
+      return ''
+    }
     const parts = folder.value.split(/[/\\]/)
-    return parts[parts.length - 1] || folder.value
+    return parts.at(-1) || folder.value
   })
   const fileCount = computed(() => ls.value.filter(f => !f.isReturn).length)
 
   // Actions
-  function setFolder(newFolder: string) {
+  function setFolder (newFolder: string) {
     folder.value = newFolder
   }
 
-  function setPinnedFiles(files: FileInfo[]) {
+  function setPinnedFiles (files: FileInfo[]) {
     pinnedFiles.value = files
   }
 
-  function addPinnedFile(file: FileInfo) {
+  function addPinnedFile (file: FileInfo) {
     if (!pinnedFiles.value.some(f => f.path === file.path)) {
       pinnedFiles.value.push(file)
     }
   }
 
-  function removePinnedFile(path: string) {
+  function removePinnedFile (path: string) {
     pinnedFiles.value = pinnedFiles.value.filter(f => f.path !== path)
   }
 
-  function setLs(files: FileItem[]) {
+  function setLs (files: FileItem[]) {
     ls.value = files
   }
 
-  function setDisks(diskList: FileInfo[]) {
+  function setDisks (diskList: FileInfo[]) {
     disks.value = diskList
   }
 
-  function resetFileState() {
+  function resetFileState () {
     folder.value = ''
     pinnedFiles.value = []
     ls.value = []

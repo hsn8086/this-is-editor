@@ -1,22 +1,22 @@
-import { debounce, type DebouncedFunc } from "lodash";
-import { ref, onMounted, onUnmounted, type Ref } from "vue";
+import { debounce, type DebouncedFunc } from 'lodash'
+import { onMounted, onUnmounted, ref, type Ref } from 'vue'
 
 /**
  * useEditorFileSync 选项
  */
 export interface UseEditorFileSyncOptions {
   /** 保存代码的函数 */
-  saveCode: (code: string) => Promise<void> | void;
+  saveCode: (code: string) => Promise<void> | void
   /** 设置编辑器内容的函数（用于 resetCode，保持光标位置） */
-  setValue: (value: string, cursorPos?: number) => void;
+  setValue: (value: string, cursorPos?: number) => void
   /** 获取编辑器内容的函数 */
-  getValue: () => string;
+  getValue: () => string
   /** 自动保存 debounce 时间（默认 500ms） */
-  debounceMs?: number;
+  debounceMs?: number
   /** 外部变更冷却时间（默认 1000ms） */
-  cooldownMs?: number;
+  cooldownMs?: number
   /** 编辑器就绪状态 */
-  editorReady?: Ref<boolean>;
+  editorReady?: Ref<boolean>
 }
 
 /**
@@ -24,17 +24,17 @@ export interface UseEditorFileSyncOptions {
  */
 export interface UseEditorFileSyncReturn {
   /** 最后修改时间戳 */
-  lastModified: Ref<number>;
+  lastModified: Ref<number>
   /** 代码变更处理函数 */
-  onCodeChange: DebouncedFunc<(newCode: string) => void>;
+  onCodeChange: DebouncedFunc<(newCode: string) => void>
   /** 外部文件变更处理函数 */
-  handleExternalChange: (text: string) => boolean;
+  handleExternalChange: (text: string) => boolean
   /** 重置代码到编辑器（保持光标位置） */
-  resetCode: (text: string) => void;
+  resetCode: (text: string) => void
   /** 是否正在冷却中（距离上次修改 < cooldownMs） */
-  isInCooldown: () => boolean;
+  isInCooldown: () => boolean
   /** 内容是否相同 */
-  isContentEqual: (text: string) => boolean;
+  isContentEqual: (text: string) => boolean
 }
 
 /**
@@ -65,8 +65,8 @@ export interface UseEditorFileSyncReturn {
  * });
  * ```
  */
-export function useEditorFileSync(
-  options: UseEditorFileSyncOptions
+export function useEditorFileSync (
+  options: UseEditorFileSyncOptions,
 ): UseEditorFileSyncReturn {
   const {
     saveCode,
@@ -75,17 +75,17 @@ export function useEditorFileSync(
     debounceMs = 500,
     cooldownMs = 1000,
     editorReady = ref(true),
-  } = options;
+  } = options
 
   // 最后修改时间戳（在输入变更时立即更新）
-  const lastModified = ref(0);
+  const lastModified = ref(0)
 
   /**
    * 内部防抖保存函数（只负责保存，不更新 lastModified）
    */
   const debouncedSave = debounce(async (newCode: string) => {
-    await saveCode(newCode);
-  }, debounceMs);
+    await saveCode(newCode)
+  }, debounceMs)
 
   /**
    * 代码变更处理函数
@@ -93,28 +93,28 @@ export function useEditorFileSync(
    */
   const onCodeChange = Object.assign(
     (newCode: string): ReturnType<typeof debouncedSave> => {
-      lastModified.value = performance.now();
-      return debouncedSave(newCode);
+      lastModified.value = performance.now()
+      return debouncedSave(newCode)
     },
     {
       cancel: debouncedSave.cancel,
       flush: debouncedSave.flush,
-    }
-  ) as DebouncedFunc<(newCode: string) => void>;
+    },
+  ) as DebouncedFunc<(newCode: string) => void>
 
   /**
    * 检查是否处于冷却期
    */
   const isInCooldown = (): boolean => {
-    return performance.now() - lastModified.value < cooldownMs;
-  };
+    return performance.now() - lastModified.value < cooldownMs
+  }
 
   /**
    * 检查内容与当前编辑器内容是否相同
    */
   const isContentEqual = (text: string): boolean => {
-    return text === getValue();
-  };
+    return text === getValue()
+  }
 
   /**
    * 处理外部文件变更
@@ -123,23 +123,23 @@ export function useEditorFileSync(
   const handleExternalChange = (text: string): boolean => {
     // 检查编辑器就绪
     if (!editorReady.value) {
-      return false;
+      return false
     }
 
     // 检查内容是否相同
     if (isContentEqual(text)) {
-      return false;
+      return false
     }
 
     // 检查是否处于冷却期
     if (isInCooldown()) {
-      return false;
+      return false
     }
 
     // 更新编辑器内容
-    resetCode(text);
-    return true;
-  };
+    resetCode(text)
+    return true
+  }
 
   /**
    * 重置编辑器代码（保持光标位置）
@@ -147,8 +147,8 @@ export function useEditorFileSync(
    */
   const resetCode = (text: string): void => {
     // 使用 -1 作为 cursorPos 参数保持光标位置
-    setValue(text, -1);
-  };
+    setValue(text, -1)
+  }
 
   return {
     lastModified,
@@ -157,7 +157,7 @@ export function useEditorFileSync(
     resetCode,
     isInCooldown,
     isContentEqual,
-  };
+  }
 }
 
 /**
@@ -168,19 +168,19 @@ export function useEditorFileSync(
 export interface UseEditorFileSyncWithListenerOptions
   extends UseEditorFileSyncOptions {
   /** 事件目标（默认 window） */
-  eventTarget?: EventTarget;
+  eventTarget?: EventTarget
   /** 外部变更事件名称（默认 'file-changed'） */
-  eventName?: string;
+  eventName?: string
   /** 变更处理回调 */
-  onExternalChange?: (text: string, applied: boolean) => void;
+  onExternalChange?: (text: string, applied: boolean) => void
 }
 
 export interface UseEditorFileSyncWithListenerReturn
   extends UseEditorFileSyncReturn {
   /** 手动注册监听器 */
-  registerListener: () => void;
+  registerListener: () => void
   /** 手动注销监听器 */
-  unregisterListener: () => void;
+  unregisterListener: () => void
 }
 
 /**
@@ -188,54 +188,56 @@ export interface UseEditorFileSyncWithListenerReturn
  *
  * 自动处理 onMounted/onUnmounted 注册和清理事件监听器
  */
-export function useEditorFileSyncWithListener(
-  options: UseEditorFileSyncWithListenerOptions
+export function useEditorFileSyncWithListener (
+  options: UseEditorFileSyncWithListenerOptions,
 ): UseEditorFileSyncWithListenerReturn {
   const {
     onExternalChange,
     eventTarget = window,
-    eventName = "file-changed",
+    eventName = 'file-changed',
     ...baseOptions
-  } = options;
+  } = options
 
-  const base = useEditorFileSync(baseOptions);
-  let listener: ((event: Event) => void) | null = null;
+  const base = useEditorFileSync(baseOptions)
+  let listener: ((event: Event) => void) | null = null
 
   const createListener = (): ((event: Event) => void) => {
     return (event: Event) => {
-      const text = (event as CustomEvent).detail;
-      const applied = base.handleExternalChange(text);
-      onExternalChange?.(text, applied);
-    };
-  };
+      const text = (event as CustomEvent).detail
+      const applied = base.handleExternalChange(text)
+      onExternalChange?.(text, applied)
+    }
+  }
 
   const registerListener = (): void => {
-    if (listener) return; // 已注册
-    listener = createListener();
-    eventTarget.addEventListener(eventName, listener);
-  };
+    if (listener) {
+      return
+    } // 已注册
+    listener = createListener()
+    eventTarget.addEventListener(eventName, listener)
+  }
 
   const unregisterListener = (): void => {
     if (listener) {
-      eventTarget.removeEventListener(eventName, listener);
-      listener = null;
+      eventTarget.removeEventListener(eventName, listener)
+      listener = null
     }
-  };
+  }
 
   // 自动生命周期管理
   onMounted(() => {
-    registerListener();
-  });
+    registerListener()
+  })
 
   onUnmounted(() => {
-    unregisterListener();
-  });
+    unregisterListener()
+  })
 
   return {
     ...base,
     registerListener,
     unregisterListener,
-  };
+  }
 }
 
-export default useEditorFileSync;
+export default useEditorFileSync

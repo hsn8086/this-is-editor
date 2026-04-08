@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 
 export type EditorLang = 'python' | 'cpp' | 'json' | 'text'
 
@@ -14,19 +14,19 @@ export const useEditorStore = defineStore('editor', () => {
   const canRunChecker = computed(() => enableCheckerPanel.value && isCodeLanguage.value)
 
   // Actions
-  function setLanguage(newLang: EditorLang) {
+  function setLanguage (newLang: EditorLang) {
     lang.value = newLang
   }
 
-  function setContent(newContent: string) {
+  function setContent (newContent: string) {
     content.value = newContent
   }
 
-  function setEnableCheckerPanel(enabled: boolean) {
+  function setEnableCheckerPanel (enabled: boolean) {
     enableCheckerPanel.value = enabled
   }
 
-  function resetEditor() {
+  function resetEditor () {
     lang.value = 'text'
     content.value = ''
     enableCheckerPanel.value = false

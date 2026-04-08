@@ -1,13 +1,13 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import {
   useEditorFileSync,
-  useEditorFileSyncWithListener,
   type UseEditorFileSyncOptions,
+  useEditorFileSyncWithListener,
 } from '@/composables/editor/useEditorFileSync'
 
 // Mock Vue lifecycle hooks to avoid warnings in useEditorFileSyncWithListener
-vi.mock('vue', async (importOriginal) => {
+vi.mock('vue', async importOriginal => {
   const actual = await importOriginal() as any
   return {
     ...actual,
@@ -364,7 +364,7 @@ describe('useEditorFileSyncWithListener', () => {
 
       expect(mockEventTarget.addEventListener).toHaveBeenCalledWith(
         'file-changed',
-        expect.any(Function)
+        expect.any(Function),
       )
     })
 
@@ -402,7 +402,7 @@ describe('useEditorFileSyncWithListener', () => {
 
       expect(mockEventTarget.removeEventListener).toHaveBeenCalledWith(
         'file-changed',
-        expect.any(Function)
+        expect.any(Function),
       )
     })
 
@@ -421,7 +421,7 @@ describe('useEditorFileSyncWithListener', () => {
 
     it('should call onExternalChange callback when event is dispatched', () => {
       mockGetValue.mockReturnValue('old content')
-      
+
       const result = useEditorFileSyncWithListener({
         saveCode: mockSaveCode,
         setValue: mockSetValue,
@@ -439,10 +439,10 @@ describe('useEditorFileSyncWithListener', () => {
 
       // Simulate external event
       const customEvent = new CustomEvent('file-changed', { detail: 'external content' })
-      
+
       // Ensure outside cooldown
       vi.advanceTimersByTime(2000)
-      
+
       registeredListener(customEvent)
 
       expect(mockSetValue).toHaveBeenCalledWith('external content', -1)
@@ -451,7 +451,7 @@ describe('useEditorFileSyncWithListener', () => {
 
     it('should pass applied=false when external change is not applied', () => {
       mockEditorReady.value = false
-      
+
       const result = useEditorFileSyncWithListener({
         saveCode: mockSaveCode,
         setValue: mockSetValue,
@@ -486,7 +486,7 @@ describe('useEditorFileSyncWithListener', () => {
 
       expect(mockEventTarget.addEventListener).toHaveBeenCalledWith(
         'file-changed',
-        expect.any(Function)
+        expect.any(Function),
       )
     })
 
@@ -506,14 +506,14 @@ describe('useEditorFileSyncWithListener', () => {
 
       expect(windowAddSpy).toHaveBeenCalledWith(
         'file-changed',
-        expect.any(Function)
+        expect.any(Function),
       )
 
       result.unregisterListener()
 
       expect(windowRemoveSpy).toHaveBeenCalledWith(
         'file-changed',
-        expect.any(Function)
+        expect.any(Function),
       )
 
       windowAddSpy.mockRestore()
@@ -524,7 +524,7 @@ describe('useEditorFileSyncWithListener', () => {
   describe('CustomEvent support', () => {
     it('should handle CustomEvent with detail property', () => {
       mockGetValue.mockReturnValue('old')
-      
+
       const result = useEditorFileSyncWithListener({
         saveCode: mockSaveCode,
         setValue: mockSetValue,
@@ -540,7 +540,7 @@ describe('useEditorFileSyncWithListener', () => {
 
       // Create CustomEvent with detail
       const event = new CustomEvent('file-changed', { detail: 'new content from file' })
-      
+
       vi.advanceTimersByTime(2000)
       registeredListener(event)
 
@@ -610,7 +610,7 @@ describe('useEditorFileSyncWithListener', () => {
 
     it('should correctly compare string content in isContentEqual', () => {
       mockGetValue.mockReturnValue('content')
-      
+
       const result = useEditorFileSyncWithListener({
         saveCode: mockSaveCode,
         setValue: mockSetValue,

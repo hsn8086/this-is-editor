@@ -182,6 +182,7 @@ class TestRun:
         )
 
         assert result.output == "Hello, World!"
+        assert result.stderr == ""
         assert result.type == "success"
         assert result.time == 0.5
         assert result.memory == 10.0
@@ -213,6 +214,7 @@ class TestRun:
         )
 
         assert result.type == "timeout"
+        assert result.stderr == ""
         assert result.time == 2.0
 
     @patch("pysrc.runner.fmt")
@@ -242,21 +244,22 @@ class TestRun:
         )
 
         assert result.type == "memory_limit_exceeded"
+        assert result.stderr == ""
         assert result.memory == 300.0
 
     @patch("pysrc.runner.fmt")
     @patch("pysrc.runner.run_p")
-    def test_runtime_error_with_stderr(
+    def test_stderr_does_not_force_runtime_error(
         self,
         mock_run_p: MagicMock,
         mock_fmt: MagicMock,
     ) -> None:
-        """Test runtime error when stderr is present."""
+        """Test stderr does not change a successful status to runtime error."""
         mock_fmt.side_effect = lambda c, **kwargs: c.replace(
             "{file_name}", "/tmp/test.py"
         )
         mock_run_p.return_value = runner.RunProcessResult(
-            stdout="",
+            stdout="ok",
             stderr="Error: something went wrong",
             time=0.5,
             memory=10.0,
@@ -269,8 +272,9 @@ class TestRun:
             ["python3", "{file_name}"],
         )
 
-        assert result.type == "runtime_error"
-        assert result.output == "Error: something went wrong"
+        assert result.type == "success"
+        assert result.output == "ok"
+        assert result.stderr == "Error: something went wrong"
 
     @patch("pysrc.runner.fmt")
     @patch("pysrc.runner.run_p")
@@ -294,6 +298,8 @@ class TestRun:
         )
 
         assert result.type == "runtime_error"
+        assert result.output == ""
+        assert result.stderr != ""
 
     @patch("pysrc.runner.fmt")
     @patch("pysrc.runner.run_p")
@@ -343,6 +349,7 @@ class TestRun:
 
         mock_run_p.assert_called_once()
         assert result.type == "success"
+        assert result.stderr == ""
 
 
 class TestRunCompilation:
@@ -508,6 +515,7 @@ class TestRunPython:
         """Test run_python with default version."""
         mock_run.return_value = runner.Result(
             output="output",
+            stderr="",
             type="success",
             time=0.5,
             memory=10.0,
@@ -525,6 +533,7 @@ class TestRunPython:
         """Test run_python with custom version."""
         mock_run.return_value = runner.Result(
             output="output",
+            stderr="",
             type="success",
             time=0.5,
             memory=10.0,
@@ -549,6 +558,7 @@ class TestRunC_Cpp:
         """Test run_c_cpp basic execution."""
         mock_run.return_value = runner.Result(
             output="output",
+            stderr="",
             type="success",
             time=0.5,
             memory=10.0,

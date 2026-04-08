@@ -26,6 +26,7 @@ class Result(NamedTuple):
 
     Attributes:
         output (str): The output from the process.
+        stderr (str): Standard error from the process.
         type (str): The result type (e.g., 'success', 'timeout').
         time (float): Execution time in seconds.
         memory (float): Peak memory usage in MB.
@@ -33,6 +34,7 @@ class Result(NamedTuple):
     """
 
     output: str
+    stderr: str
     type: str
     time: float
     memory: float
@@ -243,20 +245,23 @@ def run(
         memory = rst.memory
         status = rst.status
     except (subprocess.CalledProcessError, OSError) as e:
-        return Result(output=str(e), type="runtime_error", time=0, memory=0)
+        return Result(output="", stderr=str(e), type="runtime_error", time=0, memory=0)
     if status == "timeout":
-        return Result(output=stdout, type="timeout", time=time, memory=memory)
+        return Result(
+            output=stdout, stderr=stderr, type="timeout", time=time, memory=memory
+        )
     if status == "memory_limit_exceeded":
         return Result(
             output=stdout,
+            stderr=stderr,
             type="memory_limit_exceeded",
             time=time,
             memory=memory,
         )
 
-    if stderr:
-        return Result(output=stderr, type="runtime_error", time=time, memory=memory)
-    return Result(output=stdout, type="success", time=time, memory=memory)
+    return Result(
+        output=stdout, stderr=stderr, type="success", time=time, memory=memory
+    )
 
 
 def run_compilation(file_path: Path, cmd: list | str, *, executable: str = "") -> None:

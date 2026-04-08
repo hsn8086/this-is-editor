@@ -94,7 +94,8 @@ beforeAll(() => {
     compile: vi.fn().mockResolvedValue('success'),
     run_task: vi.fn().mockResolvedValue({
       result: 'Accepted',
-      status: 'Done',
+      stderr: '',
+      status: 'success',
       time: 100,
       memory: 1024,
     }),
@@ -175,20 +176,22 @@ class MockWebSocket {
   static OPEN = 1
   static CLOSING = 2
   static CLOSED = 3
-  
+
   readyState = MockWebSocket.CONNECTING
   onopen: ((event: any) => void) | null = null
   onclose: ((event: any) => void) | null = null
   onmessage: ((event: any) => void) | null = null
   onerror: ((event: any) => void) | null = null
-  
-  constructor(public url: string) {
+
+  constructor (public url: string) {
     setTimeout(() => {
       this.readyState = MockWebSocket.OPEN
-      if (this.onopen) this.onopen({})
+      if (this.onopen) {
+        this.onopen({})
+      }
     }, 0)
   }
-  
+
   send = vi.fn()
   close = vi.fn()
 }
@@ -197,11 +200,11 @@ vi.stubGlobal('WebSocket', MockWebSocket)
 
 // Mock html2canvas
 vi.mock('html2canvas', () => ({
-  default: vi.fn().mockImplementation(() => 
+  default: vi.fn().mockImplementation(() =>
     Promise.resolve({
-      toBlob: vi.fn((callback) => callback(null)),
+      toBlob: vi.fn(callback => callback(null)),
       toDataURL: vi.fn().mockReturnValue('data:image/png;base64,mock'),
-    })
+    }),
   ),
 }))
 
@@ -222,7 +225,7 @@ vi.mock('vue-i18n', () => ({
 }))
 
 // Mock Vue hooks - use importOriginal to get actual Vue exports
-vi.mock('vue', async (importOriginal) => {
+vi.mock('vue', async importOriginal => {
   const actual = await importOriginal() as any
   return {
     ...actual,

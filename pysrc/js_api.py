@@ -426,17 +426,19 @@ class Api:
         try:
             task = self.get_testcase().get("tests", [{}])[task_id - 1]
             inp = task.get("input", "")
-            output, status, time, memory = lang_runners[lang](
+            output, stderr, status, time, memory = lang_runners[lang](
                 cast("Path", self.opened_file),
                 inp,
                 memory_limit=memory_limit,
                 timeout=timeout,
             )
+            stdout = output
             answer = task.get("answer", "")
             if status == "success":
-                status = "success" if task_checker(output, answer) else "failed"
+                status = "success" if task_checker(stdout, answer) else "failed"
             return {
-                "result": output,
+                "result": stdout,
+                "stderr": stderr,
                 "status": status,
                 "time": time,
                 "memory": memory,

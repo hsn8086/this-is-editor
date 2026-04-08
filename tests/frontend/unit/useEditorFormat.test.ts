@@ -1,7 +1,7 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { ref, nextTick } from 'vue'
-import { useEditorFormat, type UseEditorFormatOptions, type FormatAction } from '@/composables/editor/useEditorFormat'
-import type { Config, Code } from '@/pywebview-defines'
+import type { Code, Config } from '@/pywebview-defines'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick, ref } from 'vue'
+import { type FormatAction, useEditorFormat, type UseEditorFormatOptions } from '@/composables/editor/useEditorFormat'
 
 // Mock services
 const mockGetConfig = vi.fn()
@@ -25,7 +25,7 @@ describe('useEditorFormat Composable', () => {
 
   beforeEach(() => {
     resetCodeMock = vi.fn()
-    
+
     mockCode = {
       code: 'print("hello")',
       type: 'python',
@@ -236,10 +236,10 @@ describe('useEditorFormat Composable', () => {
       expect(isFormatting.value).toBe(false)
 
       const formatPromise = format(resetCodeMock)
-      
+
       // 在异步操作期间可能为 true
       await formatPromise
-      
+
       expect(isFormatting.value).toBe(false)
     })
   })

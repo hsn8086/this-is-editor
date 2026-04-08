@@ -460,7 +460,7 @@ class TestApiRunTask:
         api_with_tmp_path.opened_file = test_file
         api_with_tmp_path.opened_testcase_file = MagicMock()
 
-        mock_runner = MagicMock(return_value=("output", "success", 0.1, 10))
+        mock_runner = MagicMock(return_value=("output", "", "success", 0.1, 10))
 
         with patch("pysrc.js_api.lang_runners", {"python": mock_runner}):
             with patch("pysrc.js_api.type_mp", {".py": {"id": "python"}}):
@@ -486,6 +486,46 @@ class TestApiRunTask:
 
         assert result["status"] == "success"
         assert result["result"] == "output"
+        assert result["stderr"] == ""
+
+    def test_run_task_returns_stderr_without_affecting_stdout_judgement(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test run_task returns stderr separately and judges by stdout only."""
+        test_file = tmp_path / "test.py"
+        test_file.write_text("print('hello')", encoding="utf-8")
+        api_with_tmp_path.opened_file = test_file
+
+        mock_runner = MagicMock(
+            return_value=("", "stderr output", "runtime_error", 0.1, 10)
+        )
+
+        with patch("pysrc.js_api.lang_runners", {"python": mock_runner}):
+            with patch("pysrc.js_api.type_mp", {".py": {"id": "python"}}):
+                with patch.object(
+                    api_with_tmp_path,
+                    "get_code",
+                    return_value={"type": "python"},
+                ):
+                    with patch.object(
+                        api_with_tmp_path,
+                        "get_testcase",
+                        return_value={
+                            "tests": [
+                                {
+                                    "input": "test input",
+                                    "answer": "test output",
+                                },
+                            ],
+                        },
+                    ):
+                        result = api_with_tmp_path.run_task(1)
+
+        assert result["status"] == "runtime_error"
+        assert result["result"] == ""
+        assert result["stderr"] == "stderr output"
 
     def test_run_task_unsupported_language(
         self,
@@ -521,7 +561,7 @@ class TestApiRunTask:
 
         with patch(
             "pysrc.js_api.lang_runners",
-            {"cpp": MagicMock(return_value=("ok", "success", 0.1, 4))},
+            {"cpp": MagicMock(return_value=("ok", "", "success", 0.1, 4))},
         ):
             with patch("pysrc.js_api.type_mp", {".cpp": {"id": "cpp"}}):
                 with patch("pysrc.js_api.task_checker", return_value=True):
