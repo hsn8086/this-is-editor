@@ -10,14 +10,12 @@ import subprocess
 import time
 from collections.abc import Callable
 from pathlib import Path
-from typing import NamedTuple, TypeVar
+from typing import NamedTuple
 
 import psutil
 from loguru import logger
 
 from .utils import formatter as fmt
-
-T = TypeVar("T")
 
 
 # Define namedtuples
@@ -59,7 +57,11 @@ class RunProcessResult(NamedTuple):
     status: str | None
 
 
-def try_r(func: Callable[..., T], *args: object, default: T | None = None) -> T | None:
+def try_r[T](
+    func: Callable[..., T],
+    *args: object,
+    default: T | None = None,
+) -> T | None:
     """Execute a function and return its result, or a default value on exception.
 
     Args:
@@ -99,7 +101,7 @@ def get_time(child_process: psutil.Popen) -> float:
         return 0.0
 
 
-def run_p(
+def run_p(  # noqa: C901
     cmd: list,
     inp: str = "",
     *,
@@ -248,7 +250,11 @@ def run(
         return Result(output="", stderr=str(e), type="runtime_error", time=0, memory=0)
     if status == "timeout":
         return Result(
-            output=stdout, stderr=stderr, type="timeout", time=time, memory=memory
+            output=stdout,
+            stderr=stderr,
+            type="timeout",
+            time=time,
+            memory=memory,
         )
     if status == "memory_limit_exceeded":
         return Result(
@@ -260,7 +266,11 @@ def run(
         )
 
     return Result(
-        output=stdout, stderr=stderr, type="success", time=time, memory=memory
+        output=stdout,
+        stderr=stderr,
+        type="success",
+        time=time,
+        memory=memory,
     )
 
 

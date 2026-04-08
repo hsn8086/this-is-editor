@@ -10,6 +10,7 @@ import json
 import platform
 import queue
 import shlex
+import socket
 import subprocess
 import threading
 from pathlib import Path
@@ -18,9 +19,9 @@ from typing import IO, cast
 import uvicorn
 import webview
 from fastapi import FastAPI, WebSocket
-from starlette.websockets import WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
+from starlette.websockets import WebSocketDisconnect
 
 from .js_api import Api
 from .langs import type_mp
@@ -34,8 +35,6 @@ def get_free_port() -> int:
         int: An available port number.
 
     """
-    import socket
-
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("", 0))
         return s.getsockname()[1]
@@ -51,6 +50,7 @@ class LspBridge:
     """Bridge a blocking stdio LSP process into asyncio-friendly queues."""
 
     def __init__(self, process: subprocess.Popen) -> None:
+        """Initialize the bridge for a spawned LSP process."""
         self.process = process
         self.loop = asyncio.get_running_loop()
         self.stdout_queue: asyncio.Queue[str | None] = asyncio.Queue()
@@ -101,7 +101,7 @@ class LspBridge:
             return reader(size)
         return stream.read(size)
 
-    def _stdout_worker(self) -> None:
+    def _stdout_worker(self) -> None:  # noqa: C901, PLR0912
         stdout = self.process.stdout
         if stdout is None:
             self._push_async(self.stdout_queue, None)
@@ -128,7 +128,8 @@ class LspBridge:
                                 expected_length = int(header.split(":", 1)[1].strip())
                                 break
                         if expected_length is None:
-                            raise ValueError("Missing Content-Length header")
+                            msg = "Missing Content-Length header"
+                            raise ValueError(msg)  # noqa: TRY301
                         del buffer[: header_end + 4]
 
                     if len(buffer) < expected_length:
@@ -242,7 +243,7 @@ async def start_lsp_process(websocket: WebSocket, lang: str) -> LspBridge | None
 
     creationflags = 0
     if is_windows:
-        creationflags = cast(int, getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        creationflags = cast("int", getattr(subprocess, "CREATE_NO_WINDOW", 0))
     try:
         p = subprocess.Popen(  # noqa: ASYNC220
             cmd,
@@ -448,7 +449,8 @@ window = webview.create_window(
     height=600,
 )
 if window is not None:
-    window.state._hash = _js_api._path_hashes
+    # pywebview state syncing relies on these internal members.
+    window.state._hash = _js_api._path_hashes  # noqa: SLF001
 
 
 def start_server() -> tuple[
@@ -463,8 +465,6 @@ def start_server() -> tuple[
         tuple: (main server, main thread, receiver server, receiver thread)
 
     """
-    import uvicorn
-
     logger.info(f"Starting server on port {port}")
     conf = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="info", workers=8)
     server = uvicorn.Server(conf)

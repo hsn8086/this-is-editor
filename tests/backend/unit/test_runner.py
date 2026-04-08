@@ -160,13 +160,21 @@ class TestRunP:
 class TestRun:
     """Tests for the run function."""
 
+    @staticmethod
+    def _set_file_name(mock_fmt: MagicMock, file_path: str) -> None:
+        mock_fmt.side_effect = lambda c, **_kwargs: c.replace("{file_name}", file_path)
+
     @patch("pysrc.runner.fmt")
     @patch("pysrc.runner.run_p")
-    def test_successful_run(self, mock_run_p: MagicMock, mock_fmt: MagicMock) -> None:
+    def test_successful_run(
+        self,
+        mock_run_p: MagicMock,
+        mock_fmt: MagicMock,
+        tmp_path: Path,
+    ) -> None:
         """Test successful code execution."""
-        mock_fmt.side_effect = lambda c, **kwargs: c.replace(
-            "{file_name}", "/tmp/test.py"
-        )
+        test_file = tmp_path / "test.py"
+        self._set_file_name(mock_fmt, str(test_file))
         mock_run_p.return_value = runner.RunProcessResult(
             stdout="Hello, World!",
             stderr="",
@@ -176,7 +184,7 @@ class TestRun:
         )
 
         result = runner.run(
-            Path("/tmp/test.py"),
+            test_file,
             "",
             ["python3", "{file_name}"],
         )
@@ -193,11 +201,11 @@ class TestRun:
         self,
         mock_run_p: MagicMock,
         mock_fmt: MagicMock,
+        tmp_path: Path,
     ) -> None:
         """Test timeout result handling."""
-        mock_fmt.side_effect = lambda c, **kwargs: c.replace(
-            "{file_name}", "/tmp/test.py"
-        )
+        test_file = tmp_path / "test.py"
+        self._set_file_name(mock_fmt, str(test_file))
         mock_run_p.return_value = runner.RunProcessResult(
             stdout="",
             stderr="",
@@ -207,7 +215,7 @@ class TestRun:
         )
 
         result = runner.run(
-            Path("/tmp/test.py"),
+            test_file,
             "",
             ["python3", "{file_name}"],
             timeout=1,
@@ -223,11 +231,11 @@ class TestRun:
         self,
         mock_run_p: MagicMock,
         mock_fmt: MagicMock,
+        tmp_path: Path,
     ) -> None:
         """Test memory limit result handling."""
-        mock_fmt.side_effect = lambda c, **kwargs: c.replace(
-            "{file_name}", "/tmp/test.py"
-        )
+        test_file = tmp_path / "test.py"
+        self._set_file_name(mock_fmt, str(test_file))
         mock_run_p.return_value = runner.RunProcessResult(
             stdout="",
             stderr="",
@@ -237,7 +245,7 @@ class TestRun:
         )
 
         result = runner.run(
-            Path("/tmp/test.py"),
+            test_file,
             "",
             ["python3", "{file_name}"],
             memory_limit=256,
@@ -253,11 +261,11 @@ class TestRun:
         self,
         mock_run_p: MagicMock,
         mock_fmt: MagicMock,
+        tmp_path: Path,
     ) -> None:
         """Test stderr does not change a successful status to runtime error."""
-        mock_fmt.side_effect = lambda c, **kwargs: c.replace(
-            "{file_name}", "/tmp/test.py"
-        )
+        test_file = tmp_path / "test.py"
+        self._set_file_name(mock_fmt, str(test_file))
         mock_run_p.return_value = runner.RunProcessResult(
             stdout="ok",
             stderr="Error: something went wrong",
@@ -267,7 +275,7 @@ class TestRun:
         )
 
         result = runner.run(
-            Path("/tmp/test.py"),
+            test_file,
             "",
             ["python3", "{file_name}"],
         )
@@ -282,17 +290,17 @@ class TestRun:
         self,
         mock_run_p: MagicMock,
         mock_fmt: MagicMock,
+        tmp_path: Path,
     ) -> None:
         """Test runtime error on subprocess exception."""
         import subprocess
 
-        mock_fmt.side_effect = lambda c, **kwargs: c.replace(
-            "{file_name}", "/tmp/test.py"
-        )
+        test_file = tmp_path / "test.py"
+        self._set_file_name(mock_fmt, str(test_file))
         mock_run_p.side_effect = subprocess.CalledProcessError(1, "cmd", "stderr")
 
         result = runner.run(
-            Path("/tmp/test.py"),
+            test_file,
             "",
             ["python3", "{file_name}"],
         )
@@ -307,15 +315,15 @@ class TestRun:
         self,
         mock_run_p: MagicMock,
         mock_fmt: MagicMock,
+        tmp_path: Path,
     ) -> None:
         """Test runtime error on OS exception."""
-        mock_fmt.side_effect = lambda c, **kwargs: c.replace(
-            "{file_name}", "/tmp/test.py"
-        )
+        test_file = tmp_path / "test.py"
+        self._set_file_name(mock_fmt, str(test_file))
         mock_run_p.side_effect = OSError("File not found")
 
         result = runner.run(
-            Path("/tmp/test.py"),
+            test_file,
             "",
             ["python3", "{file_name}"],
         )
@@ -328,11 +336,11 @@ class TestRun:
         self,
         mock_run_p: MagicMock,
         mock_fmt: MagicMock,
+        tmp_path: Path,
     ) -> None:
         """Test run with string command."""
-        mock_fmt.side_effect = lambda c, **kwargs: c.replace(
-            "{file_name}", "/tmp/test.py"
-        )
+        test_file = tmp_path / "test.py"
+        self._set_file_name(mock_fmt, str(test_file))
         mock_run_p.return_value = runner.RunProcessResult(
             stdout="output",
             stderr="",
@@ -342,7 +350,7 @@ class TestRun:
         )
 
         result = runner.run(
-            Path("/tmp/test.py"),
+            test_file,
             "input",
             "python3 {file_name}",
         )
@@ -355,21 +363,28 @@ class TestRun:
 class TestRunCompilation:
     """Tests for the run_compilation function."""
 
+    @staticmethod
+    def _set_cpp_file_name(mock_fmt: MagicMock, file_name: str) -> None:
+        mock_fmt.side_effect = lambda c, **_kwargs: c.replace(
+            "{file_name}",
+            file_name,
+        ).replace("{fileStem}", Path(file_name).stem)
+
     @patch("pysrc.runner.fmt")
     @patch("pysrc.runner.subprocess.run")
     def test_successful_compilation(
         self,
         mock_run: MagicMock,
         mock_fmt: MagicMock,
+        tmp_path: Path,
     ) -> None:
         """Test successful compilation."""
-        mock_fmt.side_effect = lambda c, **kwargs: c.replace(
-            "{file_name}", "test.cpp"
-        ).replace("{fileStem}", "test")
+        test_file = tmp_path / "test.cpp"
+        self._set_cpp_file_name(mock_fmt, str(test_file))
         mock_run.return_value = MagicMock(returncode=0)
 
         runner.run_compilation(
-            Path("/tmp/test.cpp"),
+            test_file,
             ["g++", "{file_name}", "-o", "{fileStem}.out"],
         )
 
@@ -381,13 +396,13 @@ class TestRunCompilation:
         self,
         mock_run: MagicMock,
         mock_fmt: MagicMock,
+        tmp_path: Path,
     ) -> None:
         """Test failed compilation raises RuntimeError."""
         import subprocess
 
-        mock_fmt.side_effect = lambda c, **kwargs: c.replace(
-            "{file_name}", "test.cpp"
-        ).replace("{fileStem}", "test")
+        test_file = tmp_path / "test.cpp"
+        self._set_cpp_file_name(mock_fmt, str(test_file))
         mock_run.side_effect = subprocess.CalledProcessError(
             1,
             "g++",
@@ -396,7 +411,7 @@ class TestRunCompilation:
 
         with pytest.raises(RuntimeError) as exc_info:
             runner.run_compilation(
-                Path("/tmp/test.cpp"),
+                test_file,
                 ["g++", "{file_name}", "-o", "{fileStem}.out"],
             )
 
@@ -408,15 +423,15 @@ class TestRunCompilation:
         self,
         mock_run: MagicMock,
         mock_fmt: MagicMock,
+        tmp_path: Path,
     ) -> None:
         """Test run_compilation with string command."""
-        mock_fmt.side_effect = lambda c, **kwargs: c.replace(
-            "{file_name}", "test.cpp"
-        ).replace("{fileStem}", "test")
+        test_file = tmp_path / "test.cpp"
+        self._set_cpp_file_name(mock_fmt, str(test_file))
         mock_run.return_value = MagicMock(returncode=0)
 
         runner.run_compilation(
-            Path("/tmp/test.cpp"),
+            test_file,
             "g++ {file_name} -o {fileStem}.out",
         )
 
@@ -432,7 +447,7 @@ class TestCompileC_CppBuilder:
         mock_run.return_value = MagicMock(returncode=0)
 
         compile_func = runner.compile_c_cpp_builder()
-        result = compile_func(Path("/tmp/test.cpp"))
+        compile_func(Path("test.cpp"))
 
         mock_run.assert_called_once()
         assert "-O2" in mock_run.call_args[0][0]
@@ -445,7 +460,7 @@ class TestCompileC_CppBuilder:
         mock_run.return_value = MagicMock(returncode=0)
 
         compile_func = runner.compile_c_cpp_builder(flags=["-O3", "-pedantic"])
-        compile_func(Path("/tmp/test.cpp"))
+        compile_func(Path("test.cpp"))
 
         call_args = mock_run.call_args[0][0]
         assert "-O3" in call_args
@@ -457,7 +472,7 @@ class TestCompileC_CppBuilder:
         mock_run.return_value = MagicMock(returncode=0)
 
         compile_func = runner.compile_c_cpp_builder(std="c++17")
-        compile_func(Path("/tmp/test.cpp"))
+        compile_func(Path("test.cpp"))
 
         call_args = mock_run.call_args[0][0]
         assert "-std=c++17" in call_args
@@ -468,31 +483,16 @@ class TestCompileC_CppBuilder:
         mock_run.return_value = MagicMock(returncode=0)
 
         compile_func = runner.compile_c_cpp_builder(lang="c")
-        compile_func(Path("/tmp/test.c"))
+        compile_func(Path("test.c"))
 
         call_args = mock_run.call_args[0][0]
         assert "-xc" in call_args
 
     def test_compilation_failure_raises_error(self) -> None:
         """Test that failed compilation raises RuntimeError."""
-        # 由于 compile_c_cpp_builder 返回的函数在闭包中引用 subprocess，
-        # 很难 mock。我们测试编译器确实会在失败时抛出异常。
-        # 使用一个不存在的命令来触发错误
-        compile_func = runner.compile_c_cpp_builder()
-
-        # 使用一个无效的文件路径来触发错误 (subprocess 会报错)
-        # 注意: 这个测试实际上会尝试编译，但由于文件不存在，
-        # g++ 会失败并抛出 CalledProcessError，然后被转换为 RuntimeError
-        import os
-        import tempfile
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            test_file = Path(tmpdir) / "nonexistent.cpp"
-            # 文件不存在，直接测试会失败
-            # 这里我们验证如果真的调用了 subprocess 会有正确的行为
-            pass  # 测试覆盖已在其他测试中实现
-
-        # 简化测试：只验证函数可以被调用（不需要实际编译）
+        # compile_c_cpp_builder closes over subprocess, so mocking the builder itself
+        # is awkward here. The detailed failure path is already covered above.
+        # Keep this test focused on the builder remaining callable.
         # 核心逻辑已经在其他测试中覆盖
         assert callable(runner.compile_c_cpp_builder())
 
@@ -502,16 +502,16 @@ class TestCompileC_CppBuilder:
         mock_run.return_value = MagicMock(returncode=0)
 
         compile_func = runner.compile_c_cpp_builder()
-        result = compile_func(Path("/tmp/test.cpp"))
+        result = compile_func(Path("test.cpp"))
 
-        assert result == Path("/tmp/test.out")
+        assert result == Path("test.out")
 
 
 class TestRunPython:
     """Tests for the run_python function."""
 
     @patch("pysrc.runner.run")
-    def test_default_version(self, mock_run: MagicMock) -> None:
+    def test_default_version(self, mock_run: MagicMock, tmp_path: Path) -> None:
         """Test run_python with default version."""
         mock_run.return_value = runner.Result(
             output="output",
@@ -521,7 +521,7 @@ class TestRunPython:
             memory=10.0,
         )
 
-        result = runner.run_python(Path("/tmp/test.py"), "input")
+        runner.run_python(tmp_path / "test.py", "input")
 
         mock_run.assert_called_once()
         call_kwargs = mock_run.call_args[1]
@@ -529,7 +529,7 @@ class TestRunPython:
         assert call_kwargs["memory_limit"] == 256
 
     @patch("pysrc.runner.run")
-    def test_custom_version(self, mock_run: MagicMock) -> None:
+    def test_custom_version(self, mock_run: MagicMock, tmp_path: Path) -> None:
         """Test run_python with custom version."""
         mock_run.return_value = runner.Result(
             output="output",
@@ -539,8 +539,8 @@ class TestRunPython:
             memory=10.0,
         )
 
-        result = runner.run_python(
-            Path("/tmp/test.py"),
+        runner.run_python(
+            tmp_path / "test.py",
             "input",
             version="python3.11",
         )
@@ -554,7 +554,7 @@ class TestRunC_Cpp:
     """Tests for the run_c_cpp function."""
 
     @patch("pysrc.runner.run")
-    def test_basic_execution(self, mock_run: MagicMock) -> None:
+    def test_basic_execution(self, mock_run: MagicMock, tmp_path: Path) -> None:
         """Test run_c_cpp basic execution."""
         mock_run.return_value = runner.Result(
             output="output",
@@ -564,7 +564,7 @@ class TestRunC_Cpp:
             memory=10.0,
         )
 
-        result = runner.run_c_cpp(Path("/tmp/test.out"), "input")
+        result = runner.run_c_cpp(tmp_path / "test.out", "input")
 
         mock_run.assert_called_once()
         assert result.type == "success"

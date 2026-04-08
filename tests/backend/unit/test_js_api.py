@@ -8,8 +8,8 @@ This module contains P0 level tests for the Api class, focusing on:
 - Exception handling
 """
 
-from collections.abc import Callable, Generator
 import json
+from collections.abc import Callable, Generator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -499,7 +499,7 @@ class TestApiRunTask:
         api_with_tmp_path.opened_file = test_file
 
         mock_runner = MagicMock(
-            return_value=("", "stderr output", "runtime_error", 0.1, 10)
+            return_value=("", "stderr output", "runtime_error", 0.1, 10),
         )
 
         with patch("pysrc.js_api.lang_runners", {"python": mock_runner}):

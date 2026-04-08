@@ -12,7 +12,7 @@ from loguru import logger
 
 import pysrc.web
 from pysrc.user_data import user_log_dir
-from pysrc.web import start_server, window
+from pysrc.web import start_server
 
 args_parser = argparse.ArgumentParser()
 args_parser.add_argument("--debug", action="store_true", help="Run in debug mode")

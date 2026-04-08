@@ -4,7 +4,7 @@ These tests ensure path hash metadata is included in API responses
 that the frontend consumes for pywebview state and file navigation.
 """
 
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from pathlib import Path
 from unittest.mock import patch
 
@@ -16,11 +16,12 @@ from pysrc.js_api import Api
 class StubWatcher:
     """A lightweight stub for Watcher to avoid file system operations in tests."""
 
-    def __init__(self, callback) -> None:
+    def __init__(self, callback: Callable[[str], None]) -> None:
+        """Store the callback without touching the filesystem."""
         self._callback = callback
 
     def create_observer(self, path: str) -> None:
-        pass
+        """Pretend to create an observer for the given path."""
 
 
 @pytest.fixture
@@ -41,6 +42,7 @@ def api_with_tmp_path(tmp_path: Path) -> Generator[Api, None, None]:
 
 
 def test_get_code_includes_path_hashes(api_with_tmp_path: Api) -> None:
+    """Ensure get_code returns path hash metadata."""
     result = api_with_tmp_path.get_code()
     assert "_hash" in result
     assert isinstance(result["_hash"], dict)
@@ -48,6 +50,7 @@ def test_get_code_includes_path_hashes(api_with_tmp_path: Api) -> None:
 
 
 def test_path_ls_includes_path_hashes(api_with_tmp_path: Api) -> None:
+    """Ensure path_ls returns path hash metadata."""
     result = api_with_tmp_path.path_ls(None)
     assert "_hash" in result
     assert isinstance(result["_hash"], dict)

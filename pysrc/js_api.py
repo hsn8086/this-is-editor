@@ -4,10 +4,12 @@ Include methods for managing files, directories, configurations, and test cases,
 as utilities for interacting with the system and running tasks.
 """
 
+import ctypes
 import json
 import platform
 import shlex
 import shutil
+import string
 import subprocess
 import time
 from pathlib import Path
@@ -63,7 +65,7 @@ class Api:
             return
         if not Path(path).exists():
             return
-        from .web import window
+        from .web import window  # noqa: PLC0415
 
         if window is None:
             return
@@ -103,11 +105,11 @@ class Api:
             return []
 
         prefixes = (f".{path.name}_", f".{path.name}.prob")
-        testcase_paths: list[Path] = []
-        for item in cph_folder.iterdir():
-            if item.name.startswith(prefixes[0]) or item.name == prefixes[1]:
-                testcase_paths.append(item)
-        return testcase_paths
+        return [
+            item
+            for item in cph_folder.iterdir()
+            if item.name.startswith(prefixes[0]) or item.name == prefixes[1]
+        ]
 
     def _move_testcase_files(self, source: Path, target: Path) -> None:
         if target.is_dir():
@@ -158,7 +160,8 @@ class Api:
             output_index = command_parts.index("-o") + 1
             if output_index < len(command_parts):
                 output_path = fmt(
-                    command_parts[output_index], file_path=self.opened_file
+                    command_parts[output_index],
+                    file_path=self.opened_file,
                 )
                 artifact_path = Path(output_path)
                 return (
@@ -309,9 +312,6 @@ class Api:
                     "type": "Drive",
                 },
             ]
-        import ctypes
-        import string
-
         drives = []
         bitmask = ctypes.cdll.kernel32.GetLogicalDrives()
         for letter in string.ascii_uppercase:
@@ -539,7 +539,11 @@ class Api:
             )
         p.write_text(json.dumps(j, indent=4), encoding="utf-8")
 
-    def set_config(self, id_str: str, value: str | bool | float) -> None:
+    def set_config(
+        self,
+        id_str: str,
+        value: str | bool | float,  # noqa: FBT001
+    ) -> None:
         """Set a configuration value.
 
         Args:
@@ -584,7 +588,7 @@ class Api:
             int: Server port number.
 
         """
-        from .web import port
+        from .web import port  # noqa: PLC0415
 
         return port
 
