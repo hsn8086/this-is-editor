@@ -61,6 +61,23 @@ export class FileService {
   }
 
   /**
+   * 重命名文件或目录
+   * @param source 原路径
+   * @param target 新路径
+   */
+  async rename(source: string, target: string): Promise<Response> {
+    return this.client.call<Response>("path_rename", source, target);
+  }
+
+  /**
+   * 删除文件或目录
+   * @param path 路径
+   */
+  async delete(path: string): Promise<Response> {
+    return this.client.call<Response>("path_delete", path);
+  }
+
+  /**
    * 获取父目录
    * @param path 当前路径
    */

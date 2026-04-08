@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   createAndOpenItem,
+  deleteItemAndRefresh,
   handleCreateInputKeydown,
+  renameAndOpenItem,
 } from "@/components/file-sel-create";
 
 describe("handleCreateInputKeydown", () => {
@@ -107,5 +109,81 @@ describe("createAndOpenItem", () => {
     expect(openFolder).toHaveBeenCalledWith("/workspace/new-folder");
     expect(touch).not.toHaveBeenCalled();
     expect(openFile).not.toHaveBeenCalled();
+  });
+});
+
+describe("renameAndOpenItem", () => {
+  it("should rename file and reopen it", async () => {
+    const join = vi.fn().mockResolvedValue("/workspace/new.py");
+    const getParent = vi.fn().mockResolvedValue("/workspace");
+    const rename = vi.fn().mockResolvedValue(undefined);
+    const openFile = vi.fn().mockResolvedValue(undefined);
+    const openFolder = vi.fn().mockResolvedValue(undefined);
+    const reset = vi.fn();
+
+    await renameAndOpenItem({
+      path: "/workspace/old.py",
+      name: "new.py",
+      join,
+      getParent,
+      rename,
+      openFile,
+      openFolder,
+      reset,
+      isDir: false,
+    });
+
+    expect(getParent).toHaveBeenCalledWith("/workspace/old.py");
+    expect(join).toHaveBeenCalledWith("/workspace", "new.py");
+    expect(rename).toHaveBeenCalledWith("/workspace/old.py", "/workspace/new.py");
+    expect(reset).toHaveBeenCalledTimes(1);
+    expect(openFile).toHaveBeenCalledWith("/workspace/new.py");
+    expect(openFolder).not.toHaveBeenCalled();
+  });
+
+  it("should rename folder and open it", async () => {
+    const join = vi.fn().mockResolvedValue("/workspace/new-folder");
+    const getParent = vi.fn().mockResolvedValue("/workspace");
+    const rename = vi.fn().mockResolvedValue(undefined);
+    const openFile = vi.fn().mockResolvedValue(undefined);
+    const openFolder = vi.fn().mockResolvedValue(undefined);
+    const reset = vi.fn();
+
+    await renameAndOpenItem({
+      path: "/workspace/old-folder",
+      name: "new-folder",
+      join,
+      getParent,
+      rename,
+      openFile,
+      openFolder,
+      reset,
+      isDir: true,
+    });
+
+    expect(rename).toHaveBeenCalledWith(
+      "/workspace/old-folder",
+      "/workspace/new-folder",
+    );
+    expect(reset).toHaveBeenCalledTimes(1);
+    expect(openFolder).toHaveBeenCalledWith("/workspace/new-folder");
+    expect(openFile).not.toHaveBeenCalled();
+  });
+});
+
+describe("deleteItemAndRefresh", () => {
+  it("should delete item and refresh current folder", async () => {
+    const deletePath = vi.fn().mockResolvedValue(undefined);
+    const refreshFolder = vi.fn().mockResolvedValue(undefined);
+
+    await deleteItemAndRefresh({
+      path: "/workspace/remove.py",
+      currentFolder: "/workspace",
+      deletePath,
+      refreshFolder,
+    });
+
+    expect(deletePath).toHaveBeenCalledWith("/workspace/remove.py");
+    expect(refreshFolder).toHaveBeenCalledWith("/workspace");
   });
 });

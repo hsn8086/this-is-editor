@@ -95,7 +95,13 @@
     <v-dialog v-model="dialog" max-width="500px">
       <v-card>
         <v-card-title class="headline">
-          {{ dialogType === "file" ? "Create File" : "Create Folder" }}
+          {{
+            dialogType === "rename"
+              ? "Rename"
+              : dialogType === "file"
+                ? "Create File"
+                : "Create Folder"
+          }}
         </v-card-title>
         <v-card-text>
           <v-text-field
@@ -110,6 +116,13 @@
             v-else-if="dialogType === 'folder'"
             label="Folder Name"
             :rules="[(value) => !!value || 'Folder name is required']"
+            @keydown="onCreateInputKeydown"
+          />
+          <v-text-field
+            v-model="createName"
+            v-else-if="dialogType === 'rename'"
+            label="New Name"
+            :rules="[(value) => !!value || 'New name is required']"
             @keydown="onCreateInputKeydown"
           />
         </v-card-text>
@@ -147,7 +160,19 @@
                 }
               "
             >
-              <v-list-item-title>Pin</v-list-item-title>
+            <v-list-item-title>Pin</v-list-item-title>
+          </v-list-item>
+            <v-list-item
+              v-if="!(('isReturn' in file) && file.isReturn)"
+              @click="openRenameDialog(file)"
+            >
+              <v-list-item-title>Rename</v-list-item-title>
+            </v-list-item>
+            <v-list-item
+              v-if="!(('isReturn' in file) && file.isReturn)"
+              @click="deleteItem(file)"
+            >
+              <v-list-item-title>Delete</v-list-item-title>
             </v-list-item>
           </v-list>
         </v-menu>
@@ -229,7 +254,9 @@ import { debounce } from "lodash";
 import { fileService } from "@/services";
 import {
   createAndOpenItem,
+  deleteItemAndRefresh,
   handleCreateInputKeydown,
+  renameAndOpenItem,
 } from "@/components/file-sel-create";
 
 import router from "@/router";
@@ -307,18 +334,47 @@ async function fileClick(file: FileItem | FileInfo) {
 }
 
 const dialog = ref(false);
-const dialogType = ref<"file" | "folder">("file");
+const dialogType = ref<"file" | "folder" | "rename">("file");
 const createName = ref<string>("");
+const targetItem = ref<FileItem | FileInfo | null>(null);
 
 async function onCreateInputKeydown(event: KeyboardEvent) {
   await handleCreateInputKeydown(event, createItem);
 }
 
 async function createItem() {
+  if (dialogType.value === "rename" && targetItem.value) {
+    await renameAndOpenItem({
+      path: targetItem.value.path,
+      name: createName.value,
+      join: fileService.join.bind(fileService),
+      getParent: fileService.getParent.bind(fileService),
+      rename: fileService.rename.bind(fileService),
+      openFile: async (path: string) => {
+        await fileService.setOpenedFile(path);
+        await router.push("/editor");
+        await fileService.setCwd(folder.value!);
+      },
+      openFolder: async (path: string) => {
+        await changeDirectory(path);
+      },
+      reset: () => {
+        dialog.value = false;
+        createName.value = "";
+        targetItem.value = null;
+      },
+      isDir: targetItem.value.is_dir,
+    });
+    return;
+  }
+
+  const createDialogType = dialogType.value;
+  if (createDialogType === "rename") return;
+
   await createAndOpenItem({
     folder: folder.value!,
     createName: createName.value,
-    dialogType: dialogType.value,
+    dialogType: createDialogType,
     join: fileService.join.bind(fileService),
     touch: fileService.touch.bind(fileService),
     mkdir: fileService.mkdir.bind(fileService),
@@ -333,6 +389,25 @@ async function createItem() {
     reset: () => {
       dialog.value = false;
       createName.value = "";
+      targetItem.value = null;
+    },
+  });
+}
+
+function openRenameDialog(file: FileItem | FileInfo) {
+  targetItem.value = file;
+  createName.value = file.name;
+  dialogType.value = "rename";
+  dialog.value = true;
+}
+
+async function deleteItem(file: FileItem | FileInfo) {
+  await deleteItemAndRefresh({
+    path: file.path,
+    currentFolder: folder.value!,
+    deletePath: fileService.delete.bind(fileService),
+    refreshFolder: async (path: string) => {
+      await fetchFiles(path);
     },
   });
 }

@@ -7,9 +7,11 @@ as utilities for interacting with the system and running tasks.
 import json
 import platform
 import shlex
+import shutil
 import subprocess
 import time
 from pathlib import Path
+from typing import cast
 
 import psutil
 from loguru import logger
@@ -37,13 +39,13 @@ class Api:
             if p.is_dir():
                 self.cwd = p
 
-        self.opened_file: Path = self.cwd / ".tie.temp.txt"
+        self.opened_file: Path | None = self.cwd / ".tie.temp.txt"
         if self.opened_file.exists():
             self.opened_file.unlink()
 
-        self._path_hashes = self._build_path_hashes(
-            [self.cwd, self.cwd_save_path, self.opened_file],
-        )
+        self._path_hashes = self._build_path_hashes([self.cwd, self.cwd_save_path])
+        if self.opened_file is not None:
+            self._path_hashes.update(self._get_path_hashes(self.opened_file))
 
         self.opened_testcase_file = None
         self.watcher: Watcher = Watcher(self._callback)
@@ -57,7 +59,7 @@ class Api:
         """
         logger.debug(f"File modified: {path}")
 
-        if Path(path) != self.opened_file:
+        if self.opened_file is None or Path(path) != self.opened_file:
             return
         if not Path(path).exists():
             return
@@ -94,6 +96,47 @@ class Api:
             parent = current.parent
             current = parent if parent != current else None
         return hashes
+
+    def _testcase_paths_for_source(self, path: Path) -> list[Path]:
+        cph_folder = path.parent / ".cph"
+        if not cph_folder.exists():
+            return []
+
+        prefixes = (f".{path.name}_", f".{path.name}.prob")
+        testcase_paths: list[Path] = []
+        for item in cph_folder.iterdir():
+            if item.name.startswith(prefixes[0]) or item.name == prefixes[1]:
+                testcase_paths.append(item)
+        return testcase_paths
+
+    def _move_testcase_files(self, source: Path, target: Path) -> None:
+        if target.is_dir():
+            return
+
+        target_cph_folder = target.parent / ".cph"
+        target_cph_folder.mkdir(parents=True, exist_ok=True)
+        for testcase_path in self._testcase_paths_for_source(source):
+            target_name = testcase_path.name.replace(source.name, target.name, 1)
+            new_testcase_path = target_cph_folder / target_name
+            testcase_data = json.loads(testcase_path.read_text(encoding="utf-8"))
+            testcase_data["name"] = target.name
+            testcase_data["srcPath"] = target.name
+            testcase_data["url"] = str(target)
+            new_testcase_path.write_text(
+                json.dumps(testcase_data, indent=4),
+                encoding="utf-8",
+            )
+            testcase_path.unlink()
+
+    def _delete_testcase_files(self, path: Path) -> None:
+        if path.is_dir():
+            for child in path.rglob("*"):
+                if child.is_file():
+                    self._delete_testcase_files(child)
+            return
+
+        for testcase_path in self._testcase_paths_for_source(path):
+            testcase_path.unlink()
 
     def get_pinned_files(self) -> list[str]:
         """Get a list of pinned files with metadata.
@@ -248,7 +291,8 @@ class Api:
         if not (cmd := formatter_cfg.get("command", "")).strip():
             msg = f"Formatter command for language {lang} is empty."
             raise ValueError(msg)
-        cmd_list = [fmt(c, file_path=self.opened_file) for c in shlex.split(cmd)]
+        opened_file = cast("Path", self.opened_file)
+        cmd_list = [fmt(c, file_path=opened_file) for c in shlex.split(cmd)]
         creationflags = 0
         if platform.system() == "Windows":
             creationflags = int(getattr(subprocess, "CREATE_NO_WINDOW", 0))
@@ -256,7 +300,7 @@ class Api:
             cmd_list,
             creationflags=creationflags,
             shell=platform.system() == "Windows",
-            cwd=self.opened_file.parent,
+            cwd=opened_file.parent,
             text=True,
         )
 
@@ -368,8 +412,9 @@ class Api:
             dict: Test case dictionary.
 
         """
+        opened_file = cast("Path", self.opened_file)
         none_testcase = {
-            "name": self.opened_file.name,
+            "name": opened_file.name,
             "tests": [],
             "memoryLimit": 1024,
             "timeLimit": 3,
@@ -378,12 +423,12 @@ class Api:
             return cph2testcase(
                 json.loads(Path(self.opened_testcase_file).read_text(encoding="utf-8")),
             )
-        cph_floder_p = self.opened_file.parent / ".cph"
+        cph_floder_p = opened_file.parent / ".cph"
         if not cph_floder_p.exists():
             return none_testcase
         for p in cph_floder_p.iterdir():
-            if p.name.startswith("." + self.opened_file.name + "_") or p.name == (
-                "." + self.opened_file.name + ".prob"
+            if p.name.startswith("." + opened_file.name + "_") or p.name == (
+                "." + opened_file.name + ".prob"
             ):
                 self.opened_testcase_file = p
                 return cph2testcase(json.loads(p.read_text(encoding="utf-8")))
@@ -397,21 +442,23 @@ class Api:
 
         """
         if self.opened_testcase_file is None:
-            cph_floder_p = self.opened_file.parent / ".cph"
+            opened_file = cast("Path", self.opened_file)
+            cph_floder_p = opened_file.parent / ".cph"
             cph_floder_p.mkdir(parents=True, exist_ok=True)
             self.opened_testcase_file = cph_floder_p / (
-                "." + self.opened_file.name + ".prob"
+                "." + opened_file.name + ".prob"
             )
         p = self.opened_testcase_file
+        opened_file = cast("Path", self.opened_file)
         j = {
-            "name": testcase.get("name", self.opened_file.name),
+            "name": testcase.get("name", opened_file.name),
             "memoryLimit": testcase.get("memoryLimit", 1024),
             "timeLimit": testcase.get("timeLimit", 3) * 1000,
             "tests": [],
             "local": True,
             "group": "local",
-            "srcPath": self.opened_file.name,
-            "url": str(self.opened_file),
+            "srcPath": opened_file.name,
+            "url": str(opened_file),
             "interactive": False,
         }
         for test in testcase.get("tests", []):
@@ -737,3 +784,64 @@ class Api:
             p.mkdir(parents=True, exist_ok=True)
             return {"status": "success", "message": f"{p} created."}
         return {"status": "warning", "message": f"{p} already exists."}
+
+    def path_rename(self, source: str, target: str) -> dict:
+        """Rename or move a file or directory.
+
+        Args:
+            source (str): Existing source path.
+            target (str): New destination path.
+
+        Returns:
+            dict: Status and message.
+
+        """
+        source_path = Path(source)
+        target_path = Path(target)
+        if not source_path.exists():
+            msg = f"{source_path} does not exist."
+            raise FileNotFoundError(msg)
+        if target_path.exists():
+            return {"status": "warning", "message": f"{target_path} already exists."}
+
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        source_path.rename(target_path)
+        self._move_testcase_files(source_path, target_path)
+
+        if self.opened_file == source_path:
+            self.opened_file = target_path
+            self.opened_testcase_file = None
+
+        return {
+            "status": "success",
+            "message": f"{source_path} renamed to {target_path}.",
+        }
+
+    def path_delete(self, path: str) -> dict:
+        """Delete a file or directory.
+
+        Args:
+            path (str): Path to delete.
+
+        Returns:
+            dict: Status and message.
+
+        """
+        target = Path(path)
+        if not target.exists():
+            return {"status": "warning", "message": f"{target} does not exist."}
+
+        self._delete_testcase_files(target)
+
+        if target.is_dir():
+            target.rmdir() if not any(target.iterdir()) else shutil.rmtree(target)
+        else:
+            target.unlink()
+
+        if self.opened_file is not None and (
+            self.opened_file == target or target in self.opened_file.parents
+        ):
+            self.opened_file = self.cwd / ".tie.temp.txt"
+            self.opened_testcase_file = None
+
+        return {"status": "success", "message": f"{target} deleted."}

@@ -142,6 +142,8 @@ export interface API {
   path_save_text: (path: string, text: string) => Promise<void>
   path_mkdir: (path: string) => Promise<Response>
   path_touch: (path: string) => Promise<Response>
+  path_rename: (source: string, target: string) => Promise<Response>
+  path_delete: (path: string) => Promise<Response>
 }
 // window.state.probQueue
 declare global {

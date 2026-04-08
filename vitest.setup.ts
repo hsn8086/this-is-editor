@@ -149,6 +149,8 @@ beforeAll(() => {
     path_save_text: vi.fn().mockResolvedValue(undefined),
     path_mkdir: vi.fn().mockResolvedValue({ status: 'success', message: '' }),
     path_touch: vi.fn().mockResolvedValue({ status: 'success', message: '' }),
+    path_rename: vi.fn().mockResolvedValue({ status: 'success', message: '' }),
+    path_delete: vi.fn().mockResolvedValue({ status: 'success', message: '' }),
   }
 
   // Mock pywebview state

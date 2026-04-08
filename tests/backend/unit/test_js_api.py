@@ -9,6 +9,7 @@ This module contains P0 level tests for the Api class, focusing on:
 """
 
 from collections.abc import Callable, Generator
+import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -290,6 +291,62 @@ class TestApiPathOperations:
 
         assert result["status"] == "success"
         assert new_dir.exists()
+
+    def test_path_rename_file_moves_related_testcase(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test path_rename migrates testcase data for renamed files."""
+        source = tmp_path / "old.py"
+        source.write_text("print('old')", encoding="utf-8")
+        cph_file = tmp_path / ".cph" / ".old.py.prob"
+        cph_file.parent.mkdir(parents=True, exist_ok=True)
+        cph_file.write_text(
+            json.dumps(
+                {
+                    "name": "old.py",
+                    "tests": [],
+                    "memoryLimit": 1000,
+                    "timeLimit": 1000,
+                    "srcPath": "old.py",
+                    "url": str(source),
+                },
+            ),
+            encoding="utf-8",
+        )
+
+        result = api_with_tmp_path.path_rename(
+            str(source),
+            str(tmp_path / "new.py"),
+        )
+
+        migrated = tmp_path / ".cph" / ".new.py.prob"
+        assert result["status"] == "success"
+        assert not source.exists()
+        assert migrated.exists()
+        migrated_data = json.loads(migrated.read_text(encoding="utf-8"))
+        assert migrated_data["name"] == "new.py"
+        assert migrated_data["srcPath"] == "new.py"
+        assert migrated_data["url"] == str(tmp_path / "new.py")
+
+    def test_path_delete_file_removes_related_testcase(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test path_delete removes testcase data for deleted files."""
+        source = tmp_path / "old.py"
+        source.write_text("print('old')", encoding="utf-8")
+        cph_file = tmp_path / ".cph" / ".old.py.prob"
+        cph_file.parent.mkdir(parents=True, exist_ok=True)
+        cph_file.write_text("{}", encoding="utf-8")
+
+        result = api_with_tmp_path.path_delete(str(source))
+
+        assert result["status"] == "success"
+        assert not source.exists()
+        assert not cph_file.exists()
 
     def test_path_save_text_success(
         self,

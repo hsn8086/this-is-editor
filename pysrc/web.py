@@ -13,7 +13,7 @@ import shlex
 import subprocess
 import threading
 from pathlib import Path
-from typing import cast
+from typing import IO, cast
 
 import uvicorn
 import webview
@@ -44,7 +44,7 @@ def get_free_port() -> int:
 port = get_free_port()
 
 app = FastAPI()
-should_exit = False
+should_exit: bool = False
 
 
 class LspBridge:
@@ -91,7 +91,11 @@ class LspBridge:
     ) -> None:
         self.loop.call_soon_threadsafe(target.put_nowait, item)
 
-    def _read_available(self, stream: subprocess.PIPE, size: int = 4096) -> bytes:
+    def _read_available(
+        self,
+        stream: IO[bytes],
+        size: int = 4096,
+    ) -> bytes:
         reader = getattr(stream, "read1", None)
         if callable(reader):
             return reader(size)

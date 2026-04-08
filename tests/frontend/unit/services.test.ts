@@ -407,6 +407,26 @@ describe("services", () => {
       const scroll = await fileService.getScroll();
       expect(scroll).toBe(100);
     });
+
+    it("should rename and delete files", async () => {
+      vi.mocked(getMockApi().path_rename!).mockResolvedValue({
+        status: "success",
+        message: "",
+      });
+      vi.mocked(getMockApi().path_delete!).mockResolvedValue({
+        status: "success",
+        message: "",
+      });
+
+      await fileService.rename("/test-old.py", "/test-new.py");
+      expect(getMockApi().path_rename).toHaveBeenCalledWith(
+        "/test-old.py",
+        "/test-new.py",
+      );
+
+      await fileService.delete("/test-new.py");
+      expect(getMockApi().path_delete).toHaveBeenCalledWith("/test-new.py");
+    });
   });
 
   describe("CodeService", () => {
