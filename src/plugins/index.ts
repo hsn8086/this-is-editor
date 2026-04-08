@@ -6,7 +6,7 @@
 
 // Plugins
 import vuetify from './vuetify'
-// import pinia from '../stores'
+import pinia from '../stores'
 import router from '../router'
 // i18n
 import { i18n } from './i18n'
@@ -18,5 +18,5 @@ export function registerPlugins (app: App) {
     .use(vuetify)
     .use(router)
     .use(i18n)
-    // .use(pinia)
+    .use(pinia)
 }

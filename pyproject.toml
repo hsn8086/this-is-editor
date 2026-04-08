@@ -27,7 +27,14 @@ include-package-data = true
 "this_is_editor" = ["web/*"]
 
 [dependency-groups]
-dev = ["nuitka>=2.7.12", "pip-licenses>=5.0.0", "python-lsp-server>=1.13.1"]
+dev = [
+    "nuitka>=2.7.12",
+    "pip-licenses>=5.0.0",
+    "python-lsp-server>=1.13.1",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.25.2",
+    "pytest-cov>=6.1.1",
+]
 
 
 [tool.ruff.lint]
@@ -95,4 +102,15 @@ ignore = [
 ]
 [tool.ruff]
 target-version = "py312"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101",   # Assert statements allowed in tests
+    "SIM117", # Multiple context managers allowed in tests for clarity
+    "PLR2004", # Magic value comparisons common in tests
+    "ARG001",  # Unused arguments in mock functions
+    "TRY003",  # Exception message outside class allowed in tests
+    "EM101",   # String literal in exception allowed in tests
+    "PLC0415", # Import inside function allowed in tests for lazy loading
+]
 

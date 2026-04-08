@@ -123,20 +123,20 @@
   </v-card>
 </template>
 <script lang="ts" setup>
-import { type API } from "@/pywebview-defines";
 import { ref } from "vue";
 import { type Config } from "@/pywebview-defines";
 import { useTheme } from "vuetify";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import type { I18nType } from "@/plugins/i18n";
+import { configService, fileService } from "@/services";
 
 const { locale, t } = useI18n();
 const theme = useTheme();
 
 const config = ref<[string, ConfigItem[]][]>([]);
 const search = ref("");
-const py: API = window.pywebview.api;
+
 onMounted(() => {
   init();
 });
@@ -148,43 +148,11 @@ type ConfigItem = {
   i18n: string;
   enum?: readonly any[];
 };
-function sortConfig(config: ConfigItem[]): [string, ConfigItem[]][] {
-  const groupMap: Record<string, ConfigItem[]> = {};
-  for (const item of config) {
-    if (!groupMap[item.group]) {
-      groupMap[item.group] = [];
-    }
-    groupMap[item.group].push(item);
-  }
-  for (const group in groupMap) {
-    groupMap[group].sort((a, b) => a.display.localeCompare(b.display));
-  }
-  let sortedConfig: [string, ConfigItem[]][] = Object.keys(groupMap)
-    .map((group): [string, ConfigItem[]] => [group, groupMap[group]]);
-  return sortedConfig;
-}
-function* parseConfig(
-  cfg: Config,
-  shuffix: string[] = []
-): Generator<ConfigItem> {
-  for (const [key, value] of Object.entries(cfg)) {
-    const id = [...shuffix, key];
-    if ("value" in value) {
-      yield {
-        ...value,
-        id: id.join("."),
-        group: id[0],
-      };
-    } else {
-      yield* parseConfig(value, id);
-    }
-  }
-}
 async function changeConfig(id: string, value: any): Promise<void> {
-  await py.set_config(id, value);
+  await configService.setConfig(id, value);
   switch (id) {
     case "editor.tie.theme": {
-      const cfg = await py.get_config();
+      const cfg = await configService.getConfig();
       if (cfg.editor.tie.theme.value === "dark")
         theme.global.name.value = "dark";
       else if (cfg.editor.tie.theme.value === "light")
@@ -193,22 +161,24 @@ async function changeConfig(id: string, value: any): Promise<void> {
       break;
     }
     case "editor.tie.language": {
-      const cfg = await py.get_config();
+      const cfg = await configService.getConfig();
       locale.value = cfg.editor.tie.language.value as I18nType;
       break;
     }
   }
 }
 async function init() {
-  const cfg = await py.get_config();
-  config.value = sortConfig(Array.from(parseConfig(cfg)));
+  const cfg = await configService.getConfig();
+  config.value = configService.sortConfig(
+    Array.from(configService.parseConfig(cfg))
+  );
   console.log("config", config.value);
 }
 
 const router = useRouter();
 async function openConfigFile() {
-  const path = await py.get_config_path();
-  await py.set_opened_file(path);
+  const path = await configService.getConfigPath();
+  await fileService.setOpenedFile(path);
   await router.push("/editor");
 }
 </script>

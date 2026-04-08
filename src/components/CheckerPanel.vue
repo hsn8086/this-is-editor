@@ -180,12 +180,20 @@
   </v-navigation-drawer>
 </template>
 <script lang="ts" setup>
-import type { API, TaskResult, TestCase } from "@/pywebview-defines";
+import type { TaskResult, TestCase } from "@/pywebview-defines";
 import { useI18n } from "vue-i18n";
 const { t } = useI18n();
 
-import { ref } from "vue";
+import { ref, computed } from "vue";
+import { storeToRefs } from "pinia";
+import { useCheckerStore } from "@/stores/checker";
 import { ceil, round } from "lodash";
+import { taskService, fileService } from "@/services";
+
+// Checker store
+const checkerStore = useCheckerStore();
+const { tasks, testcaseName, runStatus, completedTasks: completedOfTasks, testcaseInfo } = storeToRefs(checkerStore);
+const progressOfTasks = computed(() => checkerStore.progress);
 
 defineExpose({
   runAll,
@@ -200,9 +208,6 @@ const colors: Record<string, string> = {
   running: "orange",
 };
 
-// Access the Python API exposed via pywebview
-const py: API = window.pywebview.api;
-
 // Initialize the component when mounted
 onMounted(() => {
   init();
@@ -214,38 +219,22 @@ async function init() {
   await initJudgeThread();
 }
 
-// Define the structure of a test case and task
-let testcaseInfo: TestCase;
-const testcaseName = ref("");
-const tasks = ref<TaskItem[]>([]);
-type Status = "null" | "pending" | "completed" | "failed" | "running";
-type TaskItem = {
-  id: number;
-  input: string;
-  output: string;
-  answer: string;
-  status: Status;
-  expend: boolean;
-  disabledInput: boolean;
-  disabledAnswer: boolean;
-  time?: number;
-  memory?: number;
-};
-
 // Load test cases from the backend and initialize tasks
 async function loadTestcase() {
-  testcaseInfo = await py.get_testcase();
-  testcaseName.value = testcaseInfo.name;
-  tasks.value = testcaseInfo.tests.map((test, index) => ({
+  const newTestcaseInfo = await taskService.getTestcase();
+  checkerStore.setTestcaseInfo(newTestcaseInfo);
+  checkerStore.setTestcaseName(newTestcaseInfo.name);
+  const newTasks = newTestcaseInfo.tests.map((test) => ({
     id: test.id,
     input: test.input.length <= 8192 ? test.input : "<Input too long>",
     answer: test.answer.length <= 8192 ? test.answer : "<Answer too long>",
     disabledAnswer: test.answer.length > 8192,
     disabledInput: test.input.length > 8192,
-    status: "null" as Status,
+    status: "null" as const,
     output: "",
     expend: false,
   }));
+  checkerStore.setTasks(newTasks);
 }
 
 // Manage the state of the navigation drawer (collapsed/expanded)
@@ -255,107 +244,104 @@ function changRail(value: boolean) {
   rail.value = value;
   if (value === true) {
     console.log("Collapsing all tasks");
-    tasks.value.forEach((task) => {
-      task.expend = false;
-    });
+    checkerStore.collapseAllTasks();
   }
 }
 
 // Toggle the expanded state of a specific task
-function changeExpend(item: TaskItem, value: boolean) {
-  item.expend = value;
+function changeExpend(item: typeof tasks.value[0], value: boolean) {
+  checkerStore.updateTask(item.id, { expend: value });
   rail.value = !value && rail.value;
 }
 
 // Initialize the number of judge threads based on CPU count
 let judgeThread = 1; // Default to 1 thread until initialized
 async function initJudgeThread() {
-  const [cpu_count, cpu_count_logical] = await py.get_cpu_count();
-  if (cpu_count == cpu_count_logical)
-    judgeThread = Math.max(Math.floor((cpu_count * 3) / 2), 1);
-  else judgeThread = cpu_count;
+  judgeThread = await taskService.getRecommendedJudgeThread();
 }
 
 // Manage the state of the "Run All" button
 const runAllBtnDisabled = ref(false);
 const runAllBtnIcon = ref("mdi-play");
-const runStatus = ref(0); // 0: Run All, 1: Compiling..., 2: Running..., 3: All Done
-
-const completedOfTasks = ref(0);
-const progressOfTasks = computed(() => {
-  if (tasks.value.length === 0) return 0;
-  return ceil((completedOfTasks.value / tasks.value.length) * 100);
-});
 // Execute all tasks sequentially or in parallel based on the thread limit
 async function runAll() {
   runAllBtnDisabled.value = true;
   runAllBtnIcon.value = "mdi-pause";
   const limit = judgeThread;
-  completedOfTasks.value = 0;
   // Reset task statuses and outputs
-  for (const task of tasks.value) {
-    task.status = "pending";
-    task.output = "";
-    task.time = undefined;
-    task.memory = undefined;
-  }
+  checkerStore.resetAllTasksStatus();
 
   // Compile the test cases before running
-  runStatus.value = 1; // Compiling...
+  checkerStore.setRunStatus(1); // Compiling...
   try {
-    const rst = await py.compile();
+    const rst = await taskService.compile();
     if (rst !== "success") throw new Error(rst);
   } catch (error) {
     console.error("Compilation failed:", error);
     for (const task of tasks.value) {
-      task.status = "failed";
-      task.output = "<COMPILATION ERROR>";
-      changeExpend(task, true);
+      checkerStore.updateTask(task.id, {
+        status: "failed",
+        output: "<COMPILATION ERROR>",
+      });
+      checkerStore.expandTask(task.id);
     }
-    runStatus.value = 0;
+    rail.value = false;
+    checkerStore.resetRunStatus();
     runAllBtnDisabled.value = false;
     runAllBtnIcon.value = "mdi-play";
     return;
   }
 
   // Run tasks with a limit on concurrent executions
-  runStatus.value = 2; // Running...
+  checkerStore.setRunStatus(2); // Running...
   const executing = new Set<Promise<TaskResult>>();
+  const currentTestcaseInfo = testcaseInfo.value;
+  if (!currentTestcaseInfo) return;
+
   for (const task of tasks.value) {
     if (executing.size >= limit) await Promise.race(executing);
-    task.status = "running";
-    const promise = py.run_task(
+    checkerStore.updateTask(task.id, { status: "running" });
+    const promise = taskService.runTask(
       task.id,
-      testcaseInfo.memoryLimit,
-      testcaseInfo.timeLimit
+      currentTestcaseInfo.memoryLimit,
+      currentTestcaseInfo.timeLimit
     );
 
     executing.add(promise);
     promise
       .then((result) => {
-        task.output = result.result;
-        task.time = result.time;
-        task.memory = result.memory;
+        const updates: Partial<typeof task> = {
+          output: result.result,
+          time: result.time,
+          memory: result.memory,
+        };
         if (result.status !== "success") {
-          task.status = "failed";
-          changeExpend(task, true);
+          updates.status = "failed";
           if (result.result.length === 0)
-            task.output = `<${result.status.toUpperCase().replace(/_/g, " ")}>`;
+            updates.output = `<${result.status.toUpperCase().replace(/_/g, " ")}>`;
           console.error(
             `Task ${task.id} failed: ${result.status} - ${result.result}`
           );
+          checkerStore.updateTask(task.id, updates);
+          checkerStore.expandTask(task.id);
+          rail.value = false;
           return;
-        } else changeExpend(task, false);
-        task.status = "completed";
+        }
+        updates.status = "completed";
+        checkerStore.updateTask(task.id, updates);
+        checkerStore.updateTask(task.id, { expend: false });
       })
       .catch((error) => {
-        task.status = "failed";
-        task.output = `Error: ${error.message}`;
-        changeExpend(task, true);
+        checkerStore.updateTask(task.id, {
+          status: "failed",
+          output: `Error: ${error.message}`,
+        });
+        checkerStore.expandTask(task.id);
+        rail.value = false;
         console.error(`Task ${task.id} encountered an error: ${error.message}`);
       })
       .finally(() => {
-        completedOfTasks.value += 1;
+        checkerStore.incrementCompleted();
         executing.delete(promise);
         console.log(
           `Task ${task.id} completed. ${completedOfTasks.value}/${
@@ -367,7 +353,7 @@ async function runAll() {
   await Promise.all(executing);
 
   // Update the "Run All" button state after execution
-  runStatus.value = 0;
+  checkerStore.resetRunStatus();
   runAllBtnDisabled.value = false;
   runAllBtnIcon.value = "mdi-play";
 }
@@ -377,7 +363,7 @@ async function createTask() {
   const newId = tasks.value.length
     ? Math.max(...tasks.value.map((t) => t.id)) + 1
     : 1;
-  tasks.value.push({
+  checkerStore.addTask({
     id: newId,
     input: "",
     output: "",
@@ -397,20 +383,23 @@ async function saveTasks() {
     input: task.input,
     answer: task.answer,
   }));
-  testcaseInfo.tests = tests;
-  await py.save_testcase(testcaseInfo);
+  const currentTestcaseInfo = testcaseInfo.value;
+  if (currentTestcaseInfo) {
+    const updatedTestcaseInfo = { ...currentTestcaseInfo, tests };
+    await taskService.saveTestcase(updatedTestcaseInfo);
+  }
 }
 
 // Delete a specific task by its ID
 async function deleteTask(id: number) {
-  tasks.value = tasks.value.filter((task) => task.id !== id);
+  checkerStore.deleteTask(id);
   await saveTasks();
   await loadTestcase();
 }
 
 // Clear all tasks and reset the state
 async function clearAllTasks() {
-  tasks.value = [];
+  checkerStore.clearTasks();
   await saveTasks();
   await loadTestcase();
 }
@@ -449,15 +438,15 @@ async function PasteFromClipboard() {
     let fileRec: Record<string, FileType> = {};
     for (const file of files) {
       console.log(`Opening file from clipboard: ${file}`);
-      console.log(await py.path_get_text(file));
-      const info = await py.path_get_info(file);
+      console.log(await fileService.getText(file));
+      const info = await fileService.getInfo(file);
       if (fileRec[info.stem] === undefined)
         fileRec[info.stem] = { in: "", out: "" };
 
       if (info.name.endsWith(".in")) {
-        fileRec[info.stem].in = await py.path_get_text(file);
+        fileRec[info.stem].in = await fileService.getText(file);
       } else if (info.name.endsWith(".out") || info.name.endsWith(".ans")) {
-        fileRec[info.stem].out = await py.path_get_text(file);
+        fileRec[info.stem].out = await fileService.getText(file);
       }
     }
     for (const key in fileRec) {
@@ -466,17 +455,19 @@ async function PasteFromClipboard() {
       );
 
       if (firstEmptyTask) {
+        const updates: Partial<typeof firstEmptyTask> = {};
         if (!firstEmptyTask.input) {
-          firstEmptyTask.input = fileRec[key].in;
+          updates.input = fileRec[key].in;
         }
         if (!firstEmptyTask.answer) {
-          firstEmptyTask.answer = fileRec[key].out;
+          updates.answer = fileRec[key].out;
         }
+        checkerStore.updateTask(firstEmptyTask.id, updates);
       } else {
         const newId = tasks.value.length
           ? Math.max(...tasks.value.map((t) => t.id)) + 1
           : 1;
-        tasks.value.push({
+        checkerStore.addTask({
           id: newId,
           input: fileRec[key].in,
           output: "",
@@ -511,8 +502,11 @@ async function PasteFromClipboard() {
     }
 
     // Replace all tasks with the parsed data
-    testcaseInfo.tests = parsed;
-    await py.save_testcase(testcaseInfo);
+    const currentTestcaseInfo = testcaseInfo.value;
+    if (currentTestcaseInfo) {
+      const updatedTestcaseInfo = { ...currentTestcaseInfo, tests: parsed };
+      await taskService.saveTestcase(updatedTestcaseInfo);
+    }
     await loadTestcase();
   } catch (error) {
     console.warn("Invalid JSON format, attempting to paste as plain text.");
@@ -523,16 +517,18 @@ async function PasteFromClipboard() {
     );
 
     if (firstEmptyTask) {
+      const updates: Partial<typeof firstEmptyTask> = {};
       if (!firstEmptyTask.input) {
-        firstEmptyTask.input = text;
+        updates.input = text;
       } else if (!firstEmptyTask.answer) {
-        firstEmptyTask.answer = text;
+        updates.answer = text;
       }
+      checkerStore.updateTask(firstEmptyTask.id, updates);
     } else {
       const newId = tasks.value.length
         ? Math.max(...tasks.value.map((t) => t.id)) + 1
         : 1;
-      tasks.value.push({
+      checkerStore.addTask({
         id: newId,
         input: text,
         output: "",

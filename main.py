@@ -55,7 +55,7 @@ class InterceptHandler(logging.Handler):
 
         # Find caller from where originated the logged message
         frame, depth = logging.currentframe(), 2
-        while frame.f_code.co_filename == logging.__file__:
+        while frame is not None and frame.f_code.co_filename == logging.__file__:
             frame = frame.f_back
             depth += 1
 
@@ -69,11 +69,11 @@ logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
 
 server, thread, server_recver, thread_recver = start_server()
 if platform.system() == "Windows":
-    webview.start(window, gui="edgechromium", debug=args.debug)
+    webview.start(gui="edgechromium", debug=args.debug)
 else:
-    webview.start(window, debug=args.debug)
+    webview.start(debug=args.debug)
 
-pysrc.web.should_exit = True
+pysrc.web.should_exit = True  # type: ignore[assignment]
 server.should_exit = True
 server_recver.should_exit = True
 

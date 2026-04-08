@@ -41,6 +41,10 @@ class Api:
         if self.opened_file.exists():
             self.opened_file.unlink()
 
+        self._path_hashes = self._build_path_hashes(
+            [self.cwd, self.cwd_save_path, self.opened_file],
+        )
+
         self.opened_testcase_file = None
         self.watcher: Watcher = Watcher(self._callback)
 
@@ -59,6 +63,9 @@ class Api:
             return
         from .web import window
 
+        if window is None:
+            return
+
         j = json.dumps({"detail": self.opened_file.read_text(encoding="utf-8")})
         window.run_js(
             f"""window.dispatchEvent(
@@ -69,7 +76,25 @@ class Api:
             """,
         )
         logger.debug("File change event dispatched.")
-    
+
+    def _build_path_hashes(self, paths: list[Path]) -> dict[str, int]:
+        hashes: dict[str, int] = {}
+        for p in paths:
+            hashes.update(self._get_path_hashes(p))
+        return hashes
+
+    def _get_path_hashes(self, path: Path) -> dict[str, int]:
+        hashes: dict[str, int] = {}
+        current: Path | None = path
+        while current is not None:
+            key = f"{current}_hash"
+            if key in hashes:
+                break
+            hashes[key] = hash(current)
+            parent = current.parent
+            current = parent if parent != current else None
+        return hashes
+
     def get_pinned_files(self) -> list[str]:
         """Get a list of pinned files with metadata.
 
@@ -224,11 +249,12 @@ class Api:
             msg = f"Formatter command for language {lang} is empty."
             raise ValueError(msg)
         cmd_list = [fmt(c, file_path=self.opened_file) for c in shlex.split(cmd)]
+        creationflags = 0
+        if platform.system() == "Windows":
+            creationflags = int(getattr(subprocess, "CREATE_NO_WINDOW", 0))
         return subprocess.check_output(
             cmd_list,
-            creationflags=subprocess.CREATE_NO_WINDOW
-            if platform.system() == "Windows"
-            else 0,
+            creationflags=creationflags,
             shell=platform.system() == "Windows",
             cwd=self.opened_file.parent,
             text=True,
@@ -247,7 +273,9 @@ class Api:
             tuple[int, int]: (physical cores, logical cores)
 
         """
-        return psutil.cpu_count(logical=False), psutil.cpu_count(logical=True)
+        physical = psutil.cpu_count(logical=False)
+        logical = psutil.cpu_count(logical=True)
+        return (physical or 0), (logical or 0)
 
     def save_scoll(self, scroll: int) -> None:
         """Save the scroll position.
@@ -425,7 +453,7 @@ class Api:
         """
         return str(config_p)
 
-    def get_langs(self) -> dict:
+    def get_langs(self) -> list[dict]:
         """Get the list of supported languages.
 
         Returns:
@@ -453,7 +481,7 @@ class Api:
 
         """
         if self.opened_file is None:
-            return {"code": "", "type": "text"}
+            return {"code": "", "type": "text", "_hash": self._path_hashes}
         if not self.opened_file.exists():
             self.opened_file.parent.mkdir(parents=True, exist_ok=True)
             self.opened_file.touch()
@@ -465,6 +493,7 @@ class Api:
             "code": self.opened_file.read_text(encoding="utf-8"),
             "type": type_mp.get(self.opened_file.suffix.lower(), {}).get("id", "text"),
             "alias": alias,
+            "_hash": self._path_hashes,
         }
 
     def save_code(self, code: str) -> None:
@@ -581,6 +610,7 @@ class Api:
         return {
             "now_path": str(p),
             "files": rst,
+            "_hash": self._get_path_hashes(p),
         }
 
     def path_join(self, *args: str) -> str:
@@ -653,6 +683,25 @@ class Api:
             msg = f"{p} is not a file."
             raise ValueError(msg)
         return p.read_text(encoding="utf-8")
+
+    def path_save_text(self, path: str, text: str) -> None:
+        """Save text content to a file.
+
+        Args:
+            path (str): Path to the file.
+            text (str): Text content to save.
+
+        Raises:
+            ValueError: If path points to a directory.
+
+        """
+        p = Path(path)
+        if p.is_dir():
+            msg = f"{p} is a directory, not a file."
+            raise ValueError(msg)
+        if not p.parent.exists():
+            p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(text, encoding="utf-8")
 
     def path_touch(self, path: str) -> dict:
         """Create an empty file at the given path.
