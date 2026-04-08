@@ -144,6 +144,12 @@ class Api:
         if self.opened_file is None:
             return None
 
+        opened_file = self.opened_file
+
+        def resolve_candidate(command_part: str) -> Path:
+            resolved = Path(fmt(command_part, file_path=opened_file))
+            return resolved if resolved.is_absolute() else opened_file.parent / resolved
+
         compile_command = (
             config.get("programmingLanguages", {})
             .get(lang, {})
@@ -159,16 +165,9 @@ class Api:
         if "-o" in command_parts:
             output_index = command_parts.index("-o") + 1
             if output_index < len(command_parts):
-                output_path = fmt(
-                    command_parts[output_index],
-                    file_path=self.opened_file,
-                )
-                artifact_path = Path(output_path)
-                return (
-                    artifact_path
-                    if artifact_path.is_absolute()
-                    else self.opened_file.parent / artifact_path
-                )
+                artifact_path = resolve_candidate(command_parts[output_index])
+                if artifact_path.exists():
+                    return artifact_path
 
         run_command = (
             config.get("programmingLanguages", {})
@@ -185,13 +184,11 @@ class Api:
         if not run_command_parts:
             return None
 
-        first_part = fmt(run_command_parts[0], file_path=self.opened_file)
-        artifact_path = Path(first_part)
-        return (
-            artifact_path
-            if artifact_path.is_absolute()
-            else self.opened_file.parent / artifact_path
-        )
+        candidate_parts = run_command_parts
+        if candidate_parts[0] == "{executable}" and len(candidate_parts) > 1:
+            candidate_parts = candidate_parts[1:]
+
+        return resolve_candidate(candidate_parts[0])
 
     def _cleanup_compiled_artifact(self, lang: str) -> None:
         artifact_path = self._get_compiled_artifact_path(lang)
@@ -203,6 +200,14 @@ class Api:
             return
 
         artifact_path.unlink()
+
+    def cleanup_compiled_artifact(self, lang: str | None = None) -> None:
+        """Remove the compiled artifact for the currently opened file, if any."""
+        if lang is None:
+            lang = self.get_code().get("type", None)
+        if not isinstance(lang, str):
+            return
+        self._cleanup_compiled_artifact(lang)
 
     def get_pinned_files(self) -> list[str]:
         """Get a list of pinned files with metadata.
@@ -423,28 +428,25 @@ class Api:
         if lang not in lang_runners:
             msg = f"Language {lang} is not supported."
             raise ValueError(msg)
-        try:
-            task = self.get_testcase().get("tests", [{}])[task_id - 1]
-            inp = task.get("input", "")
-            output, stderr, status, time, memory = lang_runners[lang](
-                cast("Path", self.opened_file),
-                inp,
-                memory_limit=memory_limit,
-                timeout=timeout,
-            )
-            stdout = output
-            answer = task.get("answer", "")
-            if status == "success":
-                status = "success" if task_checker(stdout, answer) else "failed"
-            return {
-                "result": stdout,
-                "stderr": stderr,
-                "status": status,
-                "time": time,
-                "memory": memory,
-            }
-        finally:
-            self._cleanup_compiled_artifact(lang)
+        task = self.get_testcase().get("tests", [{}])[task_id - 1]
+        inp = task.get("input", "")
+        output, stderr, status, time, memory = lang_runners[lang](
+            cast("Path", self.opened_file),
+            inp,
+            memory_limit=memory_limit,
+            timeout=timeout,
+        )
+        stdout = output
+        answer = task.get("answer", "")
+        if status == "success":
+            status = "success" if task_checker(stdout, answer) else "failed"
+        return {
+            "result": stdout,
+            "stderr": stderr,
+            "status": status,
+            "time": time,
+            "memory": memory,
+        }
 
     def get_config(self) -> dict:
         """Get the merged configuration.

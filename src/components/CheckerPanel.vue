@@ -372,6 +372,7 @@
         })
     }
     await Promise.all(executing)
+    await taskService.cleanupCompiledArtifact()
 
     // Update the "Run All" button state after execution
     checkerStore.resetRunStatus()

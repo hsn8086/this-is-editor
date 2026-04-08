@@ -487,6 +487,13 @@ describe('services', () => {
       expect(result).toBe('success')
     })
 
+    it('should cleanup compiled artifact', async () => {
+      vi.mocked(getMockApi().cleanup_compiled_artifact!).mockResolvedValue(undefined)
+
+      await taskService.cleanupCompiledArtifact('python')
+      expect(getMockApi().cleanup_compiled_artifact).toHaveBeenCalledWith('python')
+    })
+
     it('should run task', async () => {
       const mockResult: Partial<TaskResult> = { status: 'success', stderr: '' }
       vi.mocked(getMockApi().run_task!).mockResolvedValue(mockResult)

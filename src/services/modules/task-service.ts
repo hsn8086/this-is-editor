@@ -16,6 +16,13 @@ export class TaskService {
   }
 
   /**
+   * 清理当前文件对应的编译产物
+   */
+  async cleanupCompiledArtifact (lang?: string): Promise<void> {
+    await this.client.call<void>('cleanup_compiled_artifact', lang)
+  }
+
+  /**
    * 运行单个测试任务
    * @param taskId 任务 ID
    * @param memoryLimit 内存限制（MB）

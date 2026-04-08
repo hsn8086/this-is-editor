@@ -92,6 +92,7 @@ beforeAll(() => {
     get_scoll: vi.fn().mockResolvedValue(0),
     get_cpu_count: vi.fn().mockResolvedValue([4, 8]),
     compile: vi.fn().mockResolvedValue('success'),
+    cleanup_compiled_artifact: vi.fn().mockResolvedValue(undefined),
     run_task: vi.fn().mockResolvedValue({
       result: 'Accepted',
       stderr: '',

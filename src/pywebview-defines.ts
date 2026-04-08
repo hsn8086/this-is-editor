@@ -120,6 +120,7 @@ export interface API {
   get_scoll: () => Promise<number>
   get_cpu_count: () => Promise<[number, number]>
   compile: () => Promise<'success' | string>
+  cleanup_compiled_artifact: (lang?: string) => Promise<void>
   run_task: (task_id: number, memory_limit?: number, timeout?: number) => Promise<TaskResult>
   get_testcase: () => Promise<TestCase>
   save_testcase: (testcase: TestCase) => Promise<void>

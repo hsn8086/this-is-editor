@@ -552,7 +552,7 @@ class TestApiRunTask:
         tmp_path: Path,
         api_with_tmp_path: Api,
     ) -> None:
-        """Test run_task removes compiled artifact after execution."""
+        """Test cleanup_compiled_artifact removes the compiled artifact."""
         test_file = tmp_path / "test.cpp"
         artifact = tmp_path / "test.out"
         test_file.write_text("int main() { return 0; }", encoding="utf-8")
@@ -585,6 +585,109 @@ class TestApiRunTask:
                             result = api_with_tmp_path.run_task(1)
 
         assert result["status"] == "success"
+        assert artifact.exists()
+
+        api_with_tmp_path.cleanup_compiled_artifact("cpp")
+
+        assert not artifact.exists()
+
+    def test_run_task_cleans_artifact_using_run_command_path(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test run_task falls back to the run command path when cleaning artifacts."""
+        test_file = tmp_path / "test.cpp"
+        artifact = tmp_path / "custom-test.out"
+        test_file.write_text("int main() { return 0; }", encoding="utf-8")
+        artifact.write_text("binary", encoding="utf-8")
+        api_with_tmp_path.opened_file = test_file
+
+        with patch(
+            "pysrc.js_api.config",
+            {
+                "programmingLanguages": {
+                    "cpp": {
+                        "compileCommand": "g++ {file} -o {fileStem}.out",
+                        "runCommand": "{fileParent}/custom-{fileStem}.out",
+                    },
+                },
+            },
+        ):
+            with patch(
+                "pysrc.js_api.lang_runners",
+                {"cpp": MagicMock(return_value=("ok", "", "success", 0.1, 4))},
+            ):
+                with patch("pysrc.js_api.type_mp", {".cpp": {"id": "cpp"}}):
+                    with patch("pysrc.js_api.task_checker", return_value=True):
+                        with patch.object(
+                            api_with_tmp_path,
+                            "get_code",
+                            return_value={"type": "cpp"},
+                        ):
+                            with patch.object(
+                                api_with_tmp_path,
+                                "get_testcase",
+                                return_value={
+                                    "tests": [
+                                        {
+                                            "input": "",
+                                            "answer": "ok",
+                                        },
+                                    ],
+                                },
+                            ):
+                                result = api_with_tmp_path.run_task(1)
+
+            assert result["status"] == "success"
+            assert artifact.exists()
+
+            api_with_tmp_path.cleanup_compiled_artifact("cpp")
+
+        assert not artifact.exists()
+
+    def test_run_task_cleans_python_pyc_artifact(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test run_task removes the compiled Python bytecode artifact."""
+        test_file = tmp_path / "test.py"
+        artifact = tmp_path / "test.pyc"
+        test_file.write_text("print('ok')", encoding="utf-8")
+        artifact.write_text("bytecode", encoding="utf-8")
+        api_with_tmp_path.opened_file = test_file
+
+        with patch(
+            "pysrc.js_api.lang_runners",
+            {"python": MagicMock(return_value=("ok", "", "success", 0.1, 4))},
+        ):
+            with patch("pysrc.js_api.type_mp", {".py": {"id": "python"}}):
+                with patch("pysrc.js_api.task_checker", return_value=True):
+                    with patch.object(
+                        api_with_tmp_path,
+                        "get_code",
+                        return_value={"type": "python"},
+                    ):
+                        with patch.object(
+                            api_with_tmp_path,
+                            "get_testcase",
+                            return_value={
+                                "tests": [
+                                    {
+                                        "input": "",
+                                        "answer": "ok",
+                                    },
+                                ],
+                            },
+                        ):
+                            result = api_with_tmp_path.run_task(1)
+
+        assert result["status"] == "success"
+        assert artifact.exists()
+
+        api_with_tmp_path.cleanup_compiled_artifact("python")
+
         assert not artifact.exists()
 
 
