@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { handleCreateInputKeydown } from "@/components/file-sel-create";
+import {
+  createAndOpenItem,
+  handleCreateInputKeydown,
+} from "@/components/file-sel-create";
 
 describe("handleCreateInputKeydown", () => {
   it("should create item when Enter is pressed", async () => {
@@ -46,5 +49,63 @@ describe("handleCreateInputKeydown", () => {
 
     expect(preventDefault).not.toHaveBeenCalled();
     expect(createItem).not.toHaveBeenCalled();
+  });
+});
+
+describe("createAndOpenItem", () => {
+  it("should create file and open editor immediately", async () => {
+    const join = vi.fn().mockResolvedValue("/workspace/new.py");
+    const touch = vi.fn().mockResolvedValue(undefined);
+    const mkdir = vi.fn().mockResolvedValue(undefined);
+    const openFile = vi.fn().mockResolvedValue(undefined);
+    const openFolder = vi.fn().mockResolvedValue(undefined);
+    const reset = vi.fn();
+
+    await createAndOpenItem({
+      folder: "/workspace",
+      createName: "new.py",
+      dialogType: "file",
+      join,
+      touch,
+      mkdir,
+      openFile,
+      openFolder,
+      reset,
+    });
+
+    expect(join).toHaveBeenCalledWith("/workspace", "new.py");
+    expect(touch).toHaveBeenCalledWith("/workspace/new.py");
+    expect(reset).toHaveBeenCalledTimes(1);
+    expect(openFile).toHaveBeenCalledWith("/workspace/new.py");
+    expect(mkdir).not.toHaveBeenCalled();
+    expect(openFolder).not.toHaveBeenCalled();
+  });
+
+  it("should create folder and enter it immediately", async () => {
+    const join = vi.fn().mockResolvedValue("/workspace/new-folder");
+    const touch = vi.fn().mockResolvedValue(undefined);
+    const mkdir = vi.fn().mockResolvedValue(undefined);
+    const openFile = vi.fn().mockResolvedValue(undefined);
+    const openFolder = vi.fn().mockResolvedValue(undefined);
+    const reset = vi.fn();
+
+    await createAndOpenItem({
+      folder: "/workspace",
+      createName: "new-folder",
+      dialogType: "folder",
+      join,
+      touch,
+      mkdir,
+      openFile,
+      openFolder,
+      reset,
+    });
+
+    expect(join).toHaveBeenCalledWith("/workspace", "new-folder");
+    expect(mkdir).toHaveBeenCalledWith("/workspace/new-folder");
+    expect(reset).toHaveBeenCalledTimes(1);
+    expect(openFolder).toHaveBeenCalledWith("/workspace/new-folder");
+    expect(touch).not.toHaveBeenCalled();
+    expect(openFile).not.toHaveBeenCalled();
   });
 });

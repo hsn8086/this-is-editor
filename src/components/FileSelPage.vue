@@ -227,7 +227,10 @@ import { storeToRefs } from "pinia";
 import { useFileStore } from "@/stores/file";
 import { debounce } from "lodash";
 import { fileService } from "@/services";
-import { handleCreateInputKeydown } from "@/components/file-sel-create";
+import {
+  createAndOpenItem,
+  handleCreateInputKeydown,
+} from "@/components/file-sel-create";
 
 import router from "@/router";
 
@@ -312,12 +315,26 @@ async function onCreateInputKeydown(event: KeyboardEvent) {
 }
 
 async function createItem() {
-  const p = await fileService.join(folder.value!, createName.value);
-  if (dialogType.value === "file") await fileService.touch(p);
-  else if (dialogType.value === "folder") await fileService.mkdir(p);
-  dialog.value = false; // Close dialog
-  createName.value = ""; // Reset textfield
-  fetchFiles(folder.value);
+  await createAndOpenItem({
+    folder: folder.value!,
+    createName: createName.value,
+    dialogType: dialogType.value,
+    join: fileService.join.bind(fileService),
+    touch: fileService.touch.bind(fileService),
+    mkdir: fileService.mkdir.bind(fileService),
+    openFile: async (path: string) => {
+      await fileService.setOpenedFile(path);
+      await router.push("/editor");
+      await fileService.setCwd(folder.value!);
+    },
+    openFolder: async (path: string) => {
+      await changeDirectory(path);
+    },
+    reset: () => {
+      dialog.value = false;
+      createName.value = "";
+    },
+  });
 }
 
 // scoll
