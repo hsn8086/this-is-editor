@@ -44,6 +44,7 @@ port = get_free_port()
 
 app = FastAPI()
 should_exit: bool = False
+_active_bridges: set["LspBridge"] = set()
 
 
 class LspBridge:
@@ -79,6 +80,7 @@ class LspBridge:
         if self.stop_event.is_set():
             return
         self.stop_event.set()
+        _active_bridges.discard(self)
         self.stdin_queue.put_nowait(None)
         if self.process.poll() is None:
             with contextlib.suppress(OSError):
@@ -281,6 +283,7 @@ async def start_lsp_process(websocket: WebSocket, lang: str) -> LspBridge | None
 
     bridge = LspBridge(p)
     bridge.start()
+    _active_bridges.add(bridge)
     return bridge
 
 
@@ -496,3 +499,15 @@ def start_server() -> tuple[
     thread_recver.start()
     thread.start()
     return server, thread, server_recver, thread_recver
+
+
+def shutdown_lsp_bridges() -> None:
+    """Close all active LSP bridges before process shutdown."""
+    for bridge in tuple(_active_bridges):
+        bridge.close()
+
+
+def shutdown_runtime() -> None:
+    """Shut down runtime background resources before server teardown."""
+    shutdown_lsp_bridges()
+    _js_api.shutdown()

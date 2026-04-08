@@ -73,6 +73,7 @@ if platform.system() == "Windows":
 else:
     webview.start(debug=args.debug)
 
+pysrc.web.shutdown_runtime()
 pysrc.web.should_exit = True  # type: ignore[assignment]
 server.should_exit = True
 server_recver.should_exit = True

@@ -246,6 +246,10 @@ class Api:
                 )
         return rst
 
+    def shutdown(self) -> None:
+        """Stop background resources owned by the API instance."""
+        self.watcher.stop()
+
     def add_pinned_file(self, path: str) -> None:
         """Add a file to the pinned files list.
 
