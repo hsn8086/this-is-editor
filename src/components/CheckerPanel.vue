@@ -285,6 +285,7 @@ async function runAll() {
       });
       checkerStore.expandTask(task.id);
     }
+    rail.value = false;
     checkerStore.resetRunStatus();
     runAllBtnDisabled.value = false;
     runAllBtnIcon.value = "mdi-play";
@@ -323,6 +324,7 @@ async function runAll() {
           );
           checkerStore.updateTask(task.id, updates);
           checkerStore.expandTask(task.id);
+          rail.value = false;
           return;
         }
         updates.status = "completed";
@@ -335,6 +337,7 @@ async function runAll() {
           output: `Error: ${error.message}`,
         });
         checkerStore.expandTask(task.id);
+        rail.value = false;
         console.error(`Task ${task.id} encountered an error: ${error.message}`);
       })
       .finally(() => {

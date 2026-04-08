@@ -112,7 +112,7 @@ const { takeScreenshot: takeCodeScreenshot, isCapturing: isScreenshotCapturing }
 
 // Phase 2.4: 文件同步与自动保存
 const { onCodeChange, handleExternalChange, resetCode } = useEditorFileSync({
-  saveCode: codeService.saveCode,
+  saveCode: (code: string) => codeService.saveCode(code),
   setValue,
   getValue,
   debounceMs: 500,
