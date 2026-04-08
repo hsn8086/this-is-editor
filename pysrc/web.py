@@ -5,8 +5,10 @@ problem reception, and server management using FastAPI and Uvicorn.
 """
 
 import asyncio
+import contextlib
 import json
 import platform
+import queue
 import shlex
 import subprocess
 import threading
@@ -45,6 +47,138 @@ app = FastAPI()
 should_exit = False
 
 
+class LspBridge:
+    """Bridge a blocking stdio LSP process into asyncio-friendly queues."""
+
+    def __init__(self, process: subprocess.Popen) -> None:
+        self.process = process
+        self.loop = asyncio.get_running_loop()
+        self.stdout_queue: asyncio.Queue[str | None] = asyncio.Queue()
+        self.stderr_queue: asyncio.Queue[str | None] = asyncio.Queue()
+        self.stdin_queue: queue.Queue[bytes | None] = queue.Queue()
+        self.stop_event = threading.Event()
+        self.threads: list[threading.Thread] = []
+
+    def start(self) -> None:
+        """Start background worker threads for process I/O."""
+        workers = [
+            threading.Thread(target=self._stdout_worker, daemon=True),
+            threading.Thread(target=self._stderr_worker, daemon=True),
+            threading.Thread(target=self._stdin_worker, daemon=True),
+        ]
+        self.threads.extend(workers)
+        for worker in workers:
+            worker.start()
+
+    def submit(self, message: str) -> None:
+        """Queue a JSON-RPC payload for the LSP stdin worker."""
+        self.stdin_queue.put_nowait(message.encode("utf-8"))
+
+    def close(self) -> None:
+        """Stop background workers and terminate the process if needed."""
+        if self.stop_event.is_set():
+            return
+        self.stop_event.set()
+        self.stdin_queue.put_nowait(None)
+        if self.process.poll() is None:
+            with contextlib.suppress(OSError):
+                self.process.terminate()
+
+    def _push_async(
+        self,
+        target: asyncio.Queue[str | None],
+        item: str | None,
+    ) -> None:
+        self.loop.call_soon_threadsafe(target.put_nowait, item)
+
+    def _read_available(self, stream: subprocess.PIPE, size: int = 4096) -> bytes:
+        reader = getattr(stream, "read1", None)
+        if callable(reader):
+            return reader(size)
+        return stream.read(size)
+
+    def _stdout_worker(self) -> None:
+        stdout = self.process.stdout
+        if stdout is None:
+            self._push_async(self.stdout_queue, None)
+            return
+
+        buffer = bytearray()
+        expected_length: int | None = None
+        try:
+            while not self.stop_event.is_set():
+                chunk = self._read_available(stdout)
+                if not chunk:
+                    break
+                buffer.extend(chunk)
+
+                while True:
+                    if expected_length is None:
+                        header_end = buffer.find(b"\r\n\r\n")
+                        if header_end == -1:
+                            break
+                        headers = buffer[:header_end].decode("ascii", errors="replace")
+                        expected_length = None
+                        for header in headers.split("\r\n"):
+                            if header.lower().startswith("content-length:"):
+                                expected_length = int(header.split(":", 1)[1].strip())
+                                break
+                        if expected_length is None:
+                            raise ValueError("Missing Content-Length header")
+                        del buffer[: header_end + 4]
+
+                    if len(buffer) < expected_length:
+                        break
+
+                    content = bytes(buffer[:expected_length])
+                    del buffer[:expected_length]
+                    expected_length = None
+                    if content:
+                        self._push_async(
+                            self.stdout_queue,
+                            content.decode("utf-8", errors="replace"),
+                        )
+        except (OSError, ValueError, RuntimeError) as e:
+            logger.opt(exception=e).error("LSP stdout worker error")
+        finally:
+            self._push_async(self.stdout_queue, None)
+
+    def _stderr_worker(self) -> None:
+        stderr = self.process.stderr
+        if stderr is None:
+            self._push_async(self.stderr_queue, None)
+            return
+        try:
+            while not self.stop_event.is_set():
+                error_chunk = stderr.readline()
+                if not error_chunk:
+                    break
+                self._push_async(
+                    self.stderr_queue,
+                    error_chunk.decode("utf-8", errors="replace").strip(),
+                )
+        except (OSError, RuntimeError) as e:
+            logger.opt(exception=e).error("LSP stderr worker error")
+        finally:
+            self._push_async(self.stderr_queue, None)
+
+    def _stdin_worker(self) -> None:
+        stdin = self.process.stdin
+        if stdin is None:
+            return
+        try:
+            while not self.stop_event.is_set():
+                data = self.stdin_queue.get()
+                if data is None:
+                    break
+                stdin.write(f"Content-Length: {len(data)}\r\n\r\n".encode("ascii"))
+                stdin.write(data)
+                stdin.flush()
+        except (BrokenPipeError, OSError, RuntimeError) as e:
+            if not self.stop_event.is_set():
+                logger.opt(exception=e).error("LSP stdin worker error")
+
+
 @app.websocket("/lsp/{lang:str}")
 async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
     """Handle LSP WebSocket connections for a given language.
@@ -61,21 +195,21 @@ async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
         await websocket.close()
         return
 
-    p = await start_lsp_process(websocket, lang)
-    if not p:
+    bridge = await start_lsp_process(websocket, lang)
+    if not bridge:
         return
 
     await websocket.accept()
     logger.info(f"WebSocket connection established for language: {lang}")
 
     async with asyncio.TaskGroup() as tg:
-        task_ws = tg.create_task(handle_websocket(websocket, p, lang))
-        task_p = tg.create_task(handle_process_output(websocket, p, lang))
-        task_perr = tg.create_task(handle_process_error(p, lang))
-        await monitor_tasks(lang, p, [task_ws, task_p, task_perr])
+        task_ws = tg.create_task(handle_websocket(websocket, bridge, lang))
+        task_p = tg.create_task(handle_process_output(websocket, bridge, lang))
+        task_perr = tg.create_task(handle_process_error(bridge, lang))
+        await monitor_tasks(lang, bridge, [task_ws, task_p, task_perr])
 
 
-async def start_lsp_process(websocket: WebSocket, lang: str) -> subprocess.Popen | None:
+async def start_lsp_process(websocket: WebSocket, lang: str) -> LspBridge | None:
     """Start the Language Server Protocol (LSP) process for the specified language.
 
     Args:
@@ -83,18 +217,27 @@ async def start_lsp_process(websocket: WebSocket, lang: str) -> subprocess.Popen
         lang (str): The language identifier.
 
     Returns:
-        subprocess.Popen | None: The LSP process if started successfully, else None.
+        LspBridge | None: The running bridge if started successfully, else None.
 
     """
-    cmd = type_mp.get(lang, {}).get("lsp", {}).get("command", "")
-    if not cmd:
+    raw_cmd = type_mp.get(lang, {}).get("lsp", {}).get("command", "")
+    if not raw_cmd:
         logger.error(f"No LSP command found for language: {lang}")
         await websocket.close()
         return None
-    if isinstance(cmd, str):
-        cmd = shlex.split(cmd)
+
+    is_windows = platform.system() == "Windows"
+    cmd: str | list[str]
+    cmd_display: str
+    if isinstance(raw_cmd, str):
+        cmd_display = raw_cmd
+        cmd = raw_cmd if is_windows else shlex.split(raw_cmd)
+    else:
+        cmd_display = " ".join(raw_cmd)
+        cmd = subprocess.list2cmdline(raw_cmd) if is_windows else raw_cmd
+
     creationflags = 0
-    if platform.system() == "Windows":
+    if is_windows:
         creationflags = cast(int, getattr(subprocess, "CREATE_NO_WINDOW", 0))
     try:
         p = subprocess.Popen(  # noqa: ASYNC220
@@ -103,11 +246,11 @@ async def start_lsp_process(websocket: WebSocket, lang: str) -> subprocess.Popen
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             creationflags=creationflags,
-            shell=bool(platform.system() == "Windows"),
+            shell=is_windows,
         )
     except (FileNotFoundError, PermissionError, OSError) as e:
         logger.error(f"Failed to start LSP for language: {lang}")
-        logger.opt(exception=e).error(f"Command: {' '.join(cmd)}")
+        logger.opt(exception=e).error(f"Command: {cmd_display}")
         await websocket.close()
         return None
 
@@ -115,23 +258,25 @@ async def start_lsp_process(websocket: WebSocket, lang: str) -> subprocess.Popen
     if p.poll() is not None:
         logger.error(f"Failed to start LSP for language: {lang}")
         if p.stderr is not None:
-            logger.error(p.stderr.read().decode("utf-8"))
+            logger.error(p.stderr.read().decode("utf-8", errors="replace"))
         await websocket.close()
         return None
 
-    return p
+    bridge = LspBridge(p)
+    bridge.start()
+    return bridge
 
 
 async def handle_websocket(
     websocket: WebSocket,
-    p: subprocess.Popen,
+    bridge: LspBridge,
     lang: str,
 ) -> None:
     """Forward messages from the WebSocket to the LSP process.
 
     Args:
         websocket (WebSocket): The WebSocket connection.
-        p (subprocess.Popen): The LSP process.
+        bridge (LspBridge): The LSP bridge.
         lang (str): The language identifier.
 
     Returns:
@@ -140,72 +285,40 @@ async def handle_websocket(
     """
     try:
         while True:
-            data = (await websocket.receive_text()).encode("utf-8")
-            if p.stdin is None:
-                return
-            await asyncio.to_thread(
-                p.stdin.write,
-                f"Content-Length: {len(data)}\r\n\r\n".encode(),
-            )
-            await asyncio.to_thread(p.stdin.write, data)
-            await asyncio.to_thread(p.stdin.flush)
+            bridge.submit(await websocket.receive_text())
     except (asyncio.CancelledError, ConnectionError) as e:
         logger.opt(exception=e).error(f"{lang} LS websocket error")
     except WebSocketDisconnect as e:
         if not should_exit:
             logger.opt(exception=e).error(f"{lang} LS websocket disconnected")
     finally:
+        bridge.close()
         if websocket.client_state.name != "DISCONNECTED":
             await websocket.close()
 
 
 async def handle_process_output(
     websocket: WebSocket,
-    p: subprocess.Popen,
+    bridge: LspBridge,
     lang: str,
 ) -> None:
     """Read output from the LSP process and send it to the WebSocket client.
 
     Args:
         websocket (WebSocket): The WebSocket connection.
-        p (subprocess.Popen): The LSP process.
+        bridge (LspBridge): The LSP bridge.
         lang (str): The language identifier.
 
     Returns:
         None
 
     """
-    buffer = b""
     try:
         while True:
-            stdout = p.stdout
-            if stdout is None:
+            content = await bridge.stdout_queue.get()
+            if content is None:
                 return
-            await asyncio.to_thread(stdout.read, 16)
-            while b"\r\n\r\n" not in buffer:
-                buffer += stdout.read(1)
-
-            header_end = buffer.find(b"\r\n\r\n")
-
-            if header_end == -1:
-                continue
-
-            content_length = int(
-                buffer[:header_end].strip().split(b"\n")[0].strip().split()[-1],
-            )
-            buffer = buffer[header_end + 4 :]  # skip \r\n\r\n
-            while len(buffer) < content_length:
-                chunk = await asyncio.to_thread(
-                    stdout.read,
-                    content_length - len(buffer),
-                )
-                buffer += chunk
-
-            content = buffer[:content_length]
-            buffer = buffer[content_length:]  # keep remaining data for next
-            if not content:
-                continue
-            await websocket.send_text(content.decode("utf-8"))
+            await websocket.send_text(content)
 
     except (ValueError, RuntimeError) as e:
         logger.opt(exception=e).error(f"{lang} LS process error")
@@ -213,15 +326,16 @@ async def handle_process_output(
     except asyncio.exceptions.CancelledError:
         ...
     finally:
+        bridge.close()
         if websocket.client_state.name != "DISCONNECTED":
             await websocket.close()
 
 
-async def handle_process_error(p: subprocess.Popen, lang: str) -> None:
+async def handle_process_error(bridge: LspBridge, lang: str) -> None:
     """Read and log error output from the LSP process.
 
     Args:
-        p (subprocess.Popen): The LSP process.
+        bridge (LspBridge): The LSP bridge.
         lang (str): The language identifier.
 
     Returns:
@@ -230,29 +344,24 @@ async def handle_process_error(p: subprocess.Popen, lang: str) -> None:
     """
     try:
         while True:
-            stderr = p.stderr
-            if stderr is None:
-                return
-            error_chunk = await asyncio.to_thread(stderr.readline)
-            if not error_chunk:
+            error_chunk = await bridge.stderr_queue.get()
+            if error_chunk is None:
                 break
-            logger.error(
-                f"{lang} LSP stderr: {error_chunk.decode('utf-8').strip()}",
-            )
+            logger.error(f"{lang} LSP stderr: {error_chunk}")
     except (OSError, RuntimeError) as e:
         logger.opt(exception=e).error(f"{lang} LS process stderr error")
 
 
 async def monitor_tasks(
     lang: str,
-    p: subprocess.Popen,
+    bridge: LspBridge,
     tasks: list[asyncio.Task],
 ) -> None:
     """Monitor background tasks and handle server exit or task completion.
 
     Args:
         lang (str): The language identifier.
-        p (subprocess.Popen): The LSP process.
+        bridge (LspBridge): The LSP bridge.
         tasks (list[asyncio.Task]): List of asyncio tasks to monitor.
 
     Returns:
@@ -264,11 +373,18 @@ async def monitor_tasks(
         if should_exit:
             for task in tasks:
                 task.cancel()
-            p.terminate()
-            p.wait()
+            bridge.close()
+            with contextlib.suppress(subprocess.TimeoutExpired):
+                await asyncio.to_thread(bridge.process.wait, 3)
             logger.info(f"WebSocket connection closed for language: {lang}")
             return
+        if bridge.process.poll() is not None:
+            bridge.close()
+            for task in tasks:
+                task.cancel()
+            return
         if all(task.done() for task in tasks):
+            bridge.close()
             return
 
 
