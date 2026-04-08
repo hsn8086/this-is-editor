@@ -20,7 +20,7 @@ export const useFileStore = defineStore('file', () => {
       return ''
     }
     const parts = folder.value.split(/[/\\]/)
-    return parts.at(-1) || folder.value
+    return parts[parts.length - 1] || folder.value
   })
   const fileCount = computed(() => ls.value.filter(f => !f.isReturn).length)
 
