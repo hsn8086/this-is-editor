@@ -138,6 +138,69 @@ class Api:
         for testcase_path in self._testcase_paths_for_source(path):
             testcase_path.unlink()
 
+    def _get_compiled_artifact_path(self, lang: str) -> Path | None:
+        if self.opened_file is None:
+            return None
+
+        compile_command = (
+            config.get("programmingLanguages", {})
+            .get(lang, {})
+            .get(
+                "compileCommand",
+                "",
+            )
+        )
+        if not compile_command:
+            return None
+
+        command_parts = shlex.split(compile_command)
+        if "-o" in command_parts:
+            output_index = command_parts.index("-o") + 1
+            if output_index < len(command_parts):
+                output_path = fmt(
+                    command_parts[output_index], file_path=self.opened_file
+                )
+                artifact_path = Path(output_path)
+                return (
+                    artifact_path
+                    if artifact_path.is_absolute()
+                    else self.opened_file.parent / artifact_path
+                )
+
+        run_command = (
+            config.get("programmingLanguages", {})
+            .get(lang, {})
+            .get(
+                "runCommand",
+                "",
+            )
+        )
+        if not run_command:
+            return None
+
+        run_command_parts = shlex.split(run_command)
+        if not run_command_parts:
+            return None
+
+        first_part = fmt(run_command_parts[0], file_path=self.opened_file)
+        artifact_path = Path(first_part)
+        return (
+            artifact_path
+            if artifact_path.is_absolute()
+            else self.opened_file.parent / artifact_path
+        )
+
+    def _cleanup_compiled_artifact(self, lang: str) -> None:
+        artifact_path = self._get_compiled_artifact_path(lang)
+        if (
+            artifact_path is None
+            or not artifact_path.exists()
+            or artifact_path == self.opened_file
+        ):
+            return
+
+        artifact_path.unlink()
+
     def get_pinned_files(self) -> list[str]:
         """Get a list of pinned files with metadata.
 
@@ -360,23 +423,26 @@ class Api:
         if lang not in lang_runners:
             msg = f"Language {lang} is not supported."
             raise ValueError(msg)
-        task = self.get_testcase().get("tests", [{}])[task_id - 1]
-        inp = task.get("input", "")
-        output, status, time, memory = lang_runners[lang](
-            self.opened_file,
-            inp,
-            memory_limit=memory_limit,
-            timeout=timeout,
-        )
-        answer = task.get("answer", "")
-        if status == "success":
-            status = "success" if task_checker(output, answer) else "failed"
-        return {
-            "result": output,
-            "status": status,
-            "time": time,
-            "memory": memory,
-        }
+        try:
+            task = self.get_testcase().get("tests", [{}])[task_id - 1]
+            inp = task.get("input", "")
+            output, status, time, memory = lang_runners[lang](
+                cast("Path", self.opened_file),
+                inp,
+                memory_limit=memory_limit,
+                timeout=timeout,
+            )
+            answer = task.get("answer", "")
+            if status == "success":
+                status = "success" if task_checker(output, answer) else "failed"
+            return {
+                "result": output,
+                "status": status,
+                "time": time,
+                "memory": memory,
+            }
+        finally:
+            self._cleanup_compiled_artifact(lang)
 
     def get_config(self) -> dict:
         """Get the merged configuration.

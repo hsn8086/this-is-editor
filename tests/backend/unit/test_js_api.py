@@ -507,6 +507,46 @@ class TestApiRunTask:
                     with pytest.raises(ValueError, match="is not supported"):
                         api_with_tmp_path.run_task(1)
 
+    def test_run_task_cleans_compiled_artifact_after_run(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test run_task removes compiled artifact after execution."""
+        test_file = tmp_path / "test.cpp"
+        artifact = tmp_path / "test.out"
+        test_file.write_text("int main() { return 0; }", encoding="utf-8")
+        artifact.write_text("binary", encoding="utf-8")
+        api_with_tmp_path.opened_file = test_file
+
+        with patch(
+            "pysrc.js_api.lang_runners",
+            {"cpp": MagicMock(return_value=("ok", "success", 0.1, 4))},
+        ):
+            with patch("pysrc.js_api.type_mp", {".cpp": {"id": "cpp"}}):
+                with patch("pysrc.js_api.task_checker", return_value=True):
+                    with patch.object(
+                        api_with_tmp_path,
+                        "get_code",
+                        return_value={"type": "cpp"},
+                    ):
+                        with patch.object(
+                            api_with_tmp_path,
+                            "get_testcase",
+                            return_value={
+                                "tests": [
+                                    {
+                                        "input": "",
+                                        "answer": "ok",
+                                    },
+                                ],
+                            },
+                        ):
+                            result = api_with_tmp_path.run_task(1)
+
+        assert result["status"] == "success"
+        assert not artifact.exists()
+
 
 class TestApiOtherMethods:
     """Tests for other Api methods."""
