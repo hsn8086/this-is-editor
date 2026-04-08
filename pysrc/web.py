@@ -83,13 +83,25 @@ class LspBridge:
         if self.process.poll() is None:
             with contextlib.suppress(OSError):
                 self.process.terminate()
+            with contextlib.suppress(subprocess.TimeoutExpired, OSError):
+                self.process.wait(timeout=1)
+            if self.process.poll() is None:
+                with contextlib.suppress(OSError):
+                    self.process.kill()
+                with contextlib.suppress(subprocess.TimeoutExpired, OSError):
+                    self.process.wait(timeout=1)
+
+        for thread in self.threads:
+            if thread.is_alive():
+                thread.join(timeout=1)
 
     def _push_async(
         self,
         target: asyncio.Queue[str | None],
         item: str | None,
     ) -> None:
-        self.loop.call_soon_threadsafe(target.put_nowait, item)
+        with contextlib.suppress(RuntimeError):
+            self.loop.call_soon_threadsafe(target.put_nowait, item)
 
     def _read_available(
         self,
@@ -292,7 +304,8 @@ async def handle_websocket(
         while True:
             bridge.submit(await websocket.receive_text())
     except (asyncio.CancelledError, ConnectionError) as e:
-        logger.opt(exception=e).error(f"{lang} LS websocket error")
+        if not should_exit:
+            logger.opt(exception=e).error(f"{lang} LS websocket error")
     except WebSocketDisconnect as e:
         if not should_exit:
             logger.opt(exception=e).error(f"{lang} LS websocket disconnected")
@@ -326,7 +339,8 @@ async def handle_process_output(
             await websocket.send_text(content)
 
     except (ValueError, RuntimeError) as e:
-        logger.opt(exception=e).error(f"{lang} LS process error")
+        if not should_exit:
+            logger.opt(exception=e).error(f"{lang} LS process error")
 
     except asyncio.exceptions.CancelledError:
         ...
@@ -354,7 +368,8 @@ async def handle_process_error(bridge: LspBridge, lang: str) -> None:
                 break
             logger.error(f"{lang} LSP stderr: {error_chunk}")
     except (OSError, RuntimeError) as e:
-        logger.opt(exception=e).error(f"{lang} LS process stderr error")
+        if not should_exit:
+            logger.opt(exception=e).error(f"{lang} LS process stderr error")
 
 
 async def monitor_tasks(
