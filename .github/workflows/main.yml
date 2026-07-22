@@ -19,6 +19,7 @@ on:
 jobs:
   create-release:
     name: create-release
+    needs: frontend
     runs-on: ubuntu-latest
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
@@ -100,14 +101,14 @@ jobs:
       - name: Check frontend types
         run: yarn type-check
 
+      - name: Build frontend
+        run: yarn build-only
+
       - name: Test frontend
         run: yarn test:run
 
       - name: Test backend
         run: uv run pytest tests/backend
-
-      - name: Build frontend
-        run: yarn build-only
 
       - name: Upload frontend artifact
         uses: actions/upload-artifact@v4
