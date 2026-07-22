@@ -340,6 +340,24 @@ class TestApiPathOperations:
         with pytest.raises(FileNotFoundError):
             api_with_tmp_path.path_get_info(str(nonexistent))
 
+    def test_path_ls_includes_dangling_symlink(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Directory listings should preserve symlinks with missing targets."""
+        dangling_link = tmp_path / ".missing-target"
+        dangling_link.symlink_to(tmp_path / "missing")
+
+        result = api_with_tmp_path.path_ls(None)
+
+        link_info = next(
+            item for item in result["files"] if item["path"] == str(dangling_link)
+        )
+        assert link_info["is_symlink"] is True
+        assert link_info["is_file"] is False
+        assert link_info["is_dir"] is False
+
     def test_path_get_text(self, tmp_path: Path, api_with_tmp_path: Api) -> None:
         """Test path_get_text returns file content."""
         test_file = tmp_path / "test.txt"

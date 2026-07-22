@@ -780,7 +780,7 @@ class Api:
             try:
                 rst.append(self.path_get_info(str(f)))
             except (FileNotFoundError, PermissionError) as e:
-                logger.opt(exception=e).warning(f"Failed to get info for {f}: {e}")
+                logger.warning("Failed to get info for {}: {}", f, e)
         rst.sort(key=lambda x: (not x["is_dir"], x["name"].lower()))
         return {
             "now_path": str(p),
@@ -822,21 +822,24 @@ class Api:
             dict: Metadata dictionary.
 
         """
-        if not Path(path).exists():
+        p = Path(path)
+        exists = p.exists()
+        is_symlink = p.is_symlink()
+        if not exists and not is_symlink:
             msg = f"{path} does not exist."
             raise FileNotFoundError(msg)
-        p = Path(path)
+        stat = p.stat() if exists else p.lstat()
         return {
             "name": p.name,
             "stem": p.stem,
             "path": str(p),
             "is_dir": p.is_dir(),
             "is_file": p.is_file(),
-            "is_symlink": p.is_symlink(),
-            "size": p.stat().st_size,
+            "is_symlink": is_symlink,
+            "size": stat.st_size,
             "last_modified": time.strftime(
                 "%Y-%m-%d %H:%M:%S",
-                time.localtime(p.stat().st_mtime),
+                time.localtime(stat.st_mtime),
             ),
             "type": "Directory"
             if p.is_dir()
