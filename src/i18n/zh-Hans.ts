@@ -2,6 +2,7 @@ export default {
   settingPage: {
     title: '设置',
     search: '搜索设置...',
+    restartRequired: '重启后生效',
     group: {
       editor: '编辑器',
       programmingLanguages: '编程语言',

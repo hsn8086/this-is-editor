@@ -35,9 +35,23 @@
             class="d-flex justify-space-between align-center"
             style="width: 100%"
           >
-            <v-list-item-title class="text-left">{{
-              $t("settingPage." + item.i18n)
-            }}</v-list-item-title>
+            <div class="d-flex align-center text-left flex-grow-1 mr-2">
+              <v-list-item-title>
+                {{ $t("settingPage." + item.i18n) }}
+              </v-list-item-title>
+              <v-tooltip v-if="item.requiresRestart" location="top">
+                <template #activator="{ props }">
+                  <v-icon
+                    v-bind="props"
+                    class="ml-2 flex-shrink-0 text-medium-emphasis"
+                    size="14"
+                  >
+                    mdi-information-outline
+                  </v-icon>
+                </template>
+                {{ $t('settingPage.restartRequired') }}
+              </v-tooltip>
+            </div>
             <v-select
               v-if="item.enum"
               v-model="item.value"
@@ -146,6 +160,7 @@
     value: any
     group: string
     i18n: string
+    requiresRestart?: boolean
     enum?: readonly any[]
   }
   async function changeConfig (id: string, value: any): Promise<void> {

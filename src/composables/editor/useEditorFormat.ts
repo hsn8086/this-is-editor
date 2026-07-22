@@ -1,4 +1,3 @@
-import type { Config } from '@/pywebview-defines'
 import { ref, type Ref } from 'vue'
 import { codeService, type CodeService, configService, type ConfigService } from '@/services'
 
@@ -15,6 +14,8 @@ export interface UseEditorFormatOptions {
   configService?: ConfigService
   /** 自定义代码服务（用于测试） */
   codeService?: CodeService
+  /** 格式化前执行的操作，例如等待防抖保存完成 */
+  beforeFormat?: () => Promise<void> | void
 }
 
 export interface UseEditorFormatReturn {
@@ -87,31 +88,34 @@ export function useEditorFormat (options: UseEditorFormatOptions = {}): UseEdito
    * @returns 是否成功执行格式化
    */
   async function format (resetCode: (code: string) => void): Promise<boolean> {
-    // Guard: 未加载配置时先加载
-    if (!formatterConfig.value) {
-      await loadFormatterConfig()
-    }
-
-    // Guard: formatter 不存在或未激活
-    if (!formatterConfig.value) {
-      console.log('[useEditorFormat] No formatter config found, skipping')
-      return false
-    }
-
-    if (!formatterConfig.value.active.value) {
-      console.log('[useEditorFormat] Formatter is inactive, skipping')
+    if (isFormatting.value) {
       return false
     }
 
     isFormatting.value = true
 
     try {
+      await options.beforeFormat?.()
+      // 配置可能在设置页被修改，每次执行前都重新读取。
+      await loadFormatterConfig()
+
+      if (!formatterConfig.value) {
+        console.log('[useEditorFormat] No formatter config found, skipping')
+        return false
+      }
+
+      if (!formatterConfig.value.active.value) {
+        console.log('[useEditorFormat] Formatter is inactive, skipping')
+        return false
+      }
+
       const action = formatterConfig.value.action.value
       console.log(`[useEditorFormat] Format action: ${action}`)
 
       switch (action) {
         case 'reload': {
-          // 从磁盘重新加载文件
+          // 格式化器原地修改文件，执行后从磁盘重新加载。
+          await cdService.formatCode()
           const code = await cdService.getCode()
           resetCode(code.code)
           console.log('[useEditorFormat] Code reloaded from disk')
@@ -126,7 +130,6 @@ export function useEditorFormat (options: UseEditorFormatOptions = {}): UseEdito
           return true
         }
 
-        case 'skip':
         default: {
           // 跳过格式化
           console.log('[useEditorFormat] Format skipped')

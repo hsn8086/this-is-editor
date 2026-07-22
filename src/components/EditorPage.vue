@@ -6,7 +6,7 @@
     offset-y
     :style="{ left: menuX + 'px', top: menuY + 'px' }"
   >
-    <template #activator="{ props }">
+    <template #activator>
       <v-ace-editor
         ref="aceRef"
         v-model:value="content"
@@ -52,12 +52,10 @@
   import { VAceEditor } from 'vue3-ace-editor'
   import { useI18n } from 'vue-i18n'
   import { useHotkey } from 'vuetify'
-  // Phase 2.2: 使用 LSP composable
-  import { useEditorLsp } from '@/composables/editor'
   // Phase 2A/B/2.3/2.4: 引入新的 composables
-  import { useAceEditor, useEditorClipboard, useEditorContextMenu, useEditorFileSync, useEditorFormat, useEditorKeyboard, useEditorScreenshot, useEditorTheme } from '@/composables/editor'
+  import { useAceEditor, useEditorClipboard, useEditorContextMenu, useEditorFileSync, useEditorFormat, useEditorKeyboard, useEditorLsp, useEditorScreenshot, useEditorTheme } from '@/composables/editor'
   import { codeService, configService, fileService } from '@/services'
-  import { useEditorStore } from '@/stores/editor'
+  import { type EditorLang, useEditorStore } from '@/stores/editor'
   import CheckerPanel from './CheckerPanel.vue'
   import 'ace-builds/src-noconflict/mode-python'
   import 'ace-builds/src-noconflict/mode-c_cpp'
@@ -89,29 +87,13 @@
 
   // Phase 2A: 使用 composables 管理编辑器实例和主题
   const { aceRef, editor, ready: editorReady, initEditor: initAceEditor, setValue, getValue, onChange, dispose: disposeEditor } = useAceEditor()
-  const { isDark, currentTheme, syncTheme } = useEditorTheme({ editor, autoWatch: true })
+  const { syncTheme } = useEditorTheme({ editor, autoWatch: true })
   // Phase 2B: 使用 composables 管理剪贴板、右键菜单、键盘快捷键和格式化
   const { cut, copy, copyAll, paste } = useEditorClipboard({ editor })
-  const { menuX, menuY, showMenu, onContextMenu, closeMenu } = useEditorContextMenu({ editor })
-  // Phase 2.1: 键盘快捷键和格式化
-  const keyboardShortcuts = ref({
-    formatCode: { value: 'Ctrl-Shift-F' },
-    runJudge: { value: 'F5' },
-  })
-  const { bindKeyboard, unbindKeyboard } = useEditorKeyboard({
-    editor,
-    keyboardShortcuts,
-    onFormat: () => format(code => resetCode(code)),
-    onRunJudge: () => checkPanel.value?.runAll(),
-    onCut: cut,
-    onCopy: copy,
-  })
-  const { format } = useEditorFormat()
-  // Phase 2.3: 截图功能
-  const { takeScreenshot: takeCodeScreenshot, isCapturing: isScreenshotCapturing } = useEditorScreenshot({ editor, useVuetifyTheme: true })
+  const { menuX, menuY, showMenu, onContextMenu } = useEditorContextMenu({ editor })
 
   // Phase 2.4: 文件同步与自动保存
-  const { onCodeChange, handleExternalChange, resetCode } = useEditorFileSync({
+  const { onCodeChange, handleExternalChange, resetCode, flushPendingSave } = useEditorFileSync({
     saveCode: (code: string) => codeService.saveCode(code),
     setValue,
     getValue,
@@ -120,12 +102,29 @@
     editorReady,
   })
 
+  // Phase 2.1: 键盘快捷键和格式化
+  const keyboardShortcuts = ref({
+    formatCode: { value: 'Ctrl-Shift-F' },
+    runJudge: { value: 'F5' },
+  })
+  const { format } = useEditorFormat({ beforeFormat: flushPendingSave })
+  const { bindKeyboard, unbindKeyboard } = useEditorKeyboard({
+    editor,
+    keyboardShortcuts,
+    onFormat: () => format(code => resetCode(code)),
+    onRunJudge: () => checkPanel.value?.runAll(),
+    onCut: cut,
+    onCopy: copy,
+  })
+  // Phase 2.3: 截图功能
+  const { takeScreenshot: takeCodeScreenshot } = useEditorScreenshot({ editor, useVuetifyTheme: true })
+
   // Phase 2.4: 编辑器 change 监听器引用（用于清理）
   let editorChangeListener: ((e: Ace.Delta) => void) | null = null
 
   // Phase 2.2: LSP 集成
   const filePath = ref<string | undefined>(undefined)
-  const { isReady: lspReady, register: registerLsp, unregister: unregisterLsp } = useEditorLsp({
+  const { register: registerLsp, unregister: unregisterLsp } = useEditorLsp({
     editor,
     filePath,
     joinWorkspaceURI: true,
@@ -146,7 +145,7 @@
     syncTheme()
 
     const initialCode = await codeService.getCode()
-    const langType = initialCode.type as import('@/stores/editor').EditorLang
+    const langType = initialCode.type as EditorLang
     editorStore.setLanguage(langType)
     editorStore.setContent(initialCode.code || '') // Set initial code from backend
 
@@ -160,8 +159,7 @@
       )
     if (config.programmingLanguages[initialCode.type])
       editorStore.setEnableCheckerPanel(
-        config.programmingLanguages[initialCode.type].enableCheckerPanel
-          || false,
+        config.programmingLanguages[initialCode.type].enableCheckerPanel ?? false,
       )
     // set line height
     ed.container.style.lineHeight = '2' // todo: make configurable

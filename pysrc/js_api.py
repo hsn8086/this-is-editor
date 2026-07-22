@@ -351,6 +351,10 @@ class Api:
             ValueError: If language or formatter is not supported or active.
 
         """
+        if self.opened_file is None:
+            msg = "No file is opened."
+            raise ValueError(msg)
+
         code = self.get_code()
         lang = code.get("type", None)
         if lang not in config.get("programmingLanguages", {}):
@@ -363,7 +367,7 @@ class Api:
         if not (cmd := formatter_cfg.get("command", "")).strip():
             msg = f"Formatter command for language {lang} is empty."
             raise ValueError(msg)
-        opened_file = cast("Path", self.opened_file)
+        opened_file = self.opened_file
         cmd_list = [fmt(c, file_path=opened_file) for c in shlex.split(cmd)]
         creationflags = 0
         if platform.system() == "Windows":

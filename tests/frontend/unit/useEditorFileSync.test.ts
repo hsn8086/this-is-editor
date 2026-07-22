@@ -57,6 +57,7 @@ describe('useEditorFileSync', () => {
       expect(typeof result.onCodeChange).toBe('function')
       expect(typeof result.handleExternalChange).toBe('function')
       expect(typeof result.resetCode).toBe('function')
+      expect(typeof result.flushPendingSave).toBe('function')
       expect(typeof result.isInCooldown).toBe('function')
       expect(typeof result.isContentEqual).toBe('function')
     })
@@ -138,14 +139,12 @@ describe('useEditorFileSync', () => {
       expect(mockSaveCode).not.toHaveBeenCalled()
     })
 
-    it('should have flush method from debounce', () => {
+    it('should flush pending save', async () => {
       const options = createOptions()
       const result = useEditorFileSync(options)
 
       result.onCodeChange('code to flush')
-      expect(typeof result.onCodeChange.flush).toBe('function')
-
-      result.onCodeChange.flush()
+      await result.flushPendingSave()
       expect(mockSaveCode).toHaveBeenCalledWith('code to flush')
     })
 

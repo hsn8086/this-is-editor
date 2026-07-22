@@ -133,6 +133,74 @@ class TestApiSaveCode:
             api_with_tmp_path.save_code("some code")
 
 
+class TestApiFormatCode:
+    """Tests for formatter command execution."""
+
+    def test_format_code_executes_configured_command(
+        self,
+        tmp_path: Path,
+        api_with_file: Api,
+    ) -> None:
+        """Test formatter placeholders and process options."""
+        formatter_config = {
+            "programmingLanguages": {
+                "python": {
+                    "formatter": {
+                        "active": True,
+                        "command": "ruff format {file}",
+                    },
+                },
+            },
+        }
+
+        with patch("pysrc.js_api.config", formatter_config):
+            with patch("pysrc.js_api.platform.system", return_value="Linux"):
+                with patch(
+                    "pysrc.js_api.subprocess.check_output",
+                    return_value="formatted code",
+                ) as check_output:
+                    result = api_with_file.format_code()
+
+        assert result == "formatted code"
+        check_output.assert_called_once_with(
+            ["ruff", "format", str(tmp_path / "test.py")],
+            creationflags=0,
+            shell=False,
+            cwd=tmp_path,
+            text=True,
+        )
+
+    def test_format_code_rejects_inactive_formatter(
+        self,
+        api_with_file: Api,
+    ) -> None:
+        """Test inactive formatters are not executed."""
+        formatter_config = {
+            "programmingLanguages": {
+                "python": {
+                    "formatter": {
+                        "active": False,
+                        "command": "ruff format {file}",
+                    },
+                },
+            },
+        }
+
+        with patch("pysrc.js_api.config", formatter_config):
+            with pytest.raises(ValueError, match="is not active"):
+                api_with_file.format_code()
+
+    def test_format_code_requires_opened_file(
+        self,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test formatting without an opened file fails clearly."""
+        api_with_tmp_path.opened_file = None
+
+        with pytest.raises(ValueError, match="No file is opened"):
+            api_with_tmp_path.format_code()
+
+
 class TestApiConfig:
     """Tests for get_config and set_config methods."""
 

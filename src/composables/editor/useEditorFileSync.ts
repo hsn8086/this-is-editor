@@ -31,6 +31,8 @@ export interface UseEditorFileSyncReturn {
   handleExternalChange: (text: string) => boolean
   /** 重置代码到编辑器（保持光标位置） */
   resetCode: (text: string) => void
+  /** 立即完成等待中的防抖保存 */
+  flushPendingSave: () => Promise<void>
   /** 是否正在冷却中（距离上次修改 < cooldownMs） */
   isInCooldown: () => boolean
   /** 内容是否相同 */
@@ -150,11 +152,16 @@ export function useEditorFileSync (
     setValue(text, -1)
   }
 
+  const flushPendingSave = async (): Promise<void> => {
+    await debouncedSave.flush()
+  }
+
   return {
     lastModified,
     onCodeChange,
     handleExternalChange,
     resetCode,
+    flushPendingSave,
     isInCooldown,
     isContentEqual,
   }

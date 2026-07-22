@@ -3,6 +3,7 @@ export default {
   settingPage: {
     title: 'Settings',
     search: 'Search settings...',
+    restartRequired: 'Takes effect after restart',
     group: {
       editor: 'Editor',
       programmingLanguages: 'Programming Languages',
