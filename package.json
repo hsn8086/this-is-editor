@@ -5,7 +5,7 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "yarn type-check && vite build && uv run main.py --debug",
-    "build": "yarn build-onefile",
+    "build": "yarn build-nodebug-onefile",
     "build-nodebug-dir": "yarn build-frontend && yarn build-py-dir",
     "build-nodebug-onefile": "yarn build-frontend && yarn build-py-onefile",
     "build-debug-dir": "yarn build-frontend && yarn build-py-dbg-dir",

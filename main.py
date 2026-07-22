@@ -1,59 +1,46 @@
-"""Main module for the 'this-is-editor' project.
-
-Handles the core functionality and entry point for the application.
-"""
+"""Application entry point for TIE."""
 
 import argparse
 import logging
 import platform
+from collections.abc import Sequence
+from pathlib import Path
 
-import webview
 from loguru import logger
 
-import pysrc.web
-from pysrc.user_data import user_log_dir
-from pysrc.web import start_server
+from pysrc.runtime import configure_dev_user_data_dir
 
-args_parser = argparse.ArgumentParser()
-args_parser.add_argument("--debug", action="store_true", help="Run in debug mode")
-args = args_parser.parse_args()
 
-logger.add(
-    user_log_dir / "this_is_editor.log",
-    rotation="10 MB",
-    retention="10 days",
-    compression="zip",
-    level="DEBUG" if args.debug else "INFO",
-)
+def absolute_path(value: str) -> Path:
+    """Expand and resolve a command-line path."""
+    return Path(value).expanduser().resolve()
+
+
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    """Parse TIE command-line arguments."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--debug", action="store_true", help="Run in debug mode")
+    parser.add_argument(
+        "--dev-user-data-dir",
+        type=absolute_path,
+        help=(
+            "Store TIE data, config, and logs under this directory. "
+            "Intended for isolated development and environment-scan testing."
+        ),
+    )
+    return parser.parse_args(argv)
 
 
 class InterceptHandler(logging.Handler):
-    """Logging handler to intercept standard logging and redirect to Loguru."""
+    """Redirect standard logging records to Loguru."""
 
     def emit(self, record: logging.LogRecord) -> None:
-        """Emit a log record.
-
-        This method is used to handle a log record and forward it to the Loguru logger.
-        It determines the appropriate Loguru logging level,
-        identifies the caller's frame,
-        and logs the message with the specified depth and exception information.
-
-        Args:
-            record (logging.LogRecord): The log record to be emitted, containing all
-                the information about the logging event.
-
-        Raises:
-            ValueError: If the Loguru level corresponding to the record's level name
-                does not exist.
-
-        """
-        # Get corresponding Loguru level if it exists
+        """Forward a standard logging record to Loguru."""
         try:
             level = logger.level(record.levelname).name
         except ValueError:
             level = record.levelno
 
-        # Find caller from where originated the logged message
         frame, depth = logging.currentframe(), 2
         while frame is not None and frame.f_code.co_filename == logging.__file__:
             frame = frame.f_back
@@ -65,20 +52,42 @@ class InterceptHandler(logging.Handler):
         )
 
 
-logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
+def main(argv: Sequence[str] | None = None) -> None:
+    """Start the TIE backend and desktop window."""
+    args = parse_args(argv)
+    configure_dev_user_data_dir(args.dev_user_data_dir)
 
-server, thread, server_recver, thread_recver = start_server()
-if platform.system() == "Windows":
-    webview.start(gui="edgechromium", debug=args.debug)
-else:
-    webview.start(debug=args.debug)
+    import webview  # noqa: PLC0415
 
-pysrc.web.shutdown_runtime()
-pysrc.web.should_exit = True  # type: ignore[assignment]
-server.should_exit = True
-server_recver.should_exit = True
+    from pysrc import web  # noqa: PLC0415
+    from pysrc.user_data import user_log_dir  # noqa: PLC0415
 
-logger.info("Shutting down server...")
-thread.join()
-thread_recver.join()
-logger.info("Server shut down successfully.")
+    logger.add(
+        user_log_dir / "this_is_editor.log",
+        rotation="10 MB",
+        retention="10 days",
+        compression="zip",
+        level="DEBUG" if args.debug else "INFO",
+    )
+    logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
+
+    server, thread, server_recver, thread_recver = web.start_server()
+    try:
+        if platform.system() == "Windows":
+            webview.start(gui="edgechromium", debug=args.debug)
+        else:
+            webview.start(debug=args.debug)
+    finally:
+        web.shutdown_runtime()
+        web.should_exit = True
+        server.should_exit = True
+        server_recver.should_exit = True
+
+        logger.info("Shutting down server...")
+        thread.join()
+        thread_recver.join()
+        logger.info("Server shut down successfully.")
+
+
+if __name__ == "__main__":
+    main()

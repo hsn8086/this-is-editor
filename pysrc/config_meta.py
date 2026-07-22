@@ -257,7 +257,7 @@ config = {
             "fontSize": 14,
             "fontFamily": "Maple Mono, Maple Mono NF CN, Fira Code, monospace",
             "enableBasicAutocompletion": True,
-            "enableSnippets": False,
+            "enableSnippets": True,
             "enableLiveAutocompletion": True,
             "animatedScroll": True,
             "scrollPastEnd": True,
@@ -285,7 +285,7 @@ config = {
             "alias": ["py", "python", "Python", "python3", "Python3"],
             "display": "Python Source",
             "lsp": {
-                "command": "pylsp",
+                "command": "ty server",
             },
             "formatter": {
                 "active": True,

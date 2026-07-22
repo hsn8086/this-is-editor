@@ -1,4 +1,6 @@
 import type { Ace } from 'ace-builds'
+import type { EditSession as AceCodeEditSession } from 'ace-code/src/edit_session'
+import type { Editor as AceCodeEditor } from 'ace-code/src/editor'
 import type { SessionLspConfig } from 'ace-linters/build/ace-language-client'
 import { ref, type Ref, unref, watch } from 'vue'
 import { getLanguageProvider, type LanguageProvider } from '@/lsp'
@@ -8,7 +10,7 @@ export interface UseEditorLspOptions {
   editor: Ref<Ace.Editor | undefined>
   /** 文件路径（支持 Ref 或普通 string） */
   filePath: Ref<string | undefined> | string | undefined
-  /** 是否加入 Workspace URI（默认 true） */
+  /** 是否加入 Workspace URI（绝对文件路径默认不拼接） */
   joinWorkspaceURI?: boolean
 }
 
@@ -25,7 +27,7 @@ export interface UseEditorLspReturn {
  * 编辑器 LSP 集成 Composable
  *
  * 负责：
- * - 管理 LSP LanguageProvider 的获取与缓存
+ * - 管理 LSP LanguageProvider
  * - 注册/注销编辑器到 LSP（registerEditor/closeDocument）
  * - 提供 isReady 状态
  * - 监听 filePath 变化自动重新注册
@@ -38,7 +40,7 @@ export interface UseEditorLspReturn {
  * - filePath 为 undefined 时无法注册
  */
 export function useEditorLsp (options: UseEditorLspOptions): UseEditorLspReturn {
-  const { editor, filePath, joinWorkspaceURI = true } = options
+  const { editor, filePath, joinWorkspaceURI = false } = options
 
   // State
   const isReady = ref(false)
@@ -46,10 +48,10 @@ export function useEditorLsp (options: UseEditorLspOptions): UseEditorLspReturn 
   let isRegistered = false
 
   /**
-   * 获取 LanguageProvider（带缓存）
+   * 获取 LanguageProvider，可按需刷新工作区
    */
-  async function getProvider (): Promise<LanguageProvider | undefined> {
-    if (languageProvider) {
+  async function getProvider (refreshWorkspace = false): Promise<LanguageProvider | undefined> {
+    if (languageProvider && !refreshWorkspace) {
       return languageProvider
     }
     try {
@@ -84,7 +86,7 @@ export function useEditorLsp (options: UseEditorLspOptions): UseEditorLspReturn 
       await unregister()
     }
 
-    const provider = await getProvider()
+    const provider = await getProvider(true)
     if (!provider) {
       console.warn('[useEditorLsp] Cannot register: language provider not available')
       return false
@@ -96,9 +98,10 @@ export function useEditorLsp (options: UseEditorLspOptions): UseEditorLspReturn 
     }
 
     try {
+      ed.completers ??= []
       // 类型桥接: ace-linters 使用 ace-code 类型定义，但编辑器实例来自 ace-builds
       // 两者运行时兼容，仅 TS 类型定义冲突，通过 unknown 断言绕过
-      provider.registerEditor(ed as unknown as import('ace-code/src/editor').Editor, sessionConfig)
+      provider.registerEditor(ed as unknown as AceCodeEditor, sessionConfig)
       isRegistered = true
       isReady.value = true
       console.log('[useEditorLsp] LSP registered for file:', fp)
@@ -131,7 +134,7 @@ export function useEditorLsp (options: UseEditorLspOptions): UseEditorLspReturn 
     try {
       // 类型桥接: ace-linters 使用 ace-code 的 EditSession 类型，但编辑器返回的是 ace-builds 类型
       // 两者运行时兼容，仅 TS 类型定义冲突，通过 unknown 断言绕过
-      provider.closeDocument(ed.getSession() as unknown as import('ace-code/src/edit_session').EditSession)
+      provider.closeDocument(ed.getSession() as unknown as AceCodeEditSession)
       console.log('[useEditorLsp] LSP unregistered for editor')
     } catch (error) {
       console.error('[useEditorLsp] Failed to close document:', error)

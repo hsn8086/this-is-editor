@@ -1,4 +1,5 @@
-import { debounce, type DebouncedFunc } from 'lodash'
+import type { DebouncedFunc } from 'lodash'
+import debounce from 'lodash/debounce'
 import { onMounted, onUnmounted, ref, type Ref } from 'vue'
 
 /**

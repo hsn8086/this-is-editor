@@ -8,7 +8,9 @@ export interface Code {
 export interface Lang {
   id: string
   display: string
-  lsp: string[]
+  lsp?: {
+    command?: string | string[]
+  }
   suffix: string[]
   alias: string[]
 }
@@ -108,6 +110,28 @@ export interface TaskResult {
   memory: number
 }
 
+export interface EnvironmentTool {
+  id: string
+  name: string
+  toolchain: 'python' | 'cpp'
+  role: 'runtime' | 'analysis' | 'format'
+  required: boolean
+  status: 'ready' | 'missing' | 'error'
+  path: string | null
+  version: string | null
+  source: 'configured' | 'managed' | 'path' | null
+  message: string | null
+  candidates: EnvironmentCandidate[]
+}
+
+export interface EnvironmentCandidate {
+  path: string
+  version: string | null
+  source: 'configured' | 'managed' | 'path'
+  status: 'ready' | 'error'
+  message: string | null
+}
+
 export interface API {
   [x: string]: any
   get_pinned_files: () => Promise<FileInfo[]>
@@ -126,6 +150,10 @@ export interface API {
   save_testcase: (testcase: TestCase) => Promise<void>
   set_config: (id_str: string, value: string | boolean | number) => Promise<void>
   get_config: () => Promise<Config>
+  scan_environment: () => Promise<EnvironmentTool[]>
+  select_environment_tool: (toolId: string, executablePath: string) => Promise<EnvironmentTool[]>
+  is_environment_setup_complete: () => Promise<boolean>
+  complete_environment_setup: () => Promise<void>
   get_config_path: () => Promise<string>
   get_langs: () => Promise<Lang[]>
   get_port: () => number

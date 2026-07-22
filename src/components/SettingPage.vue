@@ -18,7 +18,7 @@
     </template>
 
     <v-list dense>
-      <template v-for="[group, cfg] in config">
+      <template v-for="[group, cfg] in config" :key="group">
         <v-list-subheader>{{
           $t(`settingPage.group.${group}`)
         }}</v-list-subheader>
@@ -101,9 +101,9 @@
               multiple
               @update:model-value="changeConfig(item.id, item.value)"
             >
-              <template #chip="{ props, item }">
+              <template #chip="{ props, item: chipItem }">
                 <v-chip v-bind="props" label size="x-small">
-                  {{ item.raw }}
+                  {{ chipItem.raw }}
                 </v-chip>
               </template>
             </v-combobox>
@@ -120,6 +120,12 @@
         </v-list-item>
       </template>
       <v-list-subheader>{{ $t("settingPage.advance") }}</v-list-subheader>
+      <v-list-item
+        data-test="environment-diagnostics"
+        prepend-icon="mdi-tools"
+        :title="$t('settingPage.environmentDiagnostics')"
+        @click="openEnvironmentDiagnostics()"
+      />
       <v-list-item
         prepend-icon="mdi-file-edit-outline"
         :title="$t('settingPage.openConfigFile')"
@@ -138,14 +144,13 @@
 </template>
 <script lang="ts" setup>
   import type { I18nType } from '@/plugins/i18n'
-  import type { Config } from '@/pywebview-defines'
-  import { ref } from 'vue'
+  import { onMounted, ref } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRouter } from 'vue-router'
   import { useTheme } from 'vuetify'
   import { configService, fileService } from '@/services'
 
-  const { locale, t } = useI18n()
+  const { locale } = useI18n()
   const theme = useTheme()
 
   const config = ref<[string, ConfigItem[]][]>([])
@@ -191,6 +196,10 @@
   }
 
   const router = useRouter()
+  async function openEnvironmentDiagnostics () {
+    await router.push({ path: '/environment', query: { source: 'settings' } })
+  }
+
   async function openConfigFile () {
     const path = await configService.getConfigPath()
     await fileService.setOpenedFile(path)

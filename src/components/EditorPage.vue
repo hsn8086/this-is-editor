@@ -60,6 +60,8 @@
   import 'ace-builds/src-noconflict/mode-python'
   import 'ace-builds/src-noconflict/mode-c_cpp'
   import 'ace-builds/src-noconflict/ext-language_tools'
+  import 'ace-builds/src-noconflict/snippets/python'
+  import 'ace-builds/src-noconflict/snippets/c_cpp'
   import '@/ace-theme-tie' // 自定义主题
   import '@/ace-theme-tie-light'
   import 'ace-builds/src-noconflict/theme-github' // 亮色主题基础
@@ -127,7 +129,6 @@
   const { register: registerLsp, unregister: unregisterLsp } = useEditorLsp({
     editor,
     filePath,
-    joinWorkspaceURI: true,
   })
 
   async function initEditor () {

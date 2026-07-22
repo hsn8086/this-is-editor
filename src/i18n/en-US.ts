@@ -1,5 +1,29 @@
 export default {
 
+  environmentPage: {
+    eyebrow: 'Toolchain check',
+    title: 'Development environment',
+    summary: '{ready} of {total} tools ready',
+    scanning: 'Scanning installed tools...',
+    rescan: 'Scan again',
+    continue: 'Continue to editor',
+    backToSettings: 'Back to settings',
+    required: 'Required',
+    guidance: 'Every environment can be skipped. Required only marks a recommended dependency for that language and never blocks the editor. Choose the default tool here when multiple versions are found.',
+    scanFailed: 'The environment scan could not be completed.',
+    selectionFailed: 'The selected environment could not be saved.',
+    role: {
+      runtime: 'Runtime / compiler',
+      analysis: 'Code analysis',
+      format: 'Formatting',
+    },
+    status: {
+      ready: 'Ready',
+      missing: 'Not found',
+      error: 'Could not run',
+    },
+  },
+
   settingPage: {
     title: 'Settings',
     search: 'Search settings...',
@@ -11,6 +35,7 @@ export default {
       keyboardShortcuts: 'Keyboard Shortcuts',
     },
     openConfigFile: 'Open config file to edit',
+    environmentDiagnostics: 'Environment diagnostics',
     advance: 'Advance',
     about: 'About',
     licenses: 'Licenses',
@@ -20,7 +45,7 @@ export default {
           fontSize: 'Font Size',
           fontFamily: 'Font Family',
           enableBasicAutocompletion: 'Autocompletion',
-          enableSnippets: 'Enable Snippets',
+          enableSnippets: 'Snippet Autocompletion',
           enableLiveAutocompletion: 'Live Autocompletion',
           animatedScroll: 'Animated Scroll',
           scrollPastEnd: 'Scroll Past End',

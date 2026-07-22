@@ -67,6 +67,7 @@ vi.mock('ace-linters/build/ace-language-client', () => ({
       registerEditor: vi.fn(),
       closeDocument: vi.fn(),
       format: vi.fn(),
+      changeWorkspaceFolder: vi.fn(),
     })),
   },
 }))
@@ -117,6 +118,10 @@ beforeAll(() => {
       keyboardShortcuts: {},
     }),
     get_config_path: vi.fn().mockResolvedValue('/mock/config/path'),
+    scan_environment: vi.fn().mockResolvedValue([]),
+    select_environment_tool: vi.fn().mockResolvedValue([]),
+    is_environment_setup_complete: vi.fn().mockResolvedValue(false),
+    complete_environment_setup: vi.fn().mockResolvedValue(undefined),
     get_langs: vi.fn().mockResolvedValue([]),
     get_port: vi.fn().mockReturnValue(8000),
     get_code: vi.fn().mockResolvedValue({
@@ -183,6 +188,8 @@ class MockWebSocket {
   onclose: ((event: any) => void) | null = null
   onmessage: ((event: any) => void) | null = null
   onerror: ((event: any) => void) | null = null
+  send = vi.fn()
+  close = vi.fn()
 
   constructor (public url: string) {
     setTimeout(() => {
@@ -192,9 +199,6 @@ class MockWebSocket {
       }
     }, 0)
   }
-
-  send = vi.fn()
-  close = vi.fn()
 }
 
 vi.stubGlobal('WebSocket', MockWebSocket)

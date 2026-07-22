@@ -8,6 +8,13 @@ on:
     branches:
       - master
       - dev
+  workflow_dispatch:
+    inputs:
+      include_debug:
+        description: Build additional debug binaries
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   create-release:
@@ -18,11 +25,11 @@ jobs:
     steps:
       # 检出代码
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # 从 pyproject.toml 获取版本号（支持 Poetry 的 tool.poetry.version 或 PEP621 的 project.version）
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.12
 
@@ -53,13 +60,70 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref, 'dev') }}
 
+  frontend:
+    name: Build and test frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+
+      - name: Enable Yarn
+        run: corepack enable
+
+      - name: Install Node.js dependencies
+        run: yarn install --frozen-lockfile --non-interactive
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev libgirepository1.0-dev
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.12'
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install Python dependencies
+        run: uv sync --locked
+
+      - name: Generate licenses
+        run: yarn license-gen
+
+      - name: Check frontend types
+        run: yarn type-check
+
+      - name: Test frontend
+        run: yarn test:run
+
+      - name: Test backend
+        run: uv run pytest tests/backend
+
+      - name: Build frontend
+        run: yarn build-only
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: web
+          if-no-files-found: error
+          retention-days: 1
+
   build:
     name: Build
-    needs: create-release
+    needs: [create-release, frontend]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        debug: [debug, nodebug] # 定义调试模式矩阵
+        debug: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.include_debug && '["nodebug", "debug"]' || '["nodebug"]') }}
         # mode: [onefile, dir] # 定义构建模式矩阵
         mode: [onefile]
         os: [ubuntu-latest, windows-latest] # 定义操作系统矩阵
@@ -67,27 +131,20 @@ jobs:
     steps:
       # 检出代码
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # 设置 Node.js 环境
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
         with:
-          node-version: 24
+          name: web
+          path: web
 
-      # 安装 Yarn
-      - name: Install Yarn
-        run: corepack enable
-
-      # 安装依赖
-      - name: Install dependencies
-        run: yarn install
-
-      # 安装 Python 和 Nuitka
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
         with:
-          python-version: 3.12 # 指定 Python 版本
+          python-version: '3.12'
+          enable-cache: true
+          cache-dependency-glob: uv.lock
 
       - name: Install env
         shell: bash # 强制使用 Bash
@@ -96,13 +153,29 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y libcairo2-dev libgirepository1.0-dev  # 安装 Linux 系统依赖
           fi
-          pip install uv  # 安装 uv
-          uv sync --no-dev
+          uv sync --locked
+
+      - name: Restore Nuitka caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/Nuitka
+            ~/.cache/ccache
+            ~/AppData/Local/Nuitka/Nuitka/Cache
+          key: nuitka-${{ runner.os }}-${{ hashFiles('uv.lock') }}-${{ matrix.debug }}
+          restore-keys: |
+            nuitka-${{ runner.os }}-${{ hashFiles('uv.lock') }}-
+            nuitka-${{ runner.os }}-
 
       # 构建项目
       - name: Build project
+        shell: bash
         run: |
-          yarn build-${{ matrix.debug }}-${{ matrix.mode }}
+          args=(--mode "${{ matrix.mode }}")
+          if [[ "${{ matrix.debug }}" == "debug" ]]; then
+            args+=(--debug)
+          fi
+          uv run tools/builder.py "${args[@]}"
 
       # 压缩构建产物
       - name: Compress build artifacts

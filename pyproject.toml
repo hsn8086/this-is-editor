@@ -10,8 +10,8 @@ dependencies = [
     "loguru>=0.7.3",
     "psutil>=7.0.0",
     "pydantic>=2.11.7",
-    "pywebview>=6.0",
-    "pywebview[gtk]>=6.0 ; sys_platform == 'linux'",
+    "pywebview>=6.2.1",
+    "pywebview[gtk]>=6.2.1 ; sys_platform == 'linux'",
     "uvicorn>=0.35.0",
     "watchfiles>=1.1.0",
     "websockets>=15.0.1",
@@ -30,10 +30,10 @@ include-package-data = true
 dev = [
     "nuitka>=2.7.12",
     "pip-licenses>=5.0.0",
-    "python-lsp-server>=1.13.1",
     "pytest>=8.0.0",
     "pytest-asyncio>=0.25.2",
     "pytest-cov>=6.1.1",
+    "ty>=0.0.1a1",
 ]
 
 
@@ -113,4 +113,3 @@ target-version = "py312"
     "EM101",   # String literal in exception allowed in tests
     "PLC0415", # Import inside function allowed in tests for lazy loading
 ]
-

@@ -1,21 +1,54 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-// Need to mock pywebview before importing lsp module
-describe('lsp.ts - LSP Module', () => {
-  let languageProviderModule: typeof import('@/lsp')
+const lspMocks = vi.hoisted(() => {
+  const provider = {
+    registerEditor: vi.fn(),
+    closeDocument: vi.fn(),
+    format: vi.fn(),
+    changeWorkspaceFolder: vi.fn(),
+  }
+  return {
+    provider,
+    createProvider: vi.fn(() => provider),
+  }
+})
 
-  beforeEach(async () => {
-    // Clear any previous module cache
+vi.mock('ace-linters/build/ace-language-client', () => ({
+  AceLanguageClient: {
+    for: lspMocks.createProvider,
+  },
+}))
+
+describe('lsp.ts', () => {
+  let mockApi: {
+    get_langs: ReturnType<typeof vi.fn>
+    get_port: ReturnType<typeof vi.fn>
+    get_opened_file: ReturnType<typeof vi.fn>
+    get_cwd: ReturnType<typeof vi.fn>
+    path_parent: ReturnType<typeof vi.fn>
+  }
+  let mockWebSocket: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
     vi.resetModules()
+    lspMocks.createProvider.mockClear()
+    lspMocks.provider.changeWorkspaceFolder.mockClear()
 
-    // Setup pywebview mock for this test
-    const mockApi = {
+    mockApi = {
       get_langs: vi.fn().mockResolvedValue([
-        { id: 'python', display: 'Python', lsp: ['pylsp'], suffix: ['.py'], alias: ['python3'] },
+        {
+          id: 'python',
+          display: 'Python',
+          lsp: { command: 'ty server' },
+          suffix: ['.py'],
+          alias: ['python3'],
+        },
       ]),
-      get_port: vi.fn().mockReturnValue(8000),
+      get_port: vi.fn().mockResolvedValue(8000),
+      get_opened_file: vi.fn().mockResolvedValue('/work dir/main.py'),
+      get_cwd: vi.fn().mockResolvedValue('/fallback'),
+      path_parent: vi.fn().mockResolvedValue('/work dir'),
     }
-
     window.pywebview = {
       api: mockApi as any,
       state: {
@@ -23,104 +56,100 @@ describe('lsp.ts - LSP Module', () => {
         prob: null,
       },
     }
+
+    mockWebSocket = vi.fn().mockImplementation((url: URL) => ({
+      url,
+      send: vi.fn(),
+      close: vi.fn(),
+      readyState: 1,
+    }))
+    vi.stubGlobal('WebSocket', mockWebSocket)
   })
 
-  afterEach(() => {
-    vi.clearAllMocks()
+  it('initializes lazily with the opened file workspace', async () => {
+    const { getLanguageProvider } = await import('@/lsp')
+
+    expect(mockApi.get_langs).not.toHaveBeenCalled()
+
+    await getLanguageProvider()
+    const [serverDataList, options] = lspMocks.createProvider.mock.calls[0]
+
+    expect(mockApi.path_parent).toHaveBeenCalledWith('/work dir/main.py')
+    expect(options.workspacePath).toBe('/work dir')
+    expect(options.functionality.completion.overwriteCompleters).toBe(false)
+    expect(serverDataList).toEqual([
+      expect.objectContaining({
+        modes: 'python|python3',
+        serviceName: 'python',
+        type: 'socket',
+      }),
+    ])
+    expect(String(mockWebSocket.mock.calls[0][0])).toBe(
+      'ws://127.0.0.1:8000/lsp/python?workspace=%2Fwork+dir',
+    )
+    expect(lspMocks.provider.changeWorkspaceFolder).toHaveBeenCalledWith('/work dir')
   })
 
-  describe('getLanguageProvider', () => {
-    it('should return a promise that resolves when LSP is initialized', async () => {
-      // Import the module which should trigger initialization
-      // The module may or may not be loaded depending on pywebviewready
-      const { getLanguageProvider } = await import('@/lsp')
+  it('falls back to the application cwd when no file is opened', async () => {
+    mockApi.get_opened_file.mockResolvedValue(null)
+    const { getLanguageProvider } = await import('@/lsp')
 
-      // getLanguageProvider should return a promise
-      expect(typeof getLanguageProvider).toBe('function')
-    })
+    await getLanguageProvider()
 
-    it('should handle case when pywebview is already ready', async () => {
-      // Simulate pywebviewready event
-      window.dispatchEvent(new Event('pywebviewready'))
-
-      const { getLanguageProvider } = await import('@/lsp')
-
-      // Should be able to call getLanguageProvider
-      const providerPromise = getLanguageProvider()
-      expect(providerPromise).toBeInstanceOf(Promise)
-    })
+    expect(mockApi.get_cwd).toHaveBeenCalled()
+    expect(lspMocks.provider.changeWorkspaceFolder).toHaveBeenCalledWith('/fallback')
   })
 
-  describe('initLSP branch logic', () => {
-    it('should handle initialization with empty languages', async () => {
-      // Override the get_langs to return empty array
-      window.pywebview.api.get_langs = vi.fn().mockResolvedValue([])
+  it('reuses the provider and updates its workspace', async () => {
+    const { getLanguageProvider } = await import('@/lsp')
+    const provider = await getLanguageProvider()
+    mockApi.get_opened_file.mockResolvedValue('/other/main.py')
+    mockApi.path_parent.mockResolvedValue('/other')
 
-      // Import the module
-      await import('@/lsp')
+    const reusedProvider = await getLanguageProvider()
 
-      // The module should initialize without errors even with empty langs
-      expect(window.pywebview.api.get_langs).toHaveBeenCalled()
-    })
-
-    it('should handle initialization with languages that have no LSP', async () => {
-      window.pywebview.api.get_langs = vi.fn().mockResolvedValue([
-        { id: 'plaintext', display: 'Plain Text', lsp: [], suffix: ['.txt'], alias: [] },
-      ])
-
-      // Import the module
-      await import('@/lsp')
-
-      expect(window.pywebview.api.get_langs).toHaveBeenCalled()
-    })
-
-    it('should create WebSocket connections for languages with LSP', async () => {
-      const mockWebSocket = vi.fn().mockImplementation(() => ({
-        send: vi.fn(),
-        close: vi.fn(),
-        readyState: 1,
-        onopen: null,
-        onclose: null,
-        onmessage: null,
-        onerror: null,
-      }))
-
-      vi.stubGlobal('WebSocket', mockWebSocket)
-
-      window.pywebview.api.get_langs = vi.fn().mockResolvedValue([
-        { id: 'python', display: 'Python', lsp: ['pylsp'], suffix: ['.py'], alias: ['python3'] },
-      ])
-
-      // Import the module
-      await import('@/lsp')
-
-      // WebSocket should be called
-      // Note: The actual WebSocket may not be called in this test environment
-      // due to module initialization timing
-    })
+    expect(reusedProvider).toBe(provider)
+    expect(lspMocks.createProvider).toHaveBeenCalledTimes(1)
+    expect(lspMocks.provider.changeWorkspaceFolder).toHaveBeenLastCalledWith('/other')
   })
 
-  describe('module loading scenarios', () => {
-    it('should export getLanguageProvider function', async () => {
-      const lsp = await import('@/lsp')
-      expect(lsp.getLanguageProvider).toBeDefined()
-      expect(typeof lsp.getLanguageProvider).toBe('function')
-    })
+  it('applies the latest workspace during concurrent initialization', async () => {
+    let finishLanguageLoad: (languages: unknown[]) => void = () => {}
+    mockApi.get_langs.mockReturnValue(new Promise(resolve => {
+      finishLanguageLoad = resolve
+    }))
+    mockApi.get_opened_file
+      .mockResolvedValueOnce('/first/main.py')
+      .mockResolvedValueOnce('/second/main.py')
+    mockApi.path_parent
+      .mockResolvedValueOnce('/first')
+      .mockResolvedValueOnce('/second')
+    const { getLanguageProvider } = await import('@/lsp')
 
-    it('should handle pywebviewready event listener registration', () => {
-      // Test that the module adds event listener when pywebview is not ready
-      const addEventListenerSpy = vi.spyOn(window, 'addEventListener')
+    const firstProvider = getLanguageProvider()
+    await vi.waitFor(() => expect(mockApi.get_langs).toHaveBeenCalled())
+    const secondProvider = getLanguageProvider()
+    await vi.waitFor(() => expect(mockApi.path_parent).toHaveBeenCalledTimes(2))
+    finishLanguageLoad([])
 
-      // Re-import to trigger module evaluation
-      vi.resetModules()
+    await Promise.all([firstProvider, secondProvider])
 
-      // This will call addEventListener if pywebviewready hasn't fired
-      import('@/lsp').catch(() => {
-        // May fail due to other dependencies, but addEventListener should be called
-      })
+    expect(lspMocks.provider.changeWorkspaceFolder).toHaveBeenNthCalledWith(1, '/first')
+    expect(lspMocks.provider.changeWorkspaceFolder).toHaveBeenLastCalledWith('/second')
+  })
 
-      // Clean up
-      addEventListenerSpy.mockRestore()
-    })
+  it('skips languages without an LSP command', async () => {
+    mockApi.get_langs.mockResolvedValue([
+      { id: 'plaintext', display: 'Plain Text', suffix: ['.txt'], alias: [] },
+    ])
+    const { getLanguageProvider } = await import('@/lsp')
+
+    await getLanguageProvider()
+
+    expect(mockWebSocket).not.toHaveBeenCalled()
+    expect(lspMocks.createProvider).toHaveBeenCalledWith(
+      [],
+      expect.objectContaining({ workspacePath: '/work dir' }),
+    )
   })
 })

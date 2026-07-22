@@ -78,6 +78,10 @@ describe('useEditorScreenshot Composable', () => {
     // 模拟 html2canvas
     const mockHtml2canvas = await import('html2canvas')
     vi.mocked(mockHtml2canvas.default).mockResolvedValue(mockCanvas)
+    const mockHighlighter = await import('highlight.js')
+    vi.mocked(mockHighlighter.default.highlightAuto).mockReturnValue({
+      value: '<span class="hljs-keyword">test</span>',
+    })
 
     // Mock ClipboardItem
     mockClipboardItem = vi.fn()
@@ -148,8 +152,12 @@ describe('useEditorScreenshot Composable', () => {
       const { takeScreenshot, isCapturing } = useEditorScreenshot({ editor: editorRef })
 
       await takeScreenshot()
+      const { default: html2canvas } = await import('html2canvas')
+      const { default: highlighter } = await import('highlight.js')
 
       expect(mockEditor.getSelectedText).toHaveBeenCalled()
+      expect(html2canvas).toHaveBeenCalledOnce()
+      expect(highlighter.highlightAuto).toHaveBeenCalledWith(selectedText)
       expect(isCapturing.value).toBe(false)
     })
 

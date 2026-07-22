@@ -214,7 +214,16 @@ async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
         await websocket.close()
         return
 
-    bridge = await start_lsp_process(websocket, lang)
+    try:
+        workspace_path = resolve_workspace_path(
+            websocket.query_params.get("workspace"),
+        )
+    except ValueError as e:
+        logger.warning(str(e))
+        await websocket.close(code=1008)
+        return
+
+    bridge = await start_lsp_process(websocket, lang, workspace_path)
     if not bridge:
         return
 
@@ -228,12 +237,39 @@ async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
         await monitor_tasks(lang, bridge, [task_ws, task_p, task_perr])
 
 
-async def start_lsp_process(websocket: WebSocket, lang: str) -> LspBridge | None:
+def resolve_workspace_path(raw_path: str | None) -> Path | None:
+    """Validate and resolve an optional LSP workspace directory."""
+    if raw_path is None:
+        return None
+
+    workspace_path = Path(raw_path).expanduser()
+    if not workspace_path.is_absolute():
+        msg = f"LSP workspace path must be absolute: {raw_path}"
+        raise ValueError(msg)
+
+    try:
+        workspace_path = workspace_path.resolve(strict=True)
+    except (OSError, RuntimeError) as e:
+        msg = f"LSP workspace path cannot be resolved: {raw_path}"
+        raise ValueError(msg) from e
+
+    if not workspace_path.is_dir():
+        msg = f"LSP workspace path is not a directory: {raw_path}"
+        raise ValueError(msg)
+    return workspace_path
+
+
+async def start_lsp_process(
+    websocket: WebSocket,
+    lang: str,
+    workspace_path: Path | None = None,
+) -> LspBridge | None:
     """Start the Language Server Protocol (LSP) process for the specified language.
 
     Args:
         websocket (WebSocket): The WebSocket connection.
         lang (str): The language identifier.
+        workspace_path (Path | None): Working directory for the LSP process.
 
     Returns:
         LspBridge | None: The running bridge if started successfully, else None.
@@ -264,6 +300,7 @@ async def start_lsp_process(websocket: WebSocket, lang: str) -> LspBridge | None
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            cwd=workspace_path,
             creationflags=creationflags,
             shell=is_windows,
         )
@@ -466,9 +503,6 @@ window = webview.create_window(
     width=800,
     height=600,
 )
-if window is not None:
-    # pywebview state syncing relies on these internal members.
-    window.state._hash = _js_api._path_hashes  # noqa: SLF001
 
 
 def start_server() -> tuple[

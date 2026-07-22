@@ -27,7 +27,6 @@
 </template>
 <script lang="ts" setup>
   import type { TestCase } from './pywebview-defines'
-  import { random } from 'lodash'
   import { useI18n } from 'vue-i18n'
   import { useTheme } from 'vuetify'
   import router from './router'

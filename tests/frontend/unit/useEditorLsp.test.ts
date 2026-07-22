@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, ref } from 'vue'
-import { useEditorLsp, type UseEditorLspOptions } from '@/composables/editor/useEditorLsp'
+import { useEditorLsp } from '@/composables/editor/useEditorLsp'
 
 // Mock @/lsp module
 const mockRegisterEditor = vi.fn()
@@ -89,12 +89,13 @@ describe('useEditorLsp Composable', () => {
 
       expect(result).toBe(true)
       expect(isReady.value).toBe(true)
+      expect(mockEditor.completers).toEqual([])
       expect(mockGetLanguageProvider).toHaveBeenCalled()
       expect(mockRegisterEditor).toHaveBeenCalledWith(
         mockEditor,
         expect.objectContaining({
           filePath: '/test/file.py',
-          joinWorkspaceURI: true,
+          joinWorkspaceURI: false,
         }),
       )
     })
@@ -103,7 +104,7 @@ describe('useEditorLsp Composable', () => {
       const editor = ref(mockEditor)
       const filePath = ref('/test/file.py')
 
-      const { register } = useEditorLsp({ editor, filePath, joinWorkspaceURI: false })
+      const { register } = useEditorLsp({ editor, filePath, joinWorkspaceURI: true })
 
       await register()
 
@@ -111,7 +112,7 @@ describe('useEditorLsp Composable', () => {
         mockEditor,
         expect.objectContaining({
           filePath: '/test/file.py',
-          joinWorkspaceURI: false,
+          joinWorkspaceURI: true,
         }),
       )
     })
@@ -314,8 +315,8 @@ describe('useEditorLsp Composable', () => {
     })
   })
 
-  describe('Language Provider Caching', () => {
-    it('should cache language provider after first call', async () => {
+  describe('Language Provider Workspace', () => {
+    it('should resolve the provider on every registration', async () => {
       const editor = ref(mockEditor)
       const filePath = ref('/test/file.py')
 
@@ -324,8 +325,7 @@ describe('useEditorLsp Composable', () => {
       await register()
       await register()
 
-      // getLanguageProvider 应该只被调用一次（因为有缓存）
-      expect(mockGetLanguageProvider).toHaveBeenCalledTimes(1)
+      expect(mockGetLanguageProvider).toHaveBeenCalledTimes(2)
     })
   })
 })

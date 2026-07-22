@@ -246,6 +246,50 @@ class TestApiConfig:
         assert test_config["outer"]["inner"] == "newValue"
 
 
+class TestApiEnvironment:
+    """Tests for environment discovery API methods."""
+
+    def test_scan_environment(self, api_with_tmp_path: Api) -> None:
+        """Environment scan results are returned to the frontend."""
+        expected: list[dict] = [{"id": "python", "status": "ready"}]
+        with patch("pysrc.js_api.scan_environment", return_value=expected):
+            result = api_with_tmp_path.scan_environment()
+
+        assert result == expected
+
+    def test_environment_setup_completion(self, api_with_tmp_path: Api) -> None:
+        """First-run environment completion is exposed to the frontend."""
+        with patch(
+            "pysrc.js_api.is_environment_setup_complete",
+            return_value=True,
+        ):
+            assert api_with_tmp_path.is_environment_setup_complete() is True
+
+        with patch("pysrc.js_api.complete_environment_setup") as complete:
+            api_with_tmp_path.complete_environment_setup()
+
+        complete.assert_called_once_with()
+
+    def test_select_environment_refreshes_language_config(
+        self,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Selecting a tool refreshes derived compiler and LSP settings."""
+        expected: list[dict] = [{"id": "python", "status": "ready"}]
+        with (
+            patch(
+                "pysrc.js_api.select_environment_tool",
+                return_value=expected,
+            ) as select,
+            patch("pysrc.js_api.refresh_language_config") as refresh,
+        ):
+            result = api_with_tmp_path.select_environment_tool("python", "/opt/python")
+
+        assert result == expected
+        select.assert_called_once_with("python", "/opt/python")
+        refresh.assert_called_once_with()
+
+
 class TestApiPathOperations:
     """Tests for path_* methods."""
 
@@ -500,6 +544,22 @@ class TestApiCompile:
                 result = api_with_tmp_path.compile()
 
         assert result == "success"
+
+    def test_compile_without_opened_file(self, api_with_tmp_path: Api) -> None:
+        """Test compilation is skipped when no file is opened."""
+        compiler = MagicMock()
+        api_with_tmp_path.opened_file = None
+
+        with patch.object(
+            api_with_tmp_path,
+            "get_code",
+            return_value={"type": "python"},
+        ):
+            with patch("pysrc.js_api.lang_compilers", {"python": compiler}):
+                result = api_with_tmp_path.compile()
+
+        assert result == "success"
+        compiler.assert_not_called()
 
     def test_compile_error(self, tmp_path: Path, api_with_tmp_path: Api) -> None:
         """Test compile returns error message on failure."""
@@ -917,6 +977,24 @@ class TestApiPinnedFiles:
         result = api_with_tmp_path.get_pinned_files()
 
         assert result == []
+
+    def test_get_pinned_files_returns_metadata(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test pinned files are returned as file metadata dictionaries."""
+        source_file = tmp_path / "main.py"
+        source_file.write_text("print('ok')", encoding="utf-8")
+        pinned_file = tmp_path / "data" / "pinned.txt"
+        pinned_file.write_text(str(source_file), encoding="utf-8")
+
+        result = api_with_tmp_path.get_pinned_files()
+
+        assert result[0]["name"] == "main.py"
+        assert result[0]["path"] == str(source_file)
+        assert result[0]["is_file"] is True
+        assert isinstance(result[0]["type"], str)
 
     def test_add_pinned_file(self, tmp_path: Path, api_with_tmp_path: Api) -> None:
         """Test add_pinned_file adds file to pinned list."""

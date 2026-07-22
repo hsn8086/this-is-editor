@@ -193,7 +193,6 @@
 </template>
 <script lang="ts" setup>
   import type { TaskResult, TestCase } from '@/pywebview-defines'
-  import { ceil, round } from 'lodash'
 
   import { storeToRefs } from 'pinia'
   import { computed, ref } from 'vue'

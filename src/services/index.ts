@@ -30,6 +30,11 @@ export {
 } from './modules/config-service'
 
 export {
+  EnvironmentService,
+  environmentService,
+} from './modules/environment-service'
+
+export {
   FileService,
   fileService,
 } from './modules/file-service'

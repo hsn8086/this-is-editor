@@ -54,19 +54,19 @@ TIE stands for "This Is Editor," a cross-platform competitive programming code e
 1. Download the latest version of TIE [here](https://github.com/hsn8086/this-is-editor/releases/latest).
 2. Install **Python** and **C++** environments.
 3. Optional installations:
-   - **`python-lsp-server`**: Enhance Python code completion and error hinting.
+   - **`ty`**: Enhance Python code completion and type error diagnostics.
    - **`clangd`**: Enhance C++ code completion and error hinting.
    - **`Competitive Companion`** browser plugin: Quickly load test data.
    - **`clang-format` `ruff`**: Format your code with a single command.
 
 💡 **Recommended Font**: For better code display, it is recommended to use the [Maple Mono](https://github.com/subframe7536/Maple-font) font.
 
-### python-lsp-server
+### ty
 Please install Python and pip first. Using pipx is recommended.
 ```bash
 pip install pipx
 pipx ensurepath
-pipx install python-lsp-server
+pipx install ty
 ```
 
 ### clangd
@@ -96,6 +96,12 @@ See the official installation guide: https://clangd.llvm.org/installation.html
    ```bash
    yarn build
    ```
+
+For isolated environment-scan testing, start TIE with a temporary user-data root:
+```bash
+uv run main.py --debug --dev-user-data-dir .dev-user
+```
+TIE stores its test `data`, `config`, and `log` directories under that root.
 
 ---
 

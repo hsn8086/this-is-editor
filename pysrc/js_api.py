@@ -20,11 +20,26 @@ from loguru import logger
 
 from .config import config, config_p, merge_meta
 from .config_meta import config_meta
+from .environment import (
+    EnvironmentTool,
+    complete_environment_setup,
+    is_environment_setup_complete,
+    scan_environment,
+    select_environment_tool,
+)
 from .judge import cph2testcase, task_checker
-from .langs import lang_compilers, lang_runners, langs, type_mp
+from .langs import (
+    lang_compilers,
+    lang_runners,
+    langs,
+    refresh_language_config,
+    type_mp,
+)
 from .user_data import user_data_dir
 from .utils import formatter as fmt
 from .watch import Watcher
+
+type FileInfo = dict[str, str | bool | int]
 
 
 class Api:
@@ -209,17 +224,17 @@ class Api:
             return
         self._cleanup_compiled_artifact(lang)
 
-    def get_pinned_files(self) -> list[str]:
+    def get_pinned_files(self) -> list[FileInfo]:
         """Get a list of pinned files with metadata.
 
         Returns:
-            list[str]: List of pinned file metadata dictionaries.
+            list[FileInfo]: List of pinned file metadata dictionaries.
 
         """
         pinned_p = user_data_dir / "pinned.txt"
         if not pinned_p.exists():
             return []
-        rst = []
+        rst: list[FileInfo] = []
         for line in pinned_p.read_text(encoding="utf-8").splitlines():
             stripped_line = line.strip()
             if stripped_line and (path := Path(stripped_line)).exists():
@@ -236,11 +251,13 @@ class Api:
                             "%Y-%m-%d %H:%M:%S",
                             time.localtime(path.stat().st_mtime),
                         ),
-                        "type": "Directory"
-                        if path.is_dir()
-                        else type_mp.get(path.suffix.lower(), {}).get(
-                            "display",
-                            "File",
+                        "type": str(
+                            "Directory"
+                            if path.is_dir()
+                            else type_mp.get(path.suffix.lower(), {}).get(
+                                "display",
+                                "File",
+                            ),
                         ),
                     },
                 )
@@ -465,6 +482,28 @@ class Api:
         """
         return merge_meta(config_meta, config)
 
+    def scan_environment(self) -> list[EnvironmentTool]:
+        """Discover and verify supported development tools."""
+        return scan_environment()
+
+    def select_environment_tool(
+        self,
+        tool_id: str,
+        executable_path: str,
+    ) -> list[EnvironmentTool]:
+        """Select one discovered executable for a supported tool."""
+        results = select_environment_tool(tool_id, executable_path)
+        refresh_language_config()
+        return results
+
+    def is_environment_setup_complete(self) -> bool:
+        """Return whether first-run environment setup was completed."""
+        return is_environment_setup_complete()
+
+    def complete_environment_setup(self) -> None:
+        """Mark first-run environment setup as completed."""
+        complete_environment_setup()
+
     def compile(self) -> str:
         """Compile the currently opened code file.
 
@@ -472,13 +511,18 @@ class Api:
             str: Compilation result ("success" or error message).
 
         """
+        opened_file = self.opened_file
+        if opened_file is None:
+            logger.warning("No file is opened for compilation.")
+            return "success"
+
         lang_info = self.get_code().get("type", None)
         if lang_info not in lang_compilers:
             logger.warning(f"Language {lang_info} is not supported for compilation.")
             return "success"
         compile_func = lang_compilers[lang_info]
         try:
-            compile_func(self.opened_file)
+            compile_func(opened_file)
         except (FileNotFoundError, ValueError, RuntimeError) as e:
             return str(e)
         return "success"
@@ -572,6 +616,8 @@ class Api:
         else:
             config[id_str] = value
         config_p.write_text(json.dumps(config, indent=4), encoding="utf-8")
+        if id_str.startswith("programmingLanguages."):
+            refresh_language_config()
 
     def get_config_path(self) -> str:
         """Get the path to the configuration file.

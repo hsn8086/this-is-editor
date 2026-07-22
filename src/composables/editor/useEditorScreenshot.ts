@@ -1,10 +1,12 @@
 import type { Ace } from 'ace-builds'
-import hljs from 'highlight.js'
 import hljs_github_dark from 'highlight.js/styles/github-dark.css?url'
 import hljs_github_light from 'highlight.js/styles/github.css?url'
-import html2canvas from 'html2canvas'
 import { ref, type Ref } from 'vue'
 import { useTheme } from 'vuetify'
+
+interface SyntaxHighlighter {
+  highlightAuto: (text: string) => { value: string }
+}
 
 export interface UseEditorScreenshotOptions {
   /** Ace Editor 实例 Ref */
@@ -110,6 +112,7 @@ export function useEditorScreenshot (options: UseEditorScreenshotOptions): UseEd
   function createScreenshotContainer (
     text: string,
     computedStyle: CSSStyleDeclaration,
+    highlighter: SyntaxHighlighter,
   ): HTMLElement {
     const lines = text.split('\n')
     const fontSize = computedStyle.fontSize || '13px'
@@ -158,7 +161,7 @@ export function useEditorScreenshot (options: UseEditorScreenshotOptions): UseEd
     code.style.background = 'transparent'
     code.style.color = color
     code.style.overflow = 'visible'
-    code.innerHTML = hljs.highlightAuto(text).value
+    code.innerHTML = highlighter.highlightAuto(text).value
 
     wrapper.append(gutter)
     wrapper.append(code)
@@ -280,8 +283,13 @@ export function useEditorScreenshot (options: UseEditorScreenshotOptions): UseEd
         throw new Error('Failed to get editor computed style')
       }
 
+      const [{ default: highlighter }, { default: html2canvas }] = await Promise.all([
+        import('highlight.js'),
+        import('html2canvas'),
+      ])
+
       // 创建截图 DOM 容器
-      wrapper = createScreenshotContainer(text, computedStyle)
+      wrapper = createScreenshotContainer(text, computedStyle, highlighter)
 
       // 添加 highlight.js 样式
       style = addHighlightJsStyle()

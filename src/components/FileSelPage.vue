@@ -134,10 +134,9 @@
     </v-dialog>
     <v-card class="base" density="compact" nav style="min-height: 100%">
       <v-list>
-        <v-menu v-for="file in ls">
+        <v-menu v-for="file in ls" :key="folder + '/' + file.name">
           <template #activator="{ props }">
             <v-list-item
-              :key="folder + '/' + file.name"
               :prepend-icon="file.is_dir ? 'mdi-folder' : 'mdi-file'"
               :title="file.name"
               :value="file.name"
@@ -218,7 +217,7 @@
   import type { FileInfo, FuncResponse_ls_dir } from '@/pywebview-defines'
   import type { FileItem } from '@/stores/file'
 
-  import { debounce } from 'lodash'
+  import debounce from 'lodash/debounce'
   import { storeToRefs } from 'pinia'
   import { ref } from 'vue'
   import {
@@ -298,8 +297,8 @@
     } else {
       // If open file
       await fileService.setOpenedFile(file.path)
-      router.push('/editor')
       await fileService.setCwd(folder.value!)
+      await router.push('/editor')
     }
     folderLoading.value = false
   }
