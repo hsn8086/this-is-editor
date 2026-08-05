@@ -20,6 +20,7 @@
     "type-check": "vue-tsc --build --force",
     "license-gen": "uv run tools/gen_license.py",
     "lint": "eslint . --fix",
+    "lint:check": "eslint .",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",

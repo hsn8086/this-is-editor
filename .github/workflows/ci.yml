@@ -1,0 +1,91 @@
+name: CI
+
+# Pull-request gate. Pushes to master/dev are already covered by the release
+# pipeline in main.yml, which runs the same checks before publishing, so this
+# workflow deliberately does not trigger on push to avoid duplicate runs.
+on:
+  pull_request:
+    branches:
+      - master
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+
+      - name: Enable Yarn
+        run: corepack enable
+
+      - name: Install Node.js dependencies
+        run: yarn install --frozen-lockfile --non-interactive
+
+      - name: Check types
+        run: yarn type-check
+
+      - name: Lint
+        # Non-blocking: the tree carries pre-existing violations (member ordering,
+        # unicorn rules, unused test imports). Remove continue-on-error once they
+        # are cleaned up so lint becomes a real gate.
+        continue-on-error: true
+        run: yarn lint:check
+
+      - name: Test
+        run: yarn test:run
+
+      # LICENSES/ is committed and consumed by LicensesPage.vue via import.meta.glob,
+      # so the bundle builds without regenerating it. main.yml refreshes it at release time.
+      - name: Build
+        run: yarn build-only
+
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev libgirepository1.0-dev
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.12'
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install Python dependencies
+        run: uv sync --locked
+
+      # Pinned so a new ruff release cannot turn CI red without a code change.
+      - name: Check formatting
+        run: uvx ruff@0.16.1 format --check
+
+      - name: Lint
+        run: uvx ruff@0.16.1 check
+
+      - name: Check types
+        run: uv run ty check
+
+      - name: Test
+        run: uv run pytest tests/backend
