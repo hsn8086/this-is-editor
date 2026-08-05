@@ -764,11 +764,11 @@ class Api:
             raise ValueError(msg)
         return f"file://{p.as_posix()}"
 
-    def path_ls(self, path: None | str) -> dict:
+    def path_ls(self, path: str | None) -> dict:
         """List files in a directory.
 
         Args:
-            path (None | str): Directory path or None for cwd.
+            path (str | None): Directory path or None for cwd.
 
         Returns:
             dict: Directory listing and metadata.
