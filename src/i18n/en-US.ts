@@ -93,6 +93,15 @@ export default {
     pasteFromClipboard: 'Paste from Clipboard',
     pasteError: 'Failed to paste tasks! Please ensure the clipboard contains valid task data.',
   },
+  terminalPanel: {
+    title: 'Terminal',
+    toggle: 'Toggle Terminal',
+    clear: 'Clear',
+    interrupt: 'Interrupt (Ctrl-C)',
+    hide: 'Hide Terminal',
+    resize: 'Drag to resize',
+    exited: 'exited {code}',
+  },
   editorPage: {
     menu: {
       cut: 'Cut',
@@ -109,6 +118,7 @@ export default {
       toggleComment: 'Toggle Comment',
       runTest: 'Run Test',
       screenshot: 'Take Screenshot',
+      toggleTerminal: 'Toggle Terminal',
     },
   },
 }

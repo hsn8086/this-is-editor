@@ -1,5 +1,6 @@
 <template>
   <CheckerPanel v-if="enableCheckerPanel" ref="checkPanel" />
+  <TerminalPanel />
   <v-menu
     v-model="showMenu"
     absolute
@@ -56,7 +57,9 @@
   import { useAceEditor, useEditorClipboard, useEditorContextMenu, useEditorFileSync, useEditorFormat, useEditorKeyboard, useEditorLsp, useEditorScreenshot, useEditorTheme } from '@/composables/editor'
   import { codeService, configService, fileService } from '@/services'
   import { type EditorLang, useEditorStore } from '@/stores/editor'
+  import { useTerminalStore } from '@/stores/terminal'
   import CheckerPanel from './CheckerPanel.vue'
+  import TerminalPanel from './TerminalPanel.vue'
   import 'ace-builds/src-noconflict/mode-python'
   import 'ace-builds/src-noconflict/mode-c_cpp'
   import 'ace-builds/src-noconflict/ext-language_tools'
@@ -70,6 +73,7 @@
   // Editor store
   const editorStore = useEditorStore()
   const { lang, content, enableCheckerPanel } = storeToRefs(editorStore)
+  const terminalStore = useTerminalStore()
 
   const checkPanel: Ref<InstanceType<typeof CheckerPanel> | null> = ref(null)
 
@@ -263,6 +267,10 @@
       {
         title: 'screenshot',
         action: takeCodeScreenshot,
+      },
+      {
+        title: 'toggleTerminal',
+        action: () => terminalStore.toggleVisible(),
       },
     ],
   ]

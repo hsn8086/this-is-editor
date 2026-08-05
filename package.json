@@ -29,6 +29,8 @@
   "dependencies": {
     "@fontsource/roboto": "5.2.6",
     "@mdi/font": "7.4.47",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
     "ace-builds": "^1.43.2",
     "ace-code": "^1.43.2",
     "ace-linters": "^1.8.3",

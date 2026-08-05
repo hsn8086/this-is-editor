@@ -92,6 +92,15 @@ export default {
     pasteFromClipboard: '从剪贴板粘贴',
     pasteError: '粘贴任务失败！请确保剪贴板内容为有效的任务数据。',
   },
+  terminalPanel: {
+    title: '终端',
+    toggle: '切换终端',
+    clear: '清屏',
+    interrupt: '中断 (Ctrl-C)',
+    hide: '隐藏终端',
+    resize: '拖动调整高度',
+    exited: '已退出 {code}',
+  },
   editorPage: {
     menu: {
       cut: '剪切',
@@ -108,6 +117,7 @@ export default {
       toggleComment: '切换注释',
       runTest: '运行测试',
       screenshot: '截图',
+      toggleTerminal: '切换终端',
     },
   },
 }

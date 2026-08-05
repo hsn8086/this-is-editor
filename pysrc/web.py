@@ -26,6 +26,7 @@ from starlette.websockets import WebSocketDisconnect
 from .js_api import Api
 from .langs import type_mp
 from .models import Problem
+from .terminal import TerminalSession, shutdown_terminals
 
 
 def get_free_port() -> int:
@@ -448,7 +449,151 @@ async def monitor_tasks(
             return
 
 
+@app.websocket("/terminal")
+async def terminal_endpoint(websocket: WebSocket) -> None:
+    """Stream a shell session over a WebSocket.
+
+    Client frames are JSON: ``{"type": "stdin", "data": str}``,
+    ``{"type": "resize", "cols": int, "rows": int}``, ``{"type": "interrupt"}``.
+    Server frames are ``{"type": "output", "data": str}`` and
+    ``{"type": "exit", "code": int | None}``.
+
+    Args:
+        websocket (WebSocket): The WebSocket connection.
+
+    """
+    if should_exit:
+        await websocket.close()
+        return
+
+    session = TerminalSession(cwd=_js_api.cwd)
+    try:
+        session.start()
+    except OSError as e:
+        logger.opt(exception=e).error("Failed to start terminal shell")
+        await websocket.close(code=1011)
+        return
+
+    await websocket.accept()
+    logger.info(f"Terminal session started (pid={session.pid})")
+
+    async with asyncio.TaskGroup() as tg:
+        task_in = tg.create_task(handle_terminal_input(websocket, session))
+        task_out = tg.create_task(handle_terminal_output(websocket, session))
+        await monitor_terminal(session, [task_in, task_out])
+
+
+async def handle_terminal_input(
+    websocket: WebSocket,
+    session: TerminalSession,
+) -> None:
+    """Forward client frames to the shell until the socket closes.
+
+    Args:
+        websocket (WebSocket): The WebSocket connection.
+        session (TerminalSession): The shell session to feed.
+
+    """
+    try:
+        while not should_exit:
+            raw = await websocket.receive_text()
+            try:
+                message = json.loads(raw)
+            except json.JSONDecodeError:
+                logger.warning("Discarding malformed terminal frame")
+                continue
+
+            kind = message.get("type")
+            if kind == "stdin":
+                session.write(str(message.get("data", "")))
+            elif kind == "resize":
+                session.resize(
+                    int(message.get("cols", 80)),
+                    int(message.get("rows", 24)),
+                )
+            elif kind == "interrupt":
+                session.interrupt()
+    except WebSocketDisconnect:
+        logger.info("Terminal WebSocket disconnected")
+    except (OSError, RuntimeError, ValueError) as e:
+        if not should_exit:
+            logger.opt(exception=e).error("Terminal input handler failed")
+
+
+async def handle_terminal_output(
+    websocket: WebSocket,
+    session: TerminalSession,
+) -> None:
+    """Relay shell output to the client until the stream ends.
+
+    Args:
+        websocket (WebSocket): The WebSocket connection.
+        session (TerminalSession): The shell session to read from.
+
+    """
+    try:
+        while True:
+            chunk = await session.next_chunk()
+            if chunk is None:
+                break
+            await websocket.send_text(
+                json.dumps({"type": "output", "data": chunk}),
+            )
+        process = session.process
+        await websocket.send_text(
+            json.dumps(
+                {"type": "exit", "code": process.poll() if process else None},
+            ),
+        )
+    except WebSocketDisconnect:
+        pass
+    except (OSError, RuntimeError, ValueError) as e:
+        if not should_exit:
+            logger.opt(exception=e).error("Terminal output handler failed")
+
+
+async def monitor_terminal(
+    session: TerminalSession,
+    tasks: list[asyncio.Task],
+) -> None:
+    """Cancel terminal tasks once the shell or the application stops.
+
+    Without this watchdog a live session would keep uvicorn from draining and
+    the process would hang on shutdown.
+
+    Args:
+        session (TerminalSession): The shell session being monitored.
+        tasks (list[asyncio.Task]): Tasks to cancel when the session ends.
+
+    """
+    while True:
+        await asyncio.sleep(1)
+        if should_exit:
+            for task in tasks:
+                task.cancel()
+            session.close()
+            logger.info("Terminal session closed for shutdown")
+            return
+
+        process = session.process
+        if process is not None and process.poll() is not None:
+            session.close()
+            for task in tasks:
+                task.cancel()
+            return
+
+        # `any`, not `all`: the output task blocks until the shell exits, so
+        # waiting for both would keep a shell running after the client hangs up.
+        if any(task.done() for task in tasks):
+            session.close()
+            for task in tasks:
+                task.cancel()
+            return
+
+
 web_dir = Path(__file__).parent.parent / "web"
+# Registered last on purpose: Starlette matches in order and Mount("/") also
+# claims websocket scopes, so any route added below would be unreachable.
 app.mount(
     "/",
     StaticFiles(directory=web_dir, html=True),
@@ -544,4 +689,5 @@ def shutdown_lsp_bridges() -> None:
 def shutdown_runtime() -> None:
     """Shut down runtime background resources before server teardown."""
     shutdown_lsp_bridges()
+    shutdown_terminals()
     _js_api.shutdown()

@@ -86,11 +86,13 @@ Vue 3 Composition API 的可复用逻辑封装（Phase 2A/B/2.1 新增）：
 | `editor/useEditorScreenshot.ts` | 代码截图：html2canvas + highlight.js，剪贴板/下载（Phase 2.3） |
 | `editor/useEditorFileSync.ts` | 文件同步与自动保存：debounce 保存、外部变更监听、冷却机制（Phase 2.4） |
 | `editor/index.ts` | Composables 统一导出 |
+| `terminal/useTerminal.ts` | 终端控制台：xterm 实例、/terminal WebSocket 双向流、配色跟随 Vuetify 主题 |
 
 **关键组件**
 
 - `EditorPage.vue`：编辑器主界面（Ace + LSP）
 - `CheckerPanel.vue`：评测/测试面板
+- `TerminalPanel.vue`：终端控制台面板（底部抽屉，可拖拽调整高度）
 - `FileSelPage.vue`：文件选择页
 - `SettingPage.vue`：设置页
 - `LicensesPage.vue`：许可证页
@@ -103,7 +105,8 @@ Vue 3 Composition API 的可复用逻辑封装（Phase 2A/B/2.1 新增）：
 
 | 模块 | 作用 |
 | --- | --- |
-| `web.py` | FastAPI 服务：静态文件、LSP WebSocket 代理、问题接收（10043） | 
+| `web.py` | FastAPI 服务：静态文件、LSP 与终端 WebSocket、问题接收（10043） | 
+| `terminal.py` | 终端会话：POSIX 走 stdlib pty，Windows 退化为管道；进程树清理 | 
 | `js_api.py` | pywebview JS API：文件/配置/测试用例/运行等 | 
 | `runner.py` | 代码编译与运行、资源监控 | 
 | `config.py` | 配置加载与合并 | 
