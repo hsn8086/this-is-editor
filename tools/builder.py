@@ -31,6 +31,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 def build_command(args: argparse.Namespace, system: str | None = None) -> list[str]:
     """Build the Nuitka command for the requested platform and mode."""
+    target_system = system or platform.system()
     command = [
         "uv",
         "run",
@@ -41,9 +42,14 @@ def build_command(args: argparse.Namespace, system: str | None = None) -> list[s
         "--include-module=uvicorn",
         "--assume-yes-for-downloads",
     ]
-    if (system or platform.system()) == "Windows" and not args.debug:
+    if target_system == "Windows" and not args.debug:
         command.append("--windows-disable-console")
-    if args.mode == "onefile":
+    if target_system == "Darwin":
+        # pywebview binds to the PyObjC frameworks (Foundation, WebKit), and Nuitka
+        # refuses to package them outside an app bundle. Onefile is mutually
+        # exclusive with the bundle on macOS, so the bundle always wins here.
+        command.append("--macos-create-app-bundle")
+    elif args.mode == "onefile":
         command.append("--onefile")
     if args.debug:
         command.extend(["--lto=no", "--debugger"])

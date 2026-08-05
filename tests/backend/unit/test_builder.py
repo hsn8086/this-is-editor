@@ -29,6 +29,28 @@ def test_build_command_configures_debug_directory() -> None:
     assert "--debugger" in command
 
 
+def test_build_command_creates_macos_app_bundle() -> None:
+    """Darwin builds must be app bundles so PyObjC frameworks can be packaged."""
+    args = builder.parse_args(["--mode", "onefile"])
+
+    command = builder.build_command(args, system="Darwin")
+
+    assert "--macos-create-app-bundle" in command
+    # Nuitka rejects onefile combined with a macOS app bundle.
+    assert "--onefile" not in command
+    assert "--windows-disable-console" not in command
+
+
+def test_build_command_omits_app_bundle_off_macos() -> None:
+    """Linux builds keep the plain standalone/onefile layout."""
+    args = builder.parse_args(["--mode", "onefile"])
+
+    command = builder.build_command(args, system="Linux")
+
+    assert "--macos-create-app-bundle" not in command
+    assert "--onefile" in command
+
+
 def test_main_propagates_nuitka_failure() -> None:
     """A failed compiler process must fail the calling CI step."""
     error = subprocess.CalledProcessError(7, ["uv", "run", "nuitka"])
