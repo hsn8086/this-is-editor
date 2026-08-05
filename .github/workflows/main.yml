@@ -178,6 +178,22 @@ jobs:
           fi
           uv run tools/builder.py "${args[@]}"
 
+      # 冒烟测试：真正启动产物，确认能起服务再发布
+      #
+      # runner 没有图形环境，但历史上真正崩掉发布产物的问题（Nuitka 漏编模块、
+      # PEP 695 导致导入期 NameError、web/ 没打进去）全部发生在开窗之前，
+      # --self-check 正是跑到 webview.start() 之前为止，因此无需 display。
+      - name: Smoke test built binary
+        shell: bash
+        timeout-minutes: 5
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            binary=".dist/main.exe"
+          else
+            binary=".dist/main.bin"
+          fi
+          "$binary" --self-check --dev-user-data-dir "${RUNNER_TEMP}/tie-smoke"
+
       # 压缩构建产物
       - name: Compress build artifacts
         shell: bash
