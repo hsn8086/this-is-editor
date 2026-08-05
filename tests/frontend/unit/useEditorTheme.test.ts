@@ -1,6 +1,6 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { ref, nextTick } from 'vue'
-import { useEditorTheme, type AceTheme } from '@/composables/editor/useEditorTheme'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick, ref } from 'vue'
+import { type AceTheme, useEditorTheme } from '@/composables/editor/useEditorTheme'
 
 // Mock vuetify - 需要返回完整的 theme 对象结构
 const createMockVuetifyTheme = (isDark: boolean) => ({

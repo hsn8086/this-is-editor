@@ -25,7 +25,8 @@ for pkg in data:
 
 # npm
 text = subprocess.check_output(
-    shlex.join(["npx", "license-checker", "--json"]), shell=True,
+    shlex.join(["npx", "license-checker", "--json"]),
+    shell=True,
 )
 data = json.loads(text)
 for key, pkg in data.items():
@@ -34,7 +35,8 @@ for key, pkg in data.items():
         license_p = Path(pkg["licenseFile"])
 
         (licenses_p / f"{name}").write_text(
-            license_p.read_text(encoding="utf-8"), encoding="utf-8",
+            license_p.read_text(encoding="utf-8"),
+            encoding="utf-8",
         )
     else:
         (licenses_p / f"{name}").write_text(

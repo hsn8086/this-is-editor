@@ -1,7 +1,6 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { ref, nextTick } from 'vue'
-import { useEditorFormat, type UseEditorFormatOptions, type FormatAction } from '@/composables/editor/useEditorFormat'
-import type { Config, Code } from '@/pywebview-defines'
+import type { Code, Config } from '@/pywebview-defines'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { type FormatAction, useEditorFormat } from '@/composables/editor/useEditorFormat'
 
 // Mock services
 const mockGetConfig = vi.fn()
@@ -25,7 +24,7 @@ describe('useEditorFormat Composable', () => {
 
   beforeEach(() => {
     resetCodeMock = vi.fn()
-    
+
     mockCode = {
       code: 'print("hello")',
       type: 'python',
@@ -174,7 +173,7 @@ describe('useEditorFormat Composable', () => {
   })
 
   describe('Format Action: reload', () => {
-    it('should reload code from disk with reload action', async () => {
+    it('should run formatter before reloading code from disk', async () => {
       mockConfig.programmingLanguages.python.formatter!.action.value = 'reload'
       const diskCode = 'code from disk'
       mockGetCode.mockResolvedValue({ ...mockCode, code: diskCode })
@@ -184,7 +183,11 @@ describe('useEditorFormat Composable', () => {
       const result = await format(resetCodeMock)
 
       expect(result).toBe(true)
+      expect(mockFormatCode).toHaveBeenCalledOnce()
       expect(resetCodeMock).toHaveBeenCalledWith(diskCode)
+      expect(mockFormatCode.mock.invocationCallOrder[0]).toBeLessThan(
+        mockGetCode.mock.invocationCallOrder.at(-1)!,
+      )
     })
   })
 
@@ -217,6 +220,21 @@ describe('useEditorFormat Composable', () => {
       expect(formatterConfig.value).toBeDefined()
     })
 
+    it('should reload config before each format', async () => {
+      const { format } = useEditorFormat()
+
+      await format(resetCodeMock)
+      mockConfig.programmingLanguages.python.formatter!.active.value = false
+      resetCodeMock.mockClear()
+
+      const result = await format(resetCodeMock)
+
+      expect(result).toBe(false)
+      expect(mockGetConfig).toHaveBeenCalledTimes(2)
+      expect(mockFormatCode).toHaveBeenCalledTimes(1)
+      expect(resetCodeMock).not.toHaveBeenCalled()
+    })
+
     it('should handle format when no formatter config exists', async () => {
       mockConfig.programmingLanguages.python.formatter = undefined
 
@@ -236,11 +254,40 @@ describe('useEditorFormat Composable', () => {
       expect(isFormatting.value).toBe(false)
 
       const formatPromise = format(resetCodeMock)
-      
+
       // 在异步操作期间可能为 true
       await formatPromise
-      
+
       expect(isFormatting.value).toBe(false)
+    })
+
+    it('should ignore concurrent format requests', async () => {
+      let resolveFormat!: (value: string) => void
+      mockFormatCode.mockImplementation(() => new Promise(resolve => {
+        resolveFormat = resolve
+      }))
+      const { format } = useEditorFormat()
+
+      const first = format(resetCodeMock)
+      await vi.waitFor(() => expect(mockFormatCode).toHaveBeenCalledOnce())
+      const second = await format(resetCodeMock)
+      resolveFormat('formatted code')
+
+      expect(second).toBe(false)
+      await expect(first).resolves.toBe(true)
+      expect(mockFormatCode).toHaveBeenCalledOnce()
+    })
+
+    it('should finish pending save before running formatter', async () => {
+      const beforeFormat = vi.fn().mockResolvedValue(undefined)
+      const { format } = useEditorFormat({ beforeFormat })
+
+      await format(resetCodeMock)
+
+      expect(beforeFormat).toHaveBeenCalledOnce()
+      expect(beforeFormat.mock.invocationCallOrder[0]).toBeLessThan(
+        mockFormatCode.mock.invocationCallOrder[0],
+      )
     })
   })
 

@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
-import { useEditorStore, type EditorLang } from '@/stores/editor'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { type EditorLang, useEditorStore } from '@/stores/editor'
 
 describe('editor Store', () => {
   beforeEach(() => {

@@ -17,8 +17,6 @@ from loguru import logger
 
 from .utils import formatter as fmt
 
-T = TypeVar("T")
-
 
 # Define namedtuples
 class Result(NamedTuple):
@@ -26,6 +24,7 @@ class Result(NamedTuple):
 
     Attributes:
         output (str): The output from the process.
+        stderr (str): Standard error from the process.
         type (str): The result type (e.g., 'success', 'timeout').
         time (float): Execution time in seconds.
         memory (float): Peak memory usage in MB.
@@ -33,6 +32,7 @@ class Result(NamedTuple):
     """
 
     output: str
+    stderr: str
     type: str
     time: float
     memory: float
@@ -57,7 +57,17 @@ class RunProcessResult(NamedTuple):
     status: str | None
 
 
-def try_r(func: Callable[..., T], *args: object, default: T | None = None) -> T | None:
+# Nuitka 2.7.12 does not implement the PEP 695 annotation scope, so the compiled
+# binary raises "NameError: name 'T' is not defined" while importing this module.
+# Keep the classic TypeVar spelling until Nuitka supports `def try_r[T](...)`.
+T = TypeVar("T")
+
+
+def try_r(
+    func: Callable[..., T],
+    *args: object,
+    default: T | None = None,
+) -> T | None:
     """Execute a function and return its result, or a default value on exception.
 
     Args:
@@ -97,7 +107,7 @@ def get_time(child_process: psutil.Popen) -> float:
         return 0.0
 
 
-def run_p(
+def run_p(  # noqa: C901
     cmd: list,
     inp: str = "",
     *,
@@ -243,20 +253,31 @@ def run(
         memory = rst.memory
         status = rst.status
     except (subprocess.CalledProcessError, OSError) as e:
-        return Result(output=str(e), type="runtime_error", time=0, memory=0)
+        return Result(output="", stderr=str(e), type="runtime_error", time=0, memory=0)
     if status == "timeout":
-        return Result(output=stdout, type="timeout", time=time, memory=memory)
+        return Result(
+            output=stdout,
+            stderr=stderr,
+            type="timeout",
+            time=time,
+            memory=memory,
+        )
     if status == "memory_limit_exceeded":
         return Result(
             output=stdout,
+            stderr=stderr,
             type="memory_limit_exceeded",
             time=time,
             memory=memory,
         )
 
-    if stderr:
-        return Result(output=stderr, type="runtime_error", time=time, memory=memory)
-    return Result(output=stdout, type="success", time=time, memory=memory)
+    return Result(
+        output=stdout,
+        stderr=stderr,
+        type="success",
+        time=time,
+        memory=memory,
+    )
 
 
 def run_compilation(file_path: Path, cmd: list | str, *, executable: str = "") -> None:

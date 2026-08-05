@@ -4,9 +4,9 @@
       <v-card-title>{{ license.name }}</v-card-title>
       <v-card-text>
         <v-textarea
-          readonly
           auto-grow
           :model-value="license.content"
+          readonly
           variant="solo"
         />
       </v-card-text>
@@ -15,17 +15,17 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from "vue";
+  import { onMounted, ref } from 'vue'
 
-// Reactive variable to store licenses
-const licenses = ref<{ name: string; content: string }[]>([]);
+  // Reactive variable to store licenses
+  const licenses = ref<{ name: string, content: string }[]>([])
 
-const modules = import.meta.glob("../../LICENSES/*", {
-  as: "raw",
-  eager: true,
-});
-for (const [path, module] of Object.entries(modules)) {
-  const name = path.split("/").pop() || "Unknown";
-  licenses.value.push({ name, content: module as string });
-}
+  const modules = import.meta.glob('../../LICENSES/*', {
+    as: 'raw',
+    eager: true,
+  })
+  for (const [path, module] of Object.entries(modules)) {
+    const name = path.split('/').pop() || 'Unknown'
+    licenses.value.push({ name, content: module as string })
+  }
 </script>

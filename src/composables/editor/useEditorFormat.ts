@@ -1,6 +1,5 @@
 import { ref, type Ref } from 'vue'
-import type { Config } from '@/pywebview-defines'
-import { configService, codeService, type ConfigService, type CodeService } from '@/services'
+import { codeService, type CodeService, configService, type ConfigService } from '@/services'
 
 export type FormatAction = 'reload' | 'stdout' | 'skip'
 
@@ -15,6 +14,8 @@ export interface UseEditorFormatOptions {
   configService?: ConfigService
   /** 自定义代码服务（用于测试） */
   codeService?: CodeService
+  /** 格式化前执行的操作，例如等待防抖保存完成 */
+  beforeFormat?: () => Promise<void> | void
 }
 
 export interface UseEditorFormatReturn {
@@ -45,7 +46,7 @@ export interface UseEditorFormatReturn {
  *
  * 注意：formatter 未激活或不存在时会跳过
  */
-export function useEditorFormat(options: UseEditorFormatOptions = {}): UseEditorFormatReturn {
+export function useEditorFormat (options: UseEditorFormatOptions = {}): UseEditorFormatReturn {
   const cfgService = options.configService ?? configService
   const cdService = options.codeService ?? codeService
 
@@ -56,7 +57,7 @@ export function useEditorFormat(options: UseEditorFormatOptions = {}): UseEditor
   /**
    * 加载格式化配置
    */
-  async function loadFormatterConfig(): Promise<void> {
+  async function loadFormatterConfig (): Promise<void> {
     try {
       const config = await cfgService.getConfig()
       const code = await cdService.getCode()
@@ -75,8 +76,8 @@ export function useEditorFormat(options: UseEditorFormatOptions = {}): UseEditor
       }
 
       formatterConfig.value = formatter as FormatterConfig
-    } catch (err) {
-      console.error('[useEditorFormat] Failed to load formatter config:', err)
+    } catch (error) {
+      console.error('[useEditorFormat] Failed to load formatter config:', error)
       formatterConfig.value = undefined
     }
   }
@@ -86,32 +87,35 @@ export function useEditorFormat(options: UseEditorFormatOptions = {}): UseEditor
    * @param resetCode 重置代码回调
    * @returns 是否成功执行格式化
    */
-  async function format(resetCode: (code: string) => void): Promise<boolean> {
-    // Guard: 未加载配置时先加载
-    if (!formatterConfig.value) {
-      await loadFormatterConfig()
-    }
-
-    // Guard: formatter 不存在或未激活
-    if (!formatterConfig.value) {
-      console.log('[useEditorFormat] No formatter config found, skipping')
-      return false
-    }
-
-    if (!formatterConfig.value.active.value) {
-      console.log('[useEditorFormat] Formatter is inactive, skipping')
+  async function format (resetCode: (code: string) => void): Promise<boolean> {
+    if (isFormatting.value) {
       return false
     }
 
     isFormatting.value = true
 
     try {
+      await options.beforeFormat?.()
+      // 配置可能在设置页被修改，每次执行前都重新读取。
+      await loadFormatterConfig()
+
+      if (!formatterConfig.value) {
+        console.log('[useEditorFormat] No formatter config found, skipping')
+        return false
+      }
+
+      if (!formatterConfig.value.active.value) {
+        console.log('[useEditorFormat] Formatter is inactive, skipping')
+        return false
+      }
+
       const action = formatterConfig.value.action.value
       console.log(`[useEditorFormat] Format action: ${action}`)
 
       switch (action) {
         case 'reload': {
-          // 从磁盘重新加载文件
+          // 格式化器原地修改文件，执行后从磁盘重新加载。
+          await cdService.formatCode()
           const code = await cdService.getCode()
           resetCode(code.code)
           console.log('[useEditorFormat] Code reloaded from disk')
@@ -126,15 +130,14 @@ export function useEditorFormat(options: UseEditorFormatOptions = {}): UseEditor
           return true
         }
 
-        case 'skip':
         default: {
           // 跳过格式化
           console.log('[useEditorFormat] Format skipped')
           return false
         }
       }
-    } catch (err) {
-      console.error('[useEditorFormat] Format failed:', err)
+    } catch (error) {
+      console.error('[useEditorFormat] Format failed:', error)
       return false
     } finally {
       isFormatting.value = false

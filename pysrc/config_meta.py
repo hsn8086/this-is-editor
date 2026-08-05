@@ -10,80 +10,99 @@ config_meta = {
             "fontSize": {
                 "display": "Font Size",
                 "i18n": "setting.editor.aceMain.fontSize",
+                "requiresRestart": True,
             },
             "fontFamily": {
                 "display": "Font Family",
                 "i18n": "setting.editor.aceMain.fontFamily",
+                "requiresRestart": True,
             },
             "enableBasicAutocompletion": {
                 "display": "Autocompletion",
                 "i18n": "setting.editor.aceMain.enableBasicAutocompletion",
+                "requiresRestart": True,
             },
             "enableSnippets": {
                 "display": "Enable Snippets",
                 "i18n": "setting.editor.aceMain.enableSnippets",
+                "requiresRestart": True,
             },
             "enableLiveAutocompletion": {
                 "display": "Live Autocompletion",
                 "i18n": "setting.editor.aceMain.enableLiveAutocompletion",
+                "requiresRestart": True,
             },
             "animatedScroll": {
                 "display": "Animated Scroll",
                 "i18n": "setting.editor.aceMain.animatedScroll",
+                "requiresRestart": True,
             },
             "scrollPastEnd": {
                 "display": "Scroll Past End",
                 "i18n": "setting.editor.aceMain.scrollPastEnd",
+                "requiresRestart": True,
             },
             "showPrintMargin": {
                 "display": "Show Print Margin",
                 "i18n": "setting.editor.aceMain.showPrintMargin",
+                "requiresRestart": True,
             },
             "fixedWidthGutter": {
                 "display": "Fixed Width Gutter",
                 "i18n": "setting.editor.aceMain.fixedWidthGutter",
+                "requiresRestart": True,
             },
             "fadeFoldWidgets": {
                 "display": "Fade Fold Widgets",
                 "i18n": "setting.editor.aceMain.fadeFoldWidgets",
+                "requiresRestart": True,
             },
             "displayIndentGuides": {
                 "display": "Display Indent Guides",
                 "i18n": "setting.editor.aceMain.displayIndentGuides",
+                "requiresRestart": True,
             },
             "highlightIndentGuides": {
                 "display": "Highlight Indent Guides",
                 "i18n": "setting.editor.aceMain.highlightIndentGuides",
+                "requiresRestart": True,
             },
             "highlightGutterLine": {
                 "display": "Highlight Gutter Line",
                 "i18n": "setting.editor.aceMain.highlightGutterLine",
+                "requiresRestart": True,
             },
             "highlightActiveLine": {
                 "display": "Highlight Active Line",
                 "i18n": "setting.editor.aceMain.highlightActiveLine",
+                "requiresRestart": True,
             },
             "highlightSelectedWord": {
                 "display": "Highlight Selected Word",
                 "i18n": "setting.editor.aceMain.highlightSelectedWord",
+                "requiresRestart": True,
             },
             "cursorStyle": {
                 "display": "Cursor Style",
                 "i18n": "setting.editor.aceMain.cursorStyle",
                 "enum": ["smooth", "slim", "wide", "ace", "smoothwide"],
+                "requiresRestart": True,
             },
             "tabSize": {
                 "display": "Tab Size",
                 "i18n": "setting.editor.aceMain.tabSize",
+                "requiresRestart": True,
             },
             "tooltipFollowsMouse": {
                 "display": "Tooltip Follows Mouse",
                 "i18n": "setting.editor.aceMain.tooltipFollowsMouse",
+                "requiresRestart": True,
             },
             "foldStyle": {
                 "display": "Fold Style",
                 "i18n": "setting.editor.aceMain.foldStyle",
                 "enum": ["markbeginend", "manual", "markbegin"],
+                "requiresRestart": True,
             },
         },
         "tie": {
@@ -104,27 +123,33 @@ config_meta = {
             "executable": {
                 "display": "Python: Executable",
                 "i18n": "setting.programmingLanguages.python.executable",
+                "requiresRestart": True,
             },
             "compileCommand": {
                 "display": "Python: Compile Command",
                 "i18n": "setting.programmingLanguages.python.compileCommand",
+                "requiresRestart": True,
             },
             "runCommand": {
                 "display": "Python: Run Command",
                 "i18n": "setting.programmingLanguages.python.runCommand",
+                "requiresRestart": True,
             },
             "fileExtensions": {
                 "display": "Python: File Extensions",
                 "i18n": "setting.programmingLanguages.python.fileExtensions",
+                "requiresRestart": True,
             },
             "alias": {
                 "display": "Python: Alias",
                 "i18n": "setting.programmingLanguages.python.alias",
+                "requiresRestart": True,
             },
             "lsp": {
                 "command": {
                     "display": "Python: LSP Command",
                     "i18n": "setting.programmingLanguages.python.lsp.command",
+                    "requiresRestart": True,
                 },
             },
             "formatter": {
@@ -135,7 +160,7 @@ config_meta = {
                 "action": {
                     "display": "Python: Formatter Action",
                     "i18n": "setting.programmingLanguages.python.formatter.action",
-                    "enum": ["reload", "stdout", " none"],
+                    "enum": ["reload", "stdout", "skip"],
                 },
                 "active": {
                     "display": "Python: Formatter Active",
@@ -151,27 +176,33 @@ config_meta = {
             "executable": {
                 "display": "C++: Executable",
                 "i18n": "setting.programmingLanguages.cpp.executable",
+                "requiresRestart": True,
             },
             "compileCommand": {
                 "display": "C++: Compile Command",
                 "i18n": "setting.programmingLanguages.cpp.compileCommand",
+                "requiresRestart": True,
             },
             "runCommand": {
                 "display": "C++: Run Command",
                 "i18n": "setting.programmingLanguages.cpp.runCommand",
+                "requiresRestart": True,
             },
             "fileExtensions": {
                 "display": "C++: File Extensions",
                 "i18n": "setting.programmingLanguages.cpp.fileExtensions",
+                "requiresRestart": True,
             },
             "alias": {
                 "display": "C++: Alias",
                 "i18n": "setting.programmingLanguages.cpp.alias",
+                "requiresRestart": True,
             },
             "lsp": {
                 "command": {
                     "display": "C++: LSP Command",
                     "i18n": "setting.programmingLanguages.cpp.lsp.command",
+                    "requiresRestart": True,
                 },
             },
             "formatter": {
@@ -182,7 +213,7 @@ config_meta = {
                 "action": {
                     "display": "C++: Formatter Action",
                     "i18n": "setting.programmingLanguages.cpp.formatter.action",
-                    "enum": ["reload", "stdout", " none"],
+                    "enum": ["reload", "stdout", "skip"],
                 },
                 "active": {
                     "display": "C++: Formatter Active",
@@ -198,10 +229,12 @@ config_meta = {
             "alias": {
                 "display": "JSON: Alias",
                 "i18n": "setting.programmingLanguages.json.alias",
+                "requiresRestart": True,
             },
             "fileExtensions": {
                 "display": "JSON: File Extensions",
                 "i18n": "setting.programmingLanguages.json.fileExtensions",
+                "requiresRestart": True,
             },
         },
     },
@@ -209,10 +242,12 @@ config_meta = {
         "runJudge": {
             "display": "Run Judge",
             "i18n": "setting.keyboardShortcuts.runJudge",
+            "requiresRestart": True,
         },
         "formatCode": {
             "display": "Format Code",
             "i18n": "setting.keyboardShortcuts.formatCode",
+            "requiresRestart": True,
         },
     },
 }
@@ -222,7 +257,7 @@ config = {
             "fontSize": 14,
             "fontFamily": "Maple Mono, Maple Mono NF CN, Fira Code, monospace",
             "enableBasicAutocompletion": True,
-            "enableSnippets": False,
+            "enableSnippets": True,
             "enableLiveAutocompletion": True,
             "animatedScroll": True,
             "scrollPastEnd": True,
@@ -250,7 +285,7 @@ config = {
             "alias": ["py", "python", "Python", "python3", "Python3"],
             "display": "Python Source",
             "lsp": {
-                "command": "pylsp",
+                "command": "ty server",
             },
             "formatter": {
                 "active": True,

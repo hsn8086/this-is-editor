@@ -4,23 +4,42 @@ Include methods for managing files, directories, configurations, and test cases,
 as utilities for interacting with the system and running tasks.
 """
 
+import ctypes
 import json
 import platform
 import shlex
+import shutil
+import string
 import subprocess
 import time
 from pathlib import Path
+from typing import cast
 
 import psutil
 from loguru import logger
 
 from .config import config, config_p, merge_meta
 from .config_meta import config_meta
+from .environment import (
+    EnvironmentTool,
+    complete_environment_setup,
+    is_environment_setup_complete,
+    scan_environment,
+    select_environment_tool,
+)
 from .judge import cph2testcase, task_checker
-from .langs import lang_compilers, lang_runners, langs, type_mp
+from .langs import (
+    lang_compilers,
+    lang_runners,
+    langs,
+    refresh_language_config,
+    type_mp,
+)
 from .user_data import user_data_dir
 from .utils import formatter as fmt
 from .watch import Watcher
+
+type FileInfo = dict[str, str | bool | int]
 
 
 class Api:
@@ -37,13 +56,13 @@ class Api:
             if p.is_dir():
                 self.cwd = p
 
-        self.opened_file: Path = self.cwd / ".tie.temp.txt"
+        self.opened_file: Path | None = self.cwd / ".tie.temp.txt"
         if self.opened_file.exists():
             self.opened_file.unlink()
 
-        self._path_hashes = self._build_path_hashes(
-            [self.cwd, self.cwd_save_path, self.opened_file],
-        )
+        self._path_hashes = self._build_path_hashes([self.cwd, self.cwd_save_path])
+        if self.opened_file is not None:
+            self._path_hashes.update(self._get_path_hashes(self.opened_file))
 
         self.opened_testcase_file = None
         self.watcher: Watcher = Watcher(self._callback)
@@ -57,11 +76,11 @@ class Api:
         """
         logger.debug(f"File modified: {path}")
 
-        if Path(path) != self.opened_file:
+        if self.opened_file is None or Path(path) != self.opened_file:
             return
         if not Path(path).exists():
             return
-        from .web import window
+        from .web import window  # noqa: PLC0415
 
         if window is None:
             return
@@ -95,17 +114,127 @@ class Api:
             current = parent if parent != current else None
         return hashes
 
-    def get_pinned_files(self) -> list[str]:
+    def _testcase_paths_for_source(self, path: Path) -> list[Path]:
+        cph_folder = path.parent / ".cph"
+        if not cph_folder.exists():
+            return []
+
+        prefixes = (f".{path.name}_", f".{path.name}.prob")
+        return [
+            item
+            for item in cph_folder.iterdir()
+            if item.name.startswith(prefixes[0]) or item.name == prefixes[1]
+        ]
+
+    def _move_testcase_files(self, source: Path, target: Path) -> None:
+        if target.is_dir():
+            return
+
+        target_cph_folder = target.parent / ".cph"
+        target_cph_folder.mkdir(parents=True, exist_ok=True)
+        for testcase_path in self._testcase_paths_for_source(source):
+            target_name = testcase_path.name.replace(source.name, target.name, 1)
+            new_testcase_path = target_cph_folder / target_name
+            testcase_data = json.loads(testcase_path.read_text(encoding="utf-8"))
+            testcase_data["name"] = target.name
+            testcase_data["srcPath"] = target.name
+            testcase_data["url"] = str(target)
+            new_testcase_path.write_text(
+                json.dumps(testcase_data, indent=4),
+                encoding="utf-8",
+            )
+            testcase_path.unlink()
+
+    def _delete_testcase_files(self, path: Path) -> None:
+        if path.is_dir():
+            for child in path.rglob("*"):
+                if child.is_file():
+                    self._delete_testcase_files(child)
+            return
+
+        for testcase_path in self._testcase_paths_for_source(path):
+            testcase_path.unlink()
+
+    def _get_compiled_artifact_path(self, lang: str) -> Path | None:
+        if self.opened_file is None:
+            return None
+
+        opened_file = self.opened_file
+
+        def resolve_candidate(command_part: str) -> Path:
+            resolved = Path(fmt(command_part, file_path=opened_file))
+            return resolved if resolved.is_absolute() else opened_file.parent / resolved
+
+        compile_command = (
+            config.get("programmingLanguages", {})
+            .get(lang, {})
+            .get(
+                "compileCommand",
+                "",
+            )
+        )
+        if not compile_command:
+            return None
+
+        command_parts = shlex.split(compile_command)
+        if "-o" in command_parts:
+            output_index = command_parts.index("-o") + 1
+            if output_index < len(command_parts):
+                artifact_path = resolve_candidate(command_parts[output_index])
+                if artifact_path.exists():
+                    return artifact_path
+
+        run_command = (
+            config.get("programmingLanguages", {})
+            .get(lang, {})
+            .get(
+                "runCommand",
+                "",
+            )
+        )
+        if not run_command:
+            return None
+
+        run_command_parts = shlex.split(run_command)
+        if not run_command_parts:
+            return None
+
+        candidate_parts = run_command_parts
+        if candidate_parts[0] == "{executable}" and len(candidate_parts) > 1:
+            candidate_parts = candidate_parts[1:]
+
+        return resolve_candidate(candidate_parts[0])
+
+    def _cleanup_compiled_artifact(self, lang: str) -> None:
+        artifact_path = self._get_compiled_artifact_path(lang)
+        if (
+            artifact_path is None
+            or not artifact_path.exists()
+            or artifact_path == self.opened_file
+        ):
+            return
+
+        artifact_path.unlink()
+
+    def cleanup_compiled_artifact(self, lang: str | None = None) -> None:
+        """Remove the compiled artifact for the currently opened file, if any."""
+        if lang is None:
+            lang = self.get_code().get("type", None)
+        if not isinstance(lang, str):
+            return
+        self._cleanup_compiled_artifact(lang)
+
+    def get_pinned_files(self) -> list[FileInfo]:
         """Get a list of pinned files with metadata.
 
         Returns:
-            list[str]: List of pinned file metadata dictionaries.
+            list[FileInfo]: List of pinned file metadata dictionaries.
 
         """
         pinned_p = user_data_dir / "pinned.txt"
         if not pinned_p.exists():
             return []
-        rst = []
+        rst: list[FileInfo] = []
         for line in pinned_p.read_text(encoding="utf-8").splitlines():
             stripped_line = line.strip()
             if stripped_line and (path := Path(stripped_line)).exists():
@@ -122,15 +251,21 @@ class Api:
                             "%Y-%m-%d %H:%M:%S",
                             time.localtime(path.stat().st_mtime),
                         ),
-                        "type": "Directory"
-                        if path.is_dir()
-                        else type_mp.get(path.suffix.lower(), {}).get(
-                            "display",
-                            "File",
+                        "type": str(
+                            "Directory"
+                            if path.is_dir()
+                            else type_mp.get(path.suffix.lower(), {}).get(
+                                "display",
+                                "File",
+                            ),
                         ),
                     },
                 )
         return rst
+
+    def shutdown(self) -> None:
+        """Stop background resources owned by the API instance."""
+        self.watcher.stop()
 
     def add_pinned_file(self, path: str) -> None:
         """Add a file to the pinned files list.
@@ -203,9 +338,6 @@ class Api:
                     "type": "Drive",
                 },
             ]
-        import ctypes
-        import string
-
         drives = []
         bitmask = ctypes.cdll.kernel32.GetLogicalDrives()
         for letter in string.ascii_uppercase:
@@ -236,6 +368,10 @@ class Api:
             ValueError: If language or formatter is not supported or active.
 
         """
+        if self.opened_file is None:
+            msg = "No file is opened."
+            raise ValueError(msg)
+
         code = self.get_code()
         lang = code.get("type", None)
         if lang not in config.get("programmingLanguages", {}):
@@ -248,7 +384,8 @@ class Api:
         if not (cmd := formatter_cfg.get("command", "")).strip():
             msg = f"Formatter command for language {lang} is empty."
             raise ValueError(msg)
-        cmd_list = [fmt(c, file_path=self.opened_file) for c in shlex.split(cmd)]
+        opened_file = self.opened_file
+        cmd_list = [fmt(c, file_path=opened_file) for c in shlex.split(cmd)]
         creationflags = 0
         if platform.system() == "Windows":
             creationflags = int(getattr(subprocess, "CREATE_NO_WINDOW", 0))
@@ -256,7 +393,7 @@ class Api:
             cmd_list,
             creationflags=creationflags,
             shell=platform.system() == "Windows",
-            cwd=self.opened_file.parent,
+            cwd=opened_file.parent,
             text=True,
         )
 
@@ -318,17 +455,19 @@ class Api:
             raise ValueError(msg)
         task = self.get_testcase().get("tests", [{}])[task_id - 1]
         inp = task.get("input", "")
-        output, status, time, memory = lang_runners[lang](
-            self.opened_file,
+        output, stderr, status, time, memory = lang_runners[lang](
+            cast("Path", self.opened_file),
             inp,
             memory_limit=memory_limit,
             timeout=timeout,
         )
+        stdout = output
         answer = task.get("answer", "")
         if status == "success":
-            status = "success" if task_checker(output, answer) else "failed"
+            status = "success" if task_checker(stdout, answer) else "failed"
         return {
-            "result": output,
+            "result": stdout,
+            "stderr": stderr,
             "status": status,
             "time": time,
             "memory": memory,
@@ -343,6 +482,28 @@ class Api:
         """
         return merge_meta(config_meta, config)
 
+    def scan_environment(self) -> list[EnvironmentTool]:
+        """Discover and verify supported development tools."""
+        return scan_environment()
+
+    def select_environment_tool(
+        self,
+        tool_id: str,
+        executable_path: str,
+    ) -> list[EnvironmentTool]:
+        """Select one discovered executable for a supported tool."""
+        results = select_environment_tool(tool_id, executable_path)
+        refresh_language_config()
+        return results
+
+    def is_environment_setup_complete(self) -> bool:
+        """Return whether first-run environment setup was completed."""
+        return is_environment_setup_complete()
+
+    def complete_environment_setup(self) -> None:
+        """Mark first-run environment setup as completed."""
+        complete_environment_setup()
+
     def compile(self) -> str:
         """Compile the currently opened code file.
 
@@ -350,13 +511,18 @@ class Api:
             str: Compilation result ("success" or error message).
 
         """
+        opened_file = self.opened_file
+        if opened_file is None:
+            logger.warning("No file is opened for compilation.")
+            return "success"
+
         lang_info = self.get_code().get("type", None)
         if lang_info not in lang_compilers:
             logger.warning(f"Language {lang_info} is not supported for compilation.")
             return "success"
         compile_func = lang_compilers[lang_info]
         try:
-            compile_func(self.opened_file)
+            compile_func(opened_file)
         except (FileNotFoundError, ValueError, RuntimeError) as e:
             return str(e)
         return "success"
@@ -368,8 +534,9 @@ class Api:
             dict: Test case dictionary.
 
         """
+        opened_file = cast("Path", self.opened_file)
         none_testcase = {
-            "name": self.opened_file.name,
+            "name": opened_file.name,
             "tests": [],
             "memoryLimit": 1024,
             "timeLimit": 3,
@@ -378,12 +545,12 @@ class Api:
             return cph2testcase(
                 json.loads(Path(self.opened_testcase_file).read_text(encoding="utf-8")),
             )
-        cph_floder_p = self.opened_file.parent / ".cph"
+        cph_floder_p = opened_file.parent / ".cph"
         if not cph_floder_p.exists():
             return none_testcase
         for p in cph_floder_p.iterdir():
-            if p.name.startswith("." + self.opened_file.name + "_") or p.name == (
-                "." + self.opened_file.name + ".prob"
+            if p.name.startswith("." + opened_file.name + "_") or p.name == (
+                "." + opened_file.name + ".prob"
             ):
                 self.opened_testcase_file = p
                 return cph2testcase(json.loads(p.read_text(encoding="utf-8")))
@@ -397,21 +564,23 @@ class Api:
 
         """
         if self.opened_testcase_file is None:
-            cph_floder_p = self.opened_file.parent / ".cph"
+            opened_file = cast("Path", self.opened_file)
+            cph_floder_p = opened_file.parent / ".cph"
             cph_floder_p.mkdir(parents=True, exist_ok=True)
             self.opened_testcase_file = cph_floder_p / (
-                "." + self.opened_file.name + ".prob"
+                "." + opened_file.name + ".prob"
             )
         p = self.opened_testcase_file
+        opened_file = cast("Path", self.opened_file)
         j = {
-            "name": testcase.get("name", self.opened_file.name),
+            "name": testcase.get("name", opened_file.name),
             "memoryLimit": testcase.get("memoryLimit", 1024),
             "timeLimit": testcase.get("timeLimit", 3) * 1000,
             "tests": [],
             "local": True,
             "group": "local",
-            "srcPath": self.opened_file.name,
-            "url": str(self.opened_file),
+            "srcPath": opened_file.name,
+            "url": str(opened_file),
             "interactive": False,
         }
         for test in testcase.get("tests", []):
@@ -424,7 +593,11 @@ class Api:
             )
         p.write_text(json.dumps(j, indent=4), encoding="utf-8")
 
-    def set_config(self, id_str: str, value: str | bool | float) -> None:
+    def set_config(
+        self,
+        id_str: str,
+        value: str | bool | float,  # noqa: FBT001
+    ) -> None:
         """Set a configuration value.
 
         Args:
@@ -443,6 +616,8 @@ class Api:
         else:
             config[id_str] = value
         config_p.write_text(json.dumps(config, indent=4), encoding="utf-8")
+        if id_str.startswith("programmingLanguages."):
+            refresh_language_config()
 
     def get_config_path(self) -> str:
         """Get the path to the configuration file.
@@ -469,7 +644,7 @@ class Api:
             int: Server port number.
 
         """
-        from .web import port
+        from .web import port  # noqa: PLC0415
 
         return port
 
@@ -589,11 +764,11 @@ class Api:
             raise ValueError(msg)
         return f"file://{p.as_posix()}"
 
-    def path_ls(self, path: None | str) -> dict:
+    def path_ls(self, path: str | None) -> dict:
         """List files in a directory.
 
         Args:
-            path (None | str): Directory path or None for cwd.
+            path (str | None): Directory path or None for cwd.
 
         Returns:
             dict: Directory listing and metadata.
@@ -605,7 +780,7 @@ class Api:
             try:
                 rst.append(self.path_get_info(str(f)))
             except (FileNotFoundError, PermissionError) as e:
-                logger.opt(exception=e).warning(f"Failed to get info for {f}: {e}")
+                logger.warning("Failed to get info for {}: {}", f, e)
         rst.sort(key=lambda x: (not x["is_dir"], x["name"].lower()))
         return {
             "now_path": str(p),
@@ -647,21 +822,24 @@ class Api:
             dict: Metadata dictionary.
 
         """
-        if not Path(path).exists():
+        p = Path(path)
+        exists = p.exists()
+        is_symlink = p.is_symlink()
+        if not exists and not is_symlink:
             msg = f"{path} does not exist."
             raise FileNotFoundError(msg)
-        p = Path(path)
+        stat = p.stat() if exists else p.lstat()
         return {
             "name": p.name,
             "stem": p.stem,
             "path": str(p),
             "is_dir": p.is_dir(),
             "is_file": p.is_file(),
-            "is_symlink": p.is_symlink(),
-            "size": p.stat().st_size,
+            "is_symlink": is_symlink,
+            "size": stat.st_size,
             "last_modified": time.strftime(
                 "%Y-%m-%d %H:%M:%S",
-                time.localtime(p.stat().st_mtime),
+                time.localtime(stat.st_mtime),
             ),
             "type": "Directory"
             if p.is_dir()
@@ -737,3 +915,64 @@ class Api:
             p.mkdir(parents=True, exist_ok=True)
             return {"status": "success", "message": f"{p} created."}
         return {"status": "warning", "message": f"{p} already exists."}
+
+    def path_rename(self, source: str, target: str) -> dict:
+        """Rename or move a file or directory.
+
+        Args:
+            source (str): Existing source path.
+            target (str): New destination path.
+
+        Returns:
+            dict: Status and message.
+
+        """
+        source_path = Path(source)
+        target_path = Path(target)
+        if not source_path.exists():
+            msg = f"{source_path} does not exist."
+            raise FileNotFoundError(msg)
+        if target_path.exists():
+            return {"status": "warning", "message": f"{target_path} already exists."}
+
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        source_path.rename(target_path)
+        self._move_testcase_files(source_path, target_path)
+
+        if self.opened_file == source_path:
+            self.opened_file = target_path
+            self.opened_testcase_file = None
+
+        return {
+            "status": "success",
+            "message": f"{source_path} renamed to {target_path}.",
+        }
+
+    def path_delete(self, path: str) -> dict:
+        """Delete a file or directory.
+
+        Args:
+            path (str): Path to delete.
+
+        Returns:
+            dict: Status and message.
+
+        """
+        target = Path(path)
+        if not target.exists():
+            return {"status": "warning", "message": f"{target} does not exist."}
+
+        self._delete_testcase_files(target)
+
+        if target.is_dir():
+            target.rmdir() if not any(target.iterdir()) else shutil.rmtree(target)
+        else:
+            target.unlink()
+
+        if self.opened_file is not None and (
+            self.opened_file == target or target in self.opened_file.parents
+        ):
+            self.opened_file = self.cwd / ".tie.temp.txt"
+            self.opened_testcase_file = None
+
+        return {"status": "success", "message": f"{target} deleted."}

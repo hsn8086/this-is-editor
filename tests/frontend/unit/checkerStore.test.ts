@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
-import { useCheckerStore, type TaskItem, type TaskStatus, type RunStatus } from '@/stores/checker'
 import type { TestCase } from '@/pywebview-defines'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { type RunStatus, type TaskItem, type TaskStatus, useCheckerStore } from '@/stores/checker'
 
 describe('checker Store', () => {
   beforeEach(() => {
@@ -253,12 +253,13 @@ describe('checker Store', () => {
 
       store.resetAllTasksStatus()
 
-      store.tasks.forEach(task => {
+      for (const task of store.tasks) {
         expect(task.status).toBe('pending')
         expect(task.output).toBe('')
+        expect(task.stderr).toBe('')
         expect(task.time).toBeUndefined()
         expect(task.memory).toBeUndefined()
-      })
+      }
       expect(store.completedTasks).toBe(0)
     })
 
@@ -271,9 +272,9 @@ describe('checker Store', () => {
 
       store.collapseAllTasks()
 
-      store.tasks.forEach(task => {
+      for (const task of store.tasks) {
         expect(task.expend).toBe(false)
-      })
+      }
     })
 
     it('expandTask should set expend to true for specific task', () => {
@@ -309,11 +310,12 @@ describe('checker Store', () => {
 })
 
 // Helper function to create task items
-function createTask(
+function createTask (
   id: number,
   status: TaskStatus = 'null',
   input = '',
   output = '',
+  stderr = '',
   answer = '',
   time?: number,
   memory?: number,
@@ -323,6 +325,7 @@ function createTask(
     id,
     input,
     output,
+    stderr,
     answer,
     status,
     expend,

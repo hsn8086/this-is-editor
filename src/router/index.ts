@@ -3,10 +3,11 @@
  *
  * Automatic routes for `./src/pages/*.vue`
  */
+/* eslint-disable import/no-duplicates -- auto-router exposes routes through separate virtual modules */
 
+import { setupLayouts } from 'virtual:generated-layouts'
 // Composables
 import { createRouter, createWebHistory } from 'vue-router/auto'
-import { setupLayouts } from 'virtual:generated-layouts'
 import { routes } from 'vue-router/auto-routes'
 
 const router = createRouter({
@@ -14,14 +15,23 @@ const router = createRouter({
   routes: setupLayouts(routes),
 })
 
+function getLocalStorage (): Storage | undefined {
+  try {
+    return window.localStorage
+  } catch {
+    return undefined
+  }
+}
+
 // Workaround for https://github.com/vitejs/vite/issues/11804
 router.onError((err, to) => {
   if (err?.message?.includes?.('Failed to fetch dynamically imported module')) {
-    if (localStorage.getItem('vuetify:dynamic-reload')) {
+    const storage = getLocalStorage()
+    if (storage?.getItem('vuetify:dynamic-reload')) {
       console.error('Dynamic import error, reloading page did not fix it', err)
     } else {
       console.log('Reloading page to fix dynamic import error')
-      localStorage.setItem('vuetify:dynamic-reload', 'true')
+      storage?.setItem('vuetify:dynamic-reload', 'true')
       location.assign(to.fullPath)
     }
   } else {
@@ -30,7 +40,7 @@ router.onError((err, to) => {
 })
 
 router.isReady().then(() => {
-  localStorage.removeItem('vuetify:dynamic-reload')
+  getLocalStorage()?.removeItem('vuetify:dynamic-reload')
 })
 
 export default router

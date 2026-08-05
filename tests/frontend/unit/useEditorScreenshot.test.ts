@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { ref, nextTick } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick, ref } from 'vue'
 import { useEditorScreenshot, type UseEditorScreenshotOptions } from '@/composables/editor/useEditorScreenshot'
 
 // Mock html2canvas
@@ -37,7 +37,7 @@ describe('useEditorScreenshot Composable', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    
+
     // 创建模拟的 Ace Editor 实例
     mockEditor = {
       getSelectedText: vi.fn().mockReturnValue(''),
@@ -78,6 +78,10 @@ describe('useEditorScreenshot Composable', () => {
     // 模拟 html2canvas
     const mockHtml2canvas = await import('html2canvas')
     vi.mocked(mockHtml2canvas.default).mockResolvedValue(mockCanvas)
+    const mockHighlighter = await import('highlight.js')
+    vi.mocked(mockHighlighter.default.highlightAuto).mockReturnValue({
+      value: '<span class="hljs-keyword">test</span>',
+    })
 
     // Mock ClipboardItem
     mockClipboardItem = vi.fn()
@@ -143,19 +147,23 @@ describe('useEditorScreenshot Composable', () => {
     it('should capture selected text when selection exists', async () => {
       const selectedText = 'const x = 1;'
       mockEditor.getSelectedText.mockReturnValue(selectedText)
-      
+
       const editorRef = ref(mockEditor)
       const { takeScreenshot, isCapturing } = useEditorScreenshot({ editor: editorRef })
 
       await takeScreenshot()
+      const { default: html2canvas } = await import('html2canvas')
+      const { default: highlighter } = await import('highlight.js')
 
       expect(mockEditor.getSelectedText).toHaveBeenCalled()
+      expect(html2canvas).toHaveBeenCalledOnce()
+      expect(highlighter.highlightAuto).toHaveBeenCalledWith(selectedText)
       expect(isCapturing.value).toBe(false)
     })
 
     it('should capture all content when no selection', async () => {
       mockEditor.getSelectedText.mockReturnValue('')
-      
+
       const editorRef = ref(mockEditor)
       const { takeScreenshot, isCapturing } = useEditorScreenshot({ editor: editorRef })
 
@@ -171,9 +179,9 @@ describe('useEditorScreenshot Composable', () => {
       const { takeScreenshot, isCapturing } = useEditorScreenshot({ editor: editorRef })
 
       expect(isCapturing.value).toBe(false)
-      
+
       await takeScreenshot()
-      
+
       // After completion, should be false
       expect(isCapturing.value).toBe(false)
     })
@@ -193,7 +201,7 @@ describe('useEditorScreenshot Composable', () => {
     it('should handle empty content', async () => {
       mockEditor.getSelectedText.mockReturnValue('')
       mockEditor.getValue.mockReturnValue('   ') // whitespace only
-      
+
       const editorRef = ref(mockEditor)
       const { takeScreenshot, error, isCapturing } = useEditorScreenshot({ editor: editorRef })
 
@@ -208,7 +216,7 @@ describe('useEditorScreenshot Composable', () => {
       const { default: html2canvas } = await import('html2canvas')
       const originalMock = vi.mocked(html2canvas)
       originalMock.mockRejectedValueOnce(new Error('Canvas rendering failed'))
-      
+
       const editorRef = ref(mockEditor)
       const { takeScreenshot, error, isCapturing } = useEditorScreenshot({ editor: editorRef })
 
@@ -227,7 +235,7 @@ describe('useEditorScreenshot Composable', () => {
 
       // Taking screenshot should complete without throwing
       await expect(takeScreenshot()).resolves.not.toThrow()
-      
+
       // After completion, isCapturing should be false
       expect(isCapturing.value).toBe(false)
     })
@@ -239,7 +247,7 @@ describe('useEditorScreenshot Composable', () => {
         writable: true,
         configurable: true,
       })
-      
+
       const editorRef = ref(mockEditor)
       const { takeScreenshot } = useEditorScreenshot({ editor: editorRef })
 
@@ -249,7 +257,7 @@ describe('useEditorScreenshot Composable', () => {
 
     it('should handle clipboard write failure gracefully', async () => {
       mockClipboard.write.mockRejectedValueOnce(new Error('Clipboard error'))
-      
+
       const editorRef = ref(mockEditor)
       const { takeScreenshot } = useEditorScreenshot({ editor: editorRef })
 
@@ -263,7 +271,7 @@ describe('useEditorScreenshot Composable', () => {
         writable: true,
         configurable: true,
       })
-      
+
       const editorRef = ref(mockEditor)
       const { takeScreenshot } = useEditorScreenshot({ editor: editorRef })
 

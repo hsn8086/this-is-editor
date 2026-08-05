@@ -67,6 +67,7 @@ vi.mock('ace-linters/build/ace-language-client', () => ({
       registerEditor: vi.fn(),
       closeDocument: vi.fn(),
       format: vi.fn(),
+      changeWorkspaceFolder: vi.fn(),
     })),
   },
 }))
@@ -92,9 +93,11 @@ beforeAll(() => {
     get_scoll: vi.fn().mockResolvedValue(0),
     get_cpu_count: vi.fn().mockResolvedValue([4, 8]),
     compile: vi.fn().mockResolvedValue('success'),
+    cleanup_compiled_artifact: vi.fn().mockResolvedValue(undefined),
     run_task: vi.fn().mockResolvedValue({
       result: 'Accepted',
-      status: 'Done',
+      stderr: '',
+      status: 'success',
       time: 100,
       memory: 1024,
     }),
@@ -115,6 +118,10 @@ beforeAll(() => {
       keyboardShortcuts: {},
     }),
     get_config_path: vi.fn().mockResolvedValue('/mock/config/path'),
+    scan_environment: vi.fn().mockResolvedValue([]),
+    select_environment_tool: vi.fn().mockResolvedValue([]),
+    is_environment_setup_complete: vi.fn().mockResolvedValue(false),
+    complete_environment_setup: vi.fn().mockResolvedValue(undefined),
     get_langs: vi.fn().mockResolvedValue([]),
     get_port: vi.fn().mockReturnValue(8000),
     get_code: vi.fn().mockResolvedValue({
@@ -149,6 +156,8 @@ beforeAll(() => {
     path_save_text: vi.fn().mockResolvedValue(undefined),
     path_mkdir: vi.fn().mockResolvedValue({ status: 'success', message: '' }),
     path_touch: vi.fn().mockResolvedValue({ status: 'success', message: '' }),
+    path_rename: vi.fn().mockResolvedValue({ status: 'success', message: '' }),
+    path_delete: vi.fn().mockResolvedValue({ status: 'success', message: '' }),
   }
 
   // Mock pywebview state
@@ -173,33 +182,34 @@ class MockWebSocket {
   static OPEN = 1
   static CLOSING = 2
   static CLOSED = 3
-  
+
   readyState = MockWebSocket.CONNECTING
   onopen: ((event: any) => void) | null = null
   onclose: ((event: any) => void) | null = null
   onmessage: ((event: any) => void) | null = null
   onerror: ((event: any) => void) | null = null
-  
-  constructor(public url: string) {
-    setTimeout(() => {
-      this.readyState = MockWebSocket.OPEN
-      if (this.onopen) this.onopen({})
-    }, 0)
-  }
-  
   send = vi.fn()
   close = vi.fn()
+
+  constructor (public url: string) {
+    setTimeout(() => {
+      this.readyState = MockWebSocket.OPEN
+      if (this.onopen) {
+        this.onopen({})
+      }
+    }, 0)
+  }
 }
 
 vi.stubGlobal('WebSocket', MockWebSocket)
 
 // Mock html2canvas
 vi.mock('html2canvas', () => ({
-  default: vi.fn().mockImplementation(() => 
+  default: vi.fn().mockImplementation(() =>
     Promise.resolve({
-      toBlob: vi.fn((callback) => callback(null)),
+      toBlob: vi.fn(callback => callback(null)),
       toDataURL: vi.fn().mockReturnValue('data:image/png;base64,mock'),
-    })
+    }),
   ),
 }))
 
@@ -220,7 +230,7 @@ vi.mock('vue-i18n', () => ({
 }))
 
 // Mock Vue hooks - use importOriginal to get actual Vue exports
-vi.mock('vue', async (importOriginal) => {
+vi.mock('vue', async importOriginal => {
   const actual = await importOriginal() as any
   return {
     ...actual,

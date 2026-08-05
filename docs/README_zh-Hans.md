@@ -47,18 +47,18 @@ ___
 1. 请在 [此处](https://github.com/hsn8086/this-is-editor/releases/latest) 下载最新版本的 TIE。
 2. 安装 **Python** 和 **C++** 环境。
 3. 可选安装：
-   - **`python-lsp-server`**：提升 Python 代码补全和错误提示体验。
+   - **`ty`**：提升 Python 代码补全和类型错误诊断体验。
    - **`clangd`**：提升 C++ 代码补全和错误提示体验。
    - **`Competitive Companion`** 浏览器插件：快速载入测试数据。
    - **`clang-format` `ruff`** 等代码格式化工具：一键格式化代码。
 💡 **推荐字体**：为了获得更好的代码显示效果，建议使用 [Maple Mono](https://github.com/subframe7536/Maple-font) 字体。
 
-### python-lsp-server
+### ty
 请先安装`python`环境以及`pip`。推荐使用`pipx`。
 ```bash
 pip install pipx
 pipx ensurepath
-pipx install python-lsp-server
+pipx install ty
 ```
 
 ### clangd
@@ -88,6 +88,12 @@ pipx install python-lsp-server
    ```bash
    yarn build
    ```
+
+测试环境扫描时，可以使用临时的 TIE 用户数据根目录启动：
+```bash
+uv run main.py --debug --dev-user-data-dir .dev-user
+```
+测试使用的 `data`、`config` 和 `log` 目录都会创建在该根目录下。
 
 ---
 

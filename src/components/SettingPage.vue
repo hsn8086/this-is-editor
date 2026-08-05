@@ -1,24 +1,24 @@
 <template>
   <v-card :title="$t('settingPage.title')">
-    <template v-slot:title>
+    <template #title>
       <div class="d-flex justify-space-between align-center">
         <span>{{ $t("settingPage.title") }}</span>
         <v-text-field
           v-model="search"
-          prepend-inner-icon="mdi-magnify"
           class="ma-2"
           dense
           density="compact"
           hide-details
-          variant="solo-filled"
-          style="max-width: 300px"
           :placeholder="$t('settingPage.search')"
+          prepend-inner-icon="mdi-magnify"
+          style="max-width: 300px"
+          variant="solo-filled"
         />
       </div>
     </template>
 
     <v-list dense>
-      <template v-for="[group, cfg] in config">
+      <template v-for="[group, cfg] in config" :key="group">
         <v-list-subheader>{{
           $t(`settingPage.group.${group}`)
         }}</v-list-subheader>
@@ -35,41 +35,55 @@
             class="d-flex justify-space-between align-center"
             style="width: 100%"
           >
-            <v-list-item-title class="text-left">{{
-              $t("settingPage." + item.i18n)
-            }}</v-list-item-title>
+            <div class="d-flex align-center text-left flex-grow-1 mr-2">
+              <v-list-item-title>
+                {{ $t("settingPage." + item.i18n) }}
+              </v-list-item-title>
+              <v-tooltip v-if="item.requiresRestart" location="top">
+                <template #activator="{ props }">
+                  <v-icon
+                    v-bind="props"
+                    class="ml-2 flex-shrink-0 text-medium-emphasis"
+                    size="14"
+                  >
+                    mdi-information-outline
+                  </v-icon>
+                </template>
+                {{ $t('settingPage.restartRequired') }}
+              </v-tooltip>
+            </div>
             <v-select
               v-if="item.enum"
               v-model="item.value"
-              :items="item.enum"
-              @update:model-value="changeConfig(item.id, item.value)"
-              :label="$t('settingPage.' + item.i18n)"
               class="flex-grow-1 ma-2"
+              :items="item.enum"
+              :label="$t('settingPage.' + item.i18n)"
               max-width="300"
+              @update:model-value="changeConfig(item.id, item.value)"
             />
             <v-text-field
               v-else-if="typeof item.value === 'string'"
               v-model="item.value"
-              @update:focused="changeConfig(item.id, item.value)"
-              :label="$t('settingPage.' + item.i18n)"
               class="flex-grow-1 ma-2"
+              :label="$t('settingPage.' + item.i18n)"
               max-width="300"
+              @update:focused="changeConfig(item.id, item.value)"
             />
             <v-text-field
               v-else-if="typeof item.value === 'number'"
               v-model.number="item.value"
-              @update:focused="changeConfig(item.id, item.value)"
-              :label="$t('settingPage.' + item.i18n)"
-              type="number"
               class="flex-grow-1 ma-2"
+              :label="$t('settingPage.' + item.i18n)"
               max-width="300"
+              type="number"
+              @update:focused="changeConfig(item.id, item.value)"
             />
             <v-switch
               v-else-if="typeof item.value === 'boolean'"
               v-model="item.value"
-              @change="changeConfig(item.id, item.value)"
               class="ma-2"
               variant="tonal"
+              @change="changeConfig(item.id, item.value)"
             />
 
             <v-combobox
@@ -77,28 +91,28 @@
                 typeof item.value === 'object' && Array.isArray(item.value)
               "
               v-model="item.value"
-              :label="$t('settingPage.' + item.i18n)"
-              @update:model-value="changeConfig(item.id, item.value)"
               chips
+              class="flex-grow-1 ma-2"
               clearable
               closable-chips
               hide-selected
-              multiple
+              :label="$t('settingPage.' + item.i18n)"
               max-width="300"
-              class="flex-grow-1 ma-2"
+              multiple
+              @update:model-value="changeConfig(item.id, item.value)"
             >
-              <template v-slot:chip="{ props, item }">
+              <template #chip="{ props, item: chipItem }">
                 <v-chip v-bind="props" label size="x-small">
-                  {{ item.raw }}
+                  {{ chipItem.raw }}
                 </v-chip>
               </template>
             </v-combobox>
             <v-btn
               v-else
-              prepend-icon="mdi-file-edit-outline"
-              @click="openConfigFile()"
               class="ma-2"
+              prepend-icon="mdi-file-edit-outline"
               variant="tonal"
+              @click="openConfigFile()"
             >
               {{ $t("settingPage.openConfigFile") }}
             </v-btn>
@@ -106,6 +120,12 @@
         </v-list-item>
       </template>
       <v-list-subheader>{{ $t("settingPage.advance") }}</v-list-subheader>
+      <v-list-item
+        data-test="environment-diagnostics"
+        prepend-icon="mdi-tools"
+        :title="$t('settingPage.environmentDiagnostics')"
+        @click="openEnvironmentDiagnostics()"
+      />
       <v-list-item
         prepend-icon="mdi-file-edit-outline"
         :title="$t('settingPage.openConfigFile')"
@@ -123,62 +143,66 @@
   </v-card>
 </template>
 <script lang="ts" setup>
-import { ref } from "vue";
-import { type Config } from "@/pywebview-defines";
-import { useTheme } from "vuetify";
-import { useRouter } from "vue-router";
-import { useI18n } from "vue-i18n";
-import type { I18nType } from "@/plugins/i18n";
-import { configService, fileService } from "@/services";
+  import type { I18nType } from '@/plugins/i18n'
+  import { onMounted, ref } from 'vue'
+  import { useI18n } from 'vue-i18n'
+  import { useRouter } from 'vue-router'
+  import { useTheme } from 'vuetify'
+  import { configService, fileService } from '@/services'
 
-const { locale, t } = useI18n();
-const theme = useTheme();
+  const { locale } = useI18n()
+  const theme = useTheme()
 
-const config = ref<[string, ConfigItem[]][]>([]);
-const search = ref("");
+  const config = ref<[string, ConfigItem[]][]>([])
+  const search = ref('')
 
-onMounted(() => {
-  init();
-});
-type ConfigItem = {
-  id: string;
-  display: string;
-  value: any;
-  group: string;
-  i18n: string;
-  enum?: readonly any[];
-};
-async function changeConfig(id: string, value: any): Promise<void> {
-  await configService.setConfig(id, value);
-  switch (id) {
-    case "editor.tie.theme": {
-      const cfg = await configService.getConfig();
-      if (cfg.editor.tie.theme.value === "dark")
-        theme.global.name.value = "dark";
-      else if (cfg.editor.tie.theme.value === "light")
-        theme.global.name.value = "light";
-      else theme.global.name.value = "system";
-      break;
-    }
-    case "editor.tie.language": {
-      const cfg = await configService.getConfig();
-      locale.value = cfg.editor.tie.language.value as I18nType;
-      break;
+  onMounted(() => {
+    init()
+  })
+  type ConfigItem = {
+    id: string
+    display: string
+    value: any
+    group: string
+    i18n: string
+    requiresRestart?: boolean
+    enum?: readonly any[]
+  }
+  async function changeConfig (id: string, value: any): Promise<void> {
+    await configService.setConfig(id, value)
+    switch (id) {
+      case 'editor.tie.theme': {
+        const cfg = await configService.getConfig()
+        if (cfg.editor.tie.theme.value === 'dark')
+          theme.global.name.value = 'dark'
+        else if (cfg.editor.tie.theme.value === 'light')
+          theme.global.name.value = 'light'
+        else theme.global.name.value = 'system'
+        break
+      }
+      case 'editor.tie.language': {
+        const cfg = await configService.getConfig()
+        locale.value = cfg.editor.tie.language.value as I18nType
+        break
+      }
     }
   }
-}
-async function init() {
-  const cfg = await configService.getConfig();
-  config.value = configService.sortConfig(
-    Array.from(configService.parseConfig(cfg))
-  );
-  console.log("config", config.value);
-}
+  async function init () {
+    const cfg = await configService.getConfig()
+    config.value = configService.sortConfig(
+      Array.from(configService.parseConfig(cfg)),
+    )
+    console.log('config', config.value)
+  }
 
-const router = useRouter();
-async function openConfigFile() {
-  const path = await configService.getConfigPath();
-  await fileService.setOpenedFile(path);
-  await router.push("/editor");
-}
+  const router = useRouter()
+  async function openEnvironmentDiagnostics () {
+    await router.push({ path: '/environment', query: { source: 'settings' } })
+  }
+
+  async function openConfigFile () {
+    const path = await configService.getConfigPath()
+    await fileService.setOpenedFile(path)
+    await router.push('/editor')
+  }
 </script>

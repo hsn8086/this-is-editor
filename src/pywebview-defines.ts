@@ -8,7 +8,9 @@ export interface Code {
 export interface Lang {
   id: string
   display: string
-  lsp: string[]
+  lsp?: {
+    command?: string | string[]
+  }
   suffix: string[]
   alias: string[]
 }
@@ -96,15 +98,38 @@ export interface Config {
 
 export interface TestCase {
   name: string
-  tests: { id: number; input: string; answer: string }[]
+  tests: { id: number, input: string, answer: string }[]
   memoryLimit: number
   timeLimit: number
 }
 export interface TaskResult {
   result: string
+  stderr: string
   status: string
   time: number
   memory: number
+}
+
+export interface EnvironmentTool {
+  id: string
+  name: string
+  toolchain: 'python' | 'cpp'
+  role: 'runtime' | 'analysis' | 'format'
+  required: boolean
+  status: 'ready' | 'missing' | 'error'
+  path: string | null
+  version: string | null
+  source: 'configured' | 'managed' | 'path' | null
+  message: string | null
+  candidates: EnvironmentCandidate[]
+}
+
+export interface EnvironmentCandidate {
+  path: string
+  version: string | null
+  source: 'configured' | 'managed' | 'path'
+  status: 'ready' | 'error'
+  message: string | null
 }
 
 export interface API {
@@ -119,11 +144,16 @@ export interface API {
   get_scoll: () => Promise<number>
   get_cpu_count: () => Promise<[number, number]>
   compile: () => Promise<'success' | string>
+  cleanup_compiled_artifact: (lang?: string) => Promise<void>
   run_task: (task_id: number, memory_limit?: number, timeout?: number) => Promise<TaskResult>
   get_testcase: () => Promise<TestCase>
   save_testcase: (testcase: TestCase) => Promise<void>
   set_config: (id_str: string, value: string | boolean | number) => Promise<void>
   get_config: () => Promise<Config>
+  scan_environment: () => Promise<EnvironmentTool[]>
+  select_environment_tool: (toolId: string, executablePath: string) => Promise<EnvironmentTool[]>
+  is_environment_setup_complete: () => Promise<boolean>
+  complete_environment_setup: () => Promise<void>
   get_config_path: () => Promise<string>
   get_langs: () => Promise<Lang[]>
   get_port: () => number
@@ -142,6 +172,8 @@ export interface API {
   path_save_text: (path: string, text: string) => Promise<void>
   path_mkdir: (path: string) => Promise<Response>
   path_touch: (path: string) => Promise<Response>
+  path_rename: (source: string, target: string) => Promise<Response>
+  path_delete: (path: string) => Promise<Response>
 }
 // window.state.probQueue
 declare global {

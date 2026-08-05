@@ -8,6 +8,7 @@ This module contains P0 level tests for the Api class, focusing on:
 - Exception handling
 """
 
+import json
 from collections.abc import Callable, Generator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -132,6 +133,74 @@ class TestApiSaveCode:
             api_with_tmp_path.save_code("some code")
 
 
+class TestApiFormatCode:
+    """Tests for formatter command execution."""
+
+    def test_format_code_executes_configured_command(
+        self,
+        tmp_path: Path,
+        api_with_file: Api,
+    ) -> None:
+        """Test formatter placeholders and process options."""
+        formatter_config = {
+            "programmingLanguages": {
+                "python": {
+                    "formatter": {
+                        "active": True,
+                        "command": "ruff format {file}",
+                    },
+                },
+            },
+        }
+
+        with patch("pysrc.js_api.config", formatter_config):
+            with patch("pysrc.js_api.platform.system", return_value="Linux"):
+                with patch(
+                    "pysrc.js_api.subprocess.check_output",
+                    return_value="formatted code",
+                ) as check_output:
+                    result = api_with_file.format_code()
+
+        assert result == "formatted code"
+        check_output.assert_called_once_with(
+            ["ruff", "format", str(tmp_path / "test.py")],
+            creationflags=0,
+            shell=False,
+            cwd=tmp_path,
+            text=True,
+        )
+
+    def test_format_code_rejects_inactive_formatter(
+        self,
+        api_with_file: Api,
+    ) -> None:
+        """Test inactive formatters are not executed."""
+        formatter_config = {
+            "programmingLanguages": {
+                "python": {
+                    "formatter": {
+                        "active": False,
+                        "command": "ruff format {file}",
+                    },
+                },
+            },
+        }
+
+        with patch("pysrc.js_api.config", formatter_config):
+            with pytest.raises(ValueError, match="is not active"):
+                api_with_file.format_code()
+
+    def test_format_code_requires_opened_file(
+        self,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test formatting without an opened file fails clearly."""
+        api_with_tmp_path.opened_file = None
+
+        with pytest.raises(ValueError, match="No file is opened"):
+            api_with_tmp_path.format_code()
+
+
 class TestApiConfig:
     """Tests for get_config and set_config methods."""
 
@@ -175,6 +244,50 @@ class TestApiConfig:
                 api_with_tmp_path.set_config("outer.inner", "newValue")
 
         assert test_config["outer"]["inner"] == "newValue"
+
+
+class TestApiEnvironment:
+    """Tests for environment discovery API methods."""
+
+    def test_scan_environment(self, api_with_tmp_path: Api) -> None:
+        """Environment scan results are returned to the frontend."""
+        expected: list[dict] = [{"id": "python", "status": "ready"}]
+        with patch("pysrc.js_api.scan_environment", return_value=expected):
+            result = api_with_tmp_path.scan_environment()
+
+        assert result == expected
+
+    def test_environment_setup_completion(self, api_with_tmp_path: Api) -> None:
+        """First-run environment completion is exposed to the frontend."""
+        with patch(
+            "pysrc.js_api.is_environment_setup_complete",
+            return_value=True,
+        ):
+            assert api_with_tmp_path.is_environment_setup_complete() is True
+
+        with patch("pysrc.js_api.complete_environment_setup") as complete:
+            api_with_tmp_path.complete_environment_setup()
+
+        complete.assert_called_once_with()
+
+    def test_select_environment_refreshes_language_config(
+        self,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Selecting a tool refreshes derived compiler and LSP settings."""
+        expected: list[dict] = [{"id": "python", "status": "ready"}]
+        with (
+            patch(
+                "pysrc.js_api.select_environment_tool",
+                return_value=expected,
+            ) as select,
+            patch("pysrc.js_api.refresh_language_config") as refresh,
+        ):
+            result = api_with_tmp_path.select_environment_tool("python", "/opt/python")
+
+        assert result == expected
+        select.assert_called_once_with("python", "/opt/python")
+        refresh.assert_called_once_with()
 
 
 class TestApiPathOperations:
@@ -226,6 +339,24 @@ class TestApiPathOperations:
 
         with pytest.raises(FileNotFoundError):
             api_with_tmp_path.path_get_info(str(nonexistent))
+
+    def test_path_ls_includes_dangling_symlink(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Directory listings should preserve symlinks with missing targets."""
+        dangling_link = tmp_path / ".missing-target"
+        dangling_link.symlink_to(tmp_path / "missing")
+
+        result = api_with_tmp_path.path_ls(None)
+
+        link_info = next(
+            item for item in result["files"] if item["path"] == str(dangling_link)
+        )
+        assert link_info["is_symlink"] is True
+        assert link_info["is_file"] is False
+        assert link_info["is_dir"] is False
 
     def test_path_get_text(self, tmp_path: Path, api_with_tmp_path: Api) -> None:
         """Test path_get_text returns file content."""
@@ -290,6 +421,62 @@ class TestApiPathOperations:
 
         assert result["status"] == "success"
         assert new_dir.exists()
+
+    def test_path_rename_file_moves_related_testcase(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test path_rename migrates testcase data for renamed files."""
+        source = tmp_path / "old.py"
+        source.write_text("print('old')", encoding="utf-8")
+        cph_file = tmp_path / ".cph" / ".old.py.prob"
+        cph_file.parent.mkdir(parents=True, exist_ok=True)
+        cph_file.write_text(
+            json.dumps(
+                {
+                    "name": "old.py",
+                    "tests": [],
+                    "memoryLimit": 1000,
+                    "timeLimit": 1000,
+                    "srcPath": "old.py",
+                    "url": str(source),
+                },
+            ),
+            encoding="utf-8",
+        )
+
+        result = api_with_tmp_path.path_rename(
+            str(source),
+            str(tmp_path / "new.py"),
+        )
+
+        migrated = tmp_path / ".cph" / ".new.py.prob"
+        assert result["status"] == "success"
+        assert not source.exists()
+        assert migrated.exists()
+        migrated_data = json.loads(migrated.read_text(encoding="utf-8"))
+        assert migrated_data["name"] == "new.py"
+        assert migrated_data["srcPath"] == "new.py"
+        assert migrated_data["url"] == str(tmp_path / "new.py")
+
+    def test_path_delete_file_removes_related_testcase(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test path_delete removes testcase data for deleted files."""
+        source = tmp_path / "old.py"
+        source.write_text("print('old')", encoding="utf-8")
+        cph_file = tmp_path / ".cph" / ".old.py.prob"
+        cph_file.parent.mkdir(parents=True, exist_ok=True)
+        cph_file.write_text("{}", encoding="utf-8")
+
+        result = api_with_tmp_path.path_delete(str(source))
+
+        assert result["status"] == "success"
+        assert not source.exists()
+        assert not cph_file.exists()
 
     def test_path_save_text_success(
         self,
@@ -376,6 +563,22 @@ class TestApiCompile:
 
         assert result == "success"
 
+    def test_compile_without_opened_file(self, api_with_tmp_path: Api) -> None:
+        """Test compilation is skipped when no file is opened."""
+        compiler = MagicMock()
+        api_with_tmp_path.opened_file = None
+
+        with patch.object(
+            api_with_tmp_path,
+            "get_code",
+            return_value={"type": "python"},
+        ):
+            with patch("pysrc.js_api.lang_compilers", {"python": compiler}):
+                result = api_with_tmp_path.compile()
+
+        assert result == "success"
+        compiler.assert_not_called()
+
     def test_compile_error(self, tmp_path: Path, api_with_tmp_path: Api) -> None:
         """Test compile returns error message on failure."""
 
@@ -403,7 +606,7 @@ class TestApiRunTask:
         api_with_tmp_path.opened_file = test_file
         api_with_tmp_path.opened_testcase_file = MagicMock()
 
-        mock_runner = MagicMock(return_value=("output", "success", 0.1, 10))
+        mock_runner = MagicMock(return_value=("output", "", "success", 0.1, 10))
 
         with patch("pysrc.js_api.lang_runners", {"python": mock_runner}):
             with patch("pysrc.js_api.type_mp", {".py": {"id": "python"}}):
@@ -429,6 +632,46 @@ class TestApiRunTask:
 
         assert result["status"] == "success"
         assert result["result"] == "output"
+        assert result["stderr"] == ""
+
+    def test_run_task_returns_stderr_without_affecting_stdout_judgement(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test run_task returns stderr separately and judges by stdout only."""
+        test_file = tmp_path / "test.py"
+        test_file.write_text("print('hello')", encoding="utf-8")
+        api_with_tmp_path.opened_file = test_file
+
+        mock_runner = MagicMock(
+            return_value=("", "stderr output", "runtime_error", 0.1, 10),
+        )
+
+        with patch("pysrc.js_api.lang_runners", {"python": mock_runner}):
+            with patch("pysrc.js_api.type_mp", {".py": {"id": "python"}}):
+                with patch.object(
+                    api_with_tmp_path,
+                    "get_code",
+                    return_value={"type": "python"},
+                ):
+                    with patch.object(
+                        api_with_tmp_path,
+                        "get_testcase",
+                        return_value={
+                            "tests": [
+                                {
+                                    "input": "test input",
+                                    "answer": "test output",
+                                },
+                            ],
+                        },
+                    ):
+                        result = api_with_tmp_path.run_task(1)
+
+        assert result["status"] == "runtime_error"
+        assert result["result"] == ""
+        assert result["stderr"] == "stderr output"
 
     def test_run_task_unsupported_language(
         self,
@@ -449,6 +692,149 @@ class TestApiRunTask:
                 ):
                     with pytest.raises(ValueError, match="is not supported"):
                         api_with_tmp_path.run_task(1)
+
+    def test_run_task_cleans_compiled_artifact_after_run(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test cleanup_compiled_artifact removes the compiled artifact."""
+        test_file = tmp_path / "test.cpp"
+        artifact = tmp_path / "test.out"
+        test_file.write_text("int main() { return 0; }", encoding="utf-8")
+        artifact.write_text("binary", encoding="utf-8")
+        api_with_tmp_path.opened_file = test_file
+
+        with patch(
+            "pysrc.js_api.lang_runners",
+            {"cpp": MagicMock(return_value=("ok", "", "success", 0.1, 4))},
+        ):
+            with patch("pysrc.js_api.type_mp", {".cpp": {"id": "cpp"}}):
+                with patch("pysrc.js_api.task_checker", return_value=True):
+                    with patch.object(
+                        api_with_tmp_path,
+                        "get_code",
+                        return_value={"type": "cpp"},
+                    ):
+                        with patch.object(
+                            api_with_tmp_path,
+                            "get_testcase",
+                            return_value={
+                                "tests": [
+                                    {
+                                        "input": "",
+                                        "answer": "ok",
+                                    },
+                                ],
+                            },
+                        ):
+                            result = api_with_tmp_path.run_task(1)
+
+        assert result["status"] == "success"
+        assert artifact.exists()
+
+        api_with_tmp_path.cleanup_compiled_artifact("cpp")
+
+        assert not artifact.exists()
+
+    def test_run_task_cleans_artifact_using_run_command_path(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test run_task falls back to the run command path when cleaning artifacts."""
+        test_file = tmp_path / "test.cpp"
+        artifact = tmp_path / "custom-test.out"
+        test_file.write_text("int main() { return 0; }", encoding="utf-8")
+        artifact.write_text("binary", encoding="utf-8")
+        api_with_tmp_path.opened_file = test_file
+
+        with patch(
+            "pysrc.js_api.config",
+            {
+                "programmingLanguages": {
+                    "cpp": {
+                        "compileCommand": "g++ {file} -o {fileStem}.out",
+                        "runCommand": "{fileParent}/custom-{fileStem}.out",
+                    },
+                },
+            },
+        ):
+            with patch(
+                "pysrc.js_api.lang_runners",
+                {"cpp": MagicMock(return_value=("ok", "", "success", 0.1, 4))},
+            ):
+                with patch("pysrc.js_api.type_mp", {".cpp": {"id": "cpp"}}):
+                    with patch("pysrc.js_api.task_checker", return_value=True):
+                        with patch.object(
+                            api_with_tmp_path,
+                            "get_code",
+                            return_value={"type": "cpp"},
+                        ):
+                            with patch.object(
+                                api_with_tmp_path,
+                                "get_testcase",
+                                return_value={
+                                    "tests": [
+                                        {
+                                            "input": "",
+                                            "answer": "ok",
+                                        },
+                                    ],
+                                },
+                            ):
+                                result = api_with_tmp_path.run_task(1)
+
+            assert result["status"] == "success"
+            assert artifact.exists()
+
+            api_with_tmp_path.cleanup_compiled_artifact("cpp")
+
+        assert not artifact.exists()
+
+    def test_run_task_cleans_python_pyc_artifact(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test run_task removes the compiled Python bytecode artifact."""
+        test_file = tmp_path / "test.py"
+        artifact = tmp_path / "test.pyc"
+        test_file.write_text("print('ok')", encoding="utf-8")
+        artifact.write_text("bytecode", encoding="utf-8")
+        api_with_tmp_path.opened_file = test_file
+
+        with patch(
+            "pysrc.js_api.lang_runners",
+            {"python": MagicMock(return_value=("ok", "", "success", 0.1, 4))},
+        ):
+            with patch("pysrc.js_api.type_mp", {".py": {"id": "python"}}):
+                with patch("pysrc.js_api.task_checker", return_value=True):
+                    with patch.object(
+                        api_with_tmp_path,
+                        "get_code",
+                        return_value={"type": "python"},
+                    ):
+                        with patch.object(
+                            api_with_tmp_path,
+                            "get_testcase",
+                            return_value={
+                                "tests": [
+                                    {
+                                        "input": "",
+                                        "answer": "ok",
+                                    },
+                                ],
+                            },
+                        ):
+                            result = api_with_tmp_path.run_task(1)
+
+        assert result["status"] == "success"
+        assert artifact.exists()
+
+        api_with_tmp_path.cleanup_compiled_artifact("python")
+
+        assert not artifact.exists()
 
 
 class TestApiOtherMethods:
@@ -609,6 +995,24 @@ class TestApiPinnedFiles:
         result = api_with_tmp_path.get_pinned_files()
 
         assert result == []
+
+    def test_get_pinned_files_returns_metadata(
+        self,
+        tmp_path: Path,
+        api_with_tmp_path: Api,
+    ) -> None:
+        """Test pinned files are returned as file metadata dictionaries."""
+        source_file = tmp_path / "main.py"
+        source_file.write_text("print('ok')", encoding="utf-8")
+        pinned_file = tmp_path / "data" / "pinned.txt"
+        pinned_file.write_text(str(source_file), encoding="utf-8")
+
+        result = api_with_tmp_path.get_pinned_files()
+
+        assert result[0]["name"] == "main.py"
+        assert result[0]["path"] == str(source_file)
+        assert result[0]["is_file"] is True
+        assert isinstance(result[0]["type"], str)
 
     def test_add_pinned_file(self, tmp_path: Path, api_with_tmp_path: Api) -> None:
         """Test add_pinned_file adds file to pinned list."""

@@ -10,10 +10,12 @@ declare module 'vue' {
   export interface GlobalComponents {
     CheckerPanel: typeof import('./components/CheckerPanel.vue')['default']
     EditorPage: typeof import('./components/EditorPage.vue')['default']
+    EnvironmentPage: typeof import('./components/EnvironmentPage.vue')['default']
     FileSelPage: typeof import('./components/FileSelPage.vue')['default']
     LicensesPage: typeof import('./components/LicensesPage.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SettingPage: typeof import('./components/SettingPage.vue')['default']
+    TerminalPanel: typeof import('./components/TerminalPanel.vue')['default']
   }
 }

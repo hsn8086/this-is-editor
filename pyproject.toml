@@ -10,8 +10,8 @@ dependencies = [
     "loguru>=0.7.3",
     "psutil>=7.0.0",
     "pydantic>=2.11.7",
-    "pywebview>=6.0",
-    "pywebview[gtk]>=6.0 ; sys_platform == 'linux'",
+    "pywebview>=6.2.1",
+    "pywebview[gtk]>=6.2.1 ; sys_platform == 'linux'",
     "uvicorn>=0.35.0",
     "watchfiles>=1.1.0",
     "websockets>=15.0.1",
@@ -30,10 +30,10 @@ include-package-data = true
 dev = [
     "nuitka>=2.7.12",
     "pip-licenses>=5.0.0",
-    "python-lsp-server>=1.13.1",
     "pytest>=8.0.0",
     "pytest-asyncio>=0.25.2",
     "pytest-cov>=6.1.1",
+    "ty>=0.0.1a1",
 ]
 
 
@@ -99,6 +99,11 @@ ignore = [
     "S603",    # S603 `subprocess` call without `shell=True` identified, security issue
     "TD003",
     "PLR0913", # Too many arguments
+    # PEP 695 generics compile into a broken annotation scope under Nuitka 2.7.12
+    # ("NameError: name 'T' is not defined" at import time in the packaged binary),
+    # and the failure only shows up in a build, never under `uv run main.py`.
+    # Keep classic TypeVar until Nuitka supports the syntax.
+    "UP047",   # Generic function should use type parameters
 ]
 [tool.ruff]
 target-version = "py312"
@@ -113,4 +118,3 @@ target-version = "py312"
     "EM101",   # String literal in exception allowed in tests
     "PLC0415", # Import inside function allowed in tests for lazy loading
 ]
-

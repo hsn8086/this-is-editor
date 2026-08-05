@@ -1,6 +1,6 @@
-import { ref, watch, type Ref } from 'vue'
-import { useTheme } from 'vuetify'
 import type { Ace } from 'ace-builds'
+import { ref, type Ref, watch } from 'vue'
+import { useTheme } from 'vuetify'
 
 export type AceTheme = 'ace/theme/tie' | 'ace/theme/tie-light'
 
@@ -26,32 +26,32 @@ export interface UseEditorThemeReturn {
 
 /**
  * Ace Editor 主题管理 Composable
- * 
+ *
  * 负责：
  * - 监听 Vuetify 主题状态
  * - 自动设置 Ace 主题（tie/tie-light）
- * 
+ *
  * 主题映射：
  * - Vuetify 暗色主题 -> ace/theme/tie
  * - Vuetify 亮色主题 -> ace/theme/tie-light
  */
-export function useEditorTheme(options: UseEditorThemeOptions): UseEditorThemeReturn {
+export function useEditorTheme (options: UseEditorThemeOptions): UseEditorThemeReturn {
   const { editor, autoWatch = true } = options
 
   // 获取 Vuetify 主题
   const vuetifyTheme = useTheme()
-  
+
   // 响应式状态
   const isDark = ref(vuetifyTheme.global.current.value.dark)
   const currentTheme = ref<AceTheme>(
-    isDark.value ? 'ace/theme/tie' : 'ace/theme/tie-light'
+    isDark.value ? 'ace/theme/tie' : 'ace/theme/tie-light',
   )
 
   /**
    * 设置 Ace 编辑器主题
    * @param theme Ace 主题名称
    */
-  function setAceTheme(theme: AceTheme): void {
+  function setAceTheme (theme: AceTheme): void {
     const ed = editor.value
     if (!ed) {
       console.warn('[useEditorTheme] Cannot set theme: editor not initialized')
@@ -70,10 +70,10 @@ export function useEditorTheme(options: UseEditorThemeOptions): UseEditorThemeRe
   /**
    * 根据 Vuetify 主题同步 Ace 主题
    */
-  function syncTheme(): void {
+  function syncTheme (): void {
     const dark = vuetifyTheme.global.current.value.dark
     isDark.value = dark
-    
+
     const newTheme: AceTheme = dark ? 'ace/theme/tie' : 'ace/theme/tie-light'
     setAceTheme(newTheme)
   }
@@ -84,11 +84,11 @@ export function useEditorTheme(options: UseEditorThemeOptions): UseEditorThemeRe
   if (autoWatch) {
     stopWatchFn = watch(
       () => vuetifyTheme.global.current.value.dark,
-      (newDark) => {
+      newDark => {
         console.log(`[useEditorTheme] Vuetify theme changed: dark=${newDark}`)
         syncTheme()
       },
-      { immediate: false }
+      { immediate: false },
     )
   }
 

@@ -6,6 +6,14 @@ node_modules
 # local env files
 .env.local
 .env.*.local
+.dev-user/
+.tie.temp.txt
+
+# Test artifacts
+.coverage
+coverage.xml
+htmlcov/
+.playwright-mcp/
 
 # Log files
 npm-debug.log*

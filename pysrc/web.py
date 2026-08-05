@@ -10,21 +10,23 @@ import json
 import platform
 import queue
 import shlex
+import socket
 import subprocess
 import threading
 from pathlib import Path
-from typing import cast
+from typing import IO, cast
 
 import uvicorn
 import webview
 from fastapi import FastAPI, WebSocket
-from starlette.websockets import WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
+from starlette.websockets import WebSocketDisconnect
 
 from .js_api import Api
 from .langs import type_mp
 from .models import Problem
+from .terminal import TerminalSession, shutdown_terminals
 
 
 def get_free_port() -> int:
@@ -34,8 +36,6 @@ def get_free_port() -> int:
         int: An available port number.
 
     """
-    import socket
-
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("", 0))
         return s.getsockname()[1]
@@ -44,13 +44,15 @@ def get_free_port() -> int:
 port = get_free_port()
 
 app = FastAPI()
-should_exit = False
+should_exit: bool = False
+_active_bridges: set["LspBridge"] = set()
 
 
 class LspBridge:
     """Bridge a blocking stdio LSP process into asyncio-friendly queues."""
 
     def __init__(self, process: subprocess.Popen) -> None:
+        """Initialize the bridge for a spawned LSP process."""
         self.process = process
         self.loop = asyncio.get_running_loop()
         self.stdout_queue: asyncio.Queue[str | None] = asyncio.Queue()
@@ -79,25 +81,42 @@ class LspBridge:
         if self.stop_event.is_set():
             return
         self.stop_event.set()
+        _active_bridges.discard(self)
         self.stdin_queue.put_nowait(None)
         if self.process.poll() is None:
             with contextlib.suppress(OSError):
                 self.process.terminate()
+            with contextlib.suppress(subprocess.TimeoutExpired, OSError):
+                self.process.wait(timeout=1)
+            if self.process.poll() is None:
+                with contextlib.suppress(OSError):
+                    self.process.kill()
+                with contextlib.suppress(subprocess.TimeoutExpired, OSError):
+                    self.process.wait(timeout=1)
+
+        for thread in self.threads:
+            if thread.is_alive():
+                thread.join(timeout=1)
 
     def _push_async(
         self,
         target: asyncio.Queue[str | None],
         item: str | None,
     ) -> None:
-        self.loop.call_soon_threadsafe(target.put_nowait, item)
+        with contextlib.suppress(RuntimeError):
+            self.loop.call_soon_threadsafe(target.put_nowait, item)
 
-    def _read_available(self, stream: subprocess.PIPE, size: int = 4096) -> bytes:
+    def _read_available(
+        self,
+        stream: IO[bytes],
+        size: int = 4096,
+    ) -> bytes:
         reader = getattr(stream, "read1", None)
         if callable(reader):
             return reader(size)
         return stream.read(size)
 
-    def _stdout_worker(self) -> None:
+    def _stdout_worker(self) -> None:  # noqa: C901, PLR0912
         stdout = self.process.stdout
         if stdout is None:
             self._push_async(self.stdout_queue, None)
@@ -124,7 +143,8 @@ class LspBridge:
                                 expected_length = int(header.split(":", 1)[1].strip())
                                 break
                         if expected_length is None:
-                            raise ValueError("Missing Content-Length header")
+                            msg = "Missing Content-Length header"
+                            raise ValueError(msg)  # noqa: TRY301
                         del buffer[: header_end + 4]
 
                     if len(buffer) < expected_length:
@@ -195,7 +215,16 @@ async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
         await websocket.close()
         return
 
-    bridge = await start_lsp_process(websocket, lang)
+    try:
+        workspace_path = resolve_workspace_path(
+            websocket.query_params.get("workspace"),
+        )
+    except ValueError as e:
+        logger.warning(str(e))
+        await websocket.close(code=1008)
+        return
+
+    bridge = await start_lsp_process(websocket, lang, workspace_path)
     if not bridge:
         return
 
@@ -209,12 +238,39 @@ async def websocket_endpoint(websocket: WebSocket, lang: str) -> None:
         await monitor_tasks(lang, bridge, [task_ws, task_p, task_perr])
 
 
-async def start_lsp_process(websocket: WebSocket, lang: str) -> LspBridge | None:
+def resolve_workspace_path(raw_path: str | None) -> Path | None:
+    """Validate and resolve an optional LSP workspace directory."""
+    if raw_path is None:
+        return None
+
+    workspace_path = Path(raw_path).expanduser()
+    if not workspace_path.is_absolute():
+        msg = f"LSP workspace path must be absolute: {raw_path}"
+        raise ValueError(msg)
+
+    try:
+        workspace_path = workspace_path.resolve(strict=True)
+    except (OSError, RuntimeError) as e:
+        msg = f"LSP workspace path cannot be resolved: {raw_path}"
+        raise ValueError(msg) from e
+
+    if not workspace_path.is_dir():
+        msg = f"LSP workspace path is not a directory: {raw_path}"
+        raise ValueError(msg)
+    return workspace_path
+
+
+async def start_lsp_process(
+    websocket: WebSocket,
+    lang: str,
+    workspace_path: Path | None = None,
+) -> LspBridge | None:
     """Start the Language Server Protocol (LSP) process for the specified language.
 
     Args:
         websocket (WebSocket): The WebSocket connection.
         lang (str): The language identifier.
+        workspace_path (Path | None): Working directory for the LSP process.
 
     Returns:
         LspBridge | None: The running bridge if started successfully, else None.
@@ -238,13 +294,14 @@ async def start_lsp_process(websocket: WebSocket, lang: str) -> LspBridge | None
 
     creationflags = 0
     if is_windows:
-        creationflags = cast(int, getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        creationflags = cast("int", getattr(subprocess, "CREATE_NO_WINDOW", 0))
     try:
         p = subprocess.Popen(  # noqa: ASYNC220
             cmd,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            cwd=workspace_path,
             creationflags=creationflags,
             shell=is_windows,
         )
@@ -264,6 +321,7 @@ async def start_lsp_process(websocket: WebSocket, lang: str) -> LspBridge | None
 
     bridge = LspBridge(p)
     bridge.start()
+    _active_bridges.add(bridge)
     return bridge
 
 
@@ -287,7 +345,8 @@ async def handle_websocket(
         while True:
             bridge.submit(await websocket.receive_text())
     except (asyncio.CancelledError, ConnectionError) as e:
-        logger.opt(exception=e).error(f"{lang} LS websocket error")
+        if not should_exit:
+            logger.opt(exception=e).error(f"{lang} LS websocket error")
     except WebSocketDisconnect as e:
         if not should_exit:
             logger.opt(exception=e).error(f"{lang} LS websocket disconnected")
@@ -321,7 +380,8 @@ async def handle_process_output(
             await websocket.send_text(content)
 
     except (ValueError, RuntimeError) as e:
-        logger.opt(exception=e).error(f"{lang} LS process error")
+        if not should_exit:
+            logger.opt(exception=e).error(f"{lang} LS process error")
 
     except asyncio.exceptions.CancelledError:
         ...
@@ -349,7 +409,8 @@ async def handle_process_error(bridge: LspBridge, lang: str) -> None:
                 break
             logger.error(f"{lang} LSP stderr: {error_chunk}")
     except (OSError, RuntimeError) as e:
-        logger.opt(exception=e).error(f"{lang} LS process stderr error")
+        if not should_exit:
+            logger.opt(exception=e).error(f"{lang} LS process stderr error")
 
 
 async def monitor_tasks(
@@ -388,7 +449,151 @@ async def monitor_tasks(
             return
 
 
+@app.websocket("/terminal")
+async def terminal_endpoint(websocket: WebSocket) -> None:
+    """Stream a shell session over a WebSocket.
+
+    Client frames are JSON: ``{"type": "stdin", "data": str}``,
+    ``{"type": "resize", "cols": int, "rows": int}``, ``{"type": "interrupt"}``.
+    Server frames are ``{"type": "output", "data": str}`` and
+    ``{"type": "exit", "code": int | None}``.
+
+    Args:
+        websocket (WebSocket): The WebSocket connection.
+
+    """
+    if should_exit:
+        await websocket.close()
+        return
+
+    session = TerminalSession(cwd=_js_api.cwd)
+    try:
+        session.start()
+    except OSError as e:
+        logger.opt(exception=e).error("Failed to start terminal shell")
+        await websocket.close(code=1011)
+        return
+
+    await websocket.accept()
+    logger.info(f"Terminal session started (pid={session.pid})")
+
+    async with asyncio.TaskGroup() as tg:
+        task_in = tg.create_task(handle_terminal_input(websocket, session))
+        task_out = tg.create_task(handle_terminal_output(websocket, session))
+        await monitor_terminal(session, [task_in, task_out])
+
+
+async def handle_terminal_input(
+    websocket: WebSocket,
+    session: TerminalSession,
+) -> None:
+    """Forward client frames to the shell until the socket closes.
+
+    Args:
+        websocket (WebSocket): The WebSocket connection.
+        session (TerminalSession): The shell session to feed.
+
+    """
+    try:
+        while not should_exit:
+            raw = await websocket.receive_text()
+            try:
+                message = json.loads(raw)
+            except json.JSONDecodeError:
+                logger.warning("Discarding malformed terminal frame")
+                continue
+
+            kind = message.get("type")
+            if kind == "stdin":
+                session.write(str(message.get("data", "")))
+            elif kind == "resize":
+                session.resize(
+                    int(message.get("cols", 80)),
+                    int(message.get("rows", 24)),
+                )
+            elif kind == "interrupt":
+                session.interrupt()
+    except WebSocketDisconnect:
+        logger.info("Terminal WebSocket disconnected")
+    except (OSError, RuntimeError, ValueError) as e:
+        if not should_exit:
+            logger.opt(exception=e).error("Terminal input handler failed")
+
+
+async def handle_terminal_output(
+    websocket: WebSocket,
+    session: TerminalSession,
+) -> None:
+    """Relay shell output to the client until the stream ends.
+
+    Args:
+        websocket (WebSocket): The WebSocket connection.
+        session (TerminalSession): The shell session to read from.
+
+    """
+    try:
+        while True:
+            chunk = await session.next_chunk()
+            if chunk is None:
+                break
+            await websocket.send_text(
+                json.dumps({"type": "output", "data": chunk}),
+            )
+        process = session.process
+        await websocket.send_text(
+            json.dumps(
+                {"type": "exit", "code": process.poll() if process else None},
+            ),
+        )
+    except WebSocketDisconnect:
+        pass
+    except (OSError, RuntimeError, ValueError) as e:
+        if not should_exit:
+            logger.opt(exception=e).error("Terminal output handler failed")
+
+
+async def monitor_terminal(
+    session: TerminalSession,
+    tasks: list[asyncio.Task],
+) -> None:
+    """Cancel terminal tasks once the shell or the application stops.
+
+    Without this watchdog a live session would keep uvicorn from draining and
+    the process would hang on shutdown.
+
+    Args:
+        session (TerminalSession): The shell session being monitored.
+        tasks (list[asyncio.Task]): Tasks to cancel when the session ends.
+
+    """
+    while True:
+        await asyncio.sleep(1)
+        if should_exit:
+            for task in tasks:
+                task.cancel()
+            session.close()
+            logger.info("Terminal session closed for shutdown")
+            return
+
+        process = session.process
+        if process is not None and process.poll() is not None:
+            session.close()
+            for task in tasks:
+                task.cancel()
+            return
+
+        # `any`, not `all`: the output task blocks until the shell exits, so
+        # waiting for both would keep a shell running after the client hangs up.
+        if any(task.done() for task in tasks):
+            session.close()
+            for task in tasks:
+                task.cancel()
+            return
+
+
 web_dir = Path(__file__).parent.parent / "web"
+# Registered last on purpose: Starlette matches in order and Mount("/") also
+# claims websocket scopes, so any route added below would be unreachable.
 app.mount(
     "/",
     StaticFiles(directory=web_dir, html=True),
@@ -443,8 +648,6 @@ window = webview.create_window(
     width=800,
     height=600,
 )
-if window is not None:
-    window.state._hash = _js_api._path_hashes
 
 
 def start_server() -> tuple[
@@ -459,8 +662,6 @@ def start_server() -> tuple[
         tuple: (main server, main thread, receiver server, receiver thread)
 
     """
-    import uvicorn
-
     logger.info(f"Starting server on port {port}")
     conf = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="info", workers=8)
     server = uvicorn.Server(conf)
@@ -477,3 +678,16 @@ def start_server() -> tuple[
     thread_recver.start()
     thread.start()
     return server, thread, server_recver, thread_recver
+
+
+def shutdown_lsp_bridges() -> None:
+    """Close all active LSP bridges before process shutdown."""
+    for bridge in tuple(_active_bridges):
+        bridge.close()
+
+
+def shutdown_runtime() -> None:
+    """Shut down runtime background resources before server teardown."""
+    shutdown_lsp_bridges()
+    shutdown_terminals()
+    _js_api.shutdown()

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Test the EditorPage core logic without full component mounting
 describe('EditorPage.vue - Core Logic Tests', () => {

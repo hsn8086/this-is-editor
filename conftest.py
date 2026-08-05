@@ -3,7 +3,11 @@
 This module provides shared fixtures and configuration for all tests.
 """
 
+import atexit
+import os
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -12,6 +16,21 @@ import pytest
 project_root = Path(__file__).parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
+
+# Isolate the user data directory before any ``pysrc`` module is imported.
+#
+# ``pysrc.user_data`` resolves the platform config/data/log directories at import
+# time and ``pysrc.config`` immediately merges the on-disk ``config.json`` into the
+# default config dict *in place*. Without this, the suite reads (and creates) the
+# developer's real configuration, so a stale local config silently changes the
+# "default" values under test and makes results machine-dependent.
+#
+# An explicitly provided value wins, so a developer can still point the suite at a
+# specific directory.
+if not os.environ.get("TIE_DEV_USER_DATA_DIR"):
+    _isolated_user_data_dir = tempfile.mkdtemp(prefix="tie-test-userdata-")
+    os.environ["TIE_DEV_USER_DATA_DIR"] = _isolated_user_data_dir
+    atexit.register(shutil.rmtree, _isolated_user_data_dir, ignore_errors=True)
 
 
 @pytest.fixture

@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { ref, nextTick } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick, ref } from 'vue'
 import { useEditorClipboard, type UseEditorClipboardOptions } from '@/composables/editor/useEditorClipboard'
 
 // Mock ace-builds
@@ -107,7 +107,7 @@ describe('useEditorClipboard Composable', () => {
     it('should handle clipboard write error', async () => {
       mockEditor.getSelectedText.mockReturnValue('selected text')
       vi.mocked(mockClipboard.writeText).mockRejectedValueOnce(new Error('Clipboard error'))
-      
+
       const editorRef = ref(mockEditor)
       const { cut, isProcessing } = useEditorClipboard({ editor: editorRef })
 
@@ -154,7 +154,7 @@ describe('useEditorClipboard Composable', () => {
     it('should handle clipboard write error in copy', async () => {
       mockEditor.getSelectedText.mockReturnValue('selected text')
       vi.mocked(mockClipboard.writeText).mockRejectedValueOnce(new Error('Clipboard error'))
-      
+
       const editorRef = ref(mockEditor)
       const { copy, isProcessing } = useEditorClipboard({ editor: editorRef })
 
@@ -188,7 +188,7 @@ describe('useEditorClipboard Composable', () => {
 
     it('should handle clipboard write error in copyAll', async () => {
       vi.mocked(mockClipboard.writeText).mockRejectedValueOnce(new Error('Clipboard error'))
-      
+
       const editorRef = ref(mockEditor)
       const { copyAll, isProcessing } = useEditorClipboard({ editor: editorRef })
 
@@ -223,7 +223,7 @@ describe('useEditorClipboard Composable', () => {
 
     it('should handle clipboard read error', async () => {
       vi.mocked(mockClipboard.readText).mockRejectedValueOnce(new Error('Clipboard error'))
-      
+
       const editorRef = ref(mockEditor)
       const { paste, isProcessing } = useEditorClipboard({ editor: editorRef })
 
@@ -242,12 +242,12 @@ describe('useEditorClipboard Composable', () => {
 
       // 在执行前检查
       expect(isProcessing.value).toBe(false)
-      
+
       const promise = copy()
-      
+
       // 此时应该正在处理（由于异步，可能已经是 false）
       await promise
-      
+
       // 完成后应该是 false
       expect(isProcessing.value).toBe(false)
     })

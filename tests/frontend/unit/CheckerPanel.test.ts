@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Test the pywebview API mocks and core functionality
 describe('CheckerPanel.vue - Core Logic Tests', () => {
@@ -18,7 +18,8 @@ describe('CheckerPanel.vue - Core Logic Tests', () => {
       compile: vi.fn().mockResolvedValue('success'),
       run_task: vi.fn().mockResolvedValue({
         result: 'Accepted',
-        status: 'Done',
+        stderr: '',
+        status: 'success',
         time: 50,
         memory: 1024,
       }),
@@ -60,11 +61,7 @@ describe('CheckerPanel.vue - Core Logic Tests', () => {
     it('should calculate judge threads correctly', async () => {
       const [cpu_count, cpu_count_logical] = await window.pywebview.api.get_cpu_count()
       let judgeThread: number
-      if (cpu_count == cpu_count_logical) {
-        judgeThread = Math.max(Math.floor((cpu_count * 3) / 2), 1)
-      } else {
-        judgeThread = cpu_count
-      }
+      judgeThread = cpu_count == cpu_count_logical ? Math.max(Math.floor((cpu_count * 3) / 2), 1) : cpu_count
       // cpu_count=4, cpu_count_logical=8, so 4 != 8, judgeThread = cpu_count = 4
       expect(judgeThread).toBe(4)
     })
@@ -77,7 +74,8 @@ describe('CheckerPanel.vue - Core Logic Tests', () => {
     it('should run task and return result', async () => {
       const result = await window.pywebview.api.run_task(1, 256, 1000)
       expect(result.result).toBe('Accepted')
-      expect(result.status).toBe('Done')
+      expect(result.stderr).toBe('')
+      expect(result.status).toBe('success')
       expect(result.time).toBe(50)
     })
   })
@@ -87,13 +85,13 @@ describe('CheckerPanel.vue - Core Logic Tests', () => {
       const testcase = {
         name: 'long_test',
         tests: [
-          { id: 1, input: 'a'.repeat(10000), answer: 'b'.repeat(10000) },
+          { id: 1, input: 'a'.repeat(10_000), answer: 'b'.repeat(10_000) },
         ],
         memoryLimit: 256,
         timeLimit: 1000,
       }
 
-      const processedTasks = testcase.tests.map((test) => ({
+      const processedTasks = testcase.tests.map(test => ({
         id: test.id,
         input: test.input.length <= 8192 ? test.input : '<Input too long>',
         answer: test.answer.length <= 8192 ? test.answer : '<Answer too long>',
@@ -122,7 +120,7 @@ describe('CheckerPanel.vue - Core Logic Tests', () => {
         { id: 2, input: '5\n', answer: '30\n' },
       ]
 
-      const tests = tasks.map((task) => ({
+      const tests = tasks.map(task => ({
         id: task.id,
         input: task.input,
         answer: task.answer,
@@ -153,7 +151,7 @@ describe('CheckerPanel.vue - Core Logic Tests', () => {
       vi.spyOn(navigator.clipboard, 'readText').mockResolvedValue(plainText)
 
       const text = await navigator.clipboard.readText()
-      
+
       try {
         JSON.parse(text)
         // If it doesn't throw, it's valid JSON

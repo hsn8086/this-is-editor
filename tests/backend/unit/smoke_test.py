@@ -103,5 +103,5 @@ class TestPytestInfrastructure:
 
 
 async def _asyncio_coro() -> str:
-    """Helper async function for testing."""
+    """Return an async sentinel value for tests."""
     return "async"

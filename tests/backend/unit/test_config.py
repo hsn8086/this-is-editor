@@ -5,6 +5,16 @@ in the config module.
 """
 
 from pysrc.config import merge, merge_meta
+from pysrc.config_meta import config as default_config
+
+
+def test_snippet_autocompletion_is_enabled_by_default() -> None:
+    """Fresh configurations enable Ace snippet expansion and suggestions."""
+    editor = default_config.get("editor")
+    assert isinstance(editor, dict)
+    ace_main = editor.get("aceMain")
+    assert isinstance(ace_main, dict)
+    assert ace_main.get("enableSnippets") is True
 
 
 class TestMergeMeta:

@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
-import { useFileStore, type FileItem } from '@/stores/file'
 import type { FileInfo } from '@/pywebview-defines'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { type FileItem, useFileStore } from '@/stores/file'
 
 describe('file Store', () => {
   beforeEach(() => {
@@ -39,7 +39,7 @@ describe('file Store', () => {
 
     it('currentFolderName should handle Windows paths', () => {
       const store = useFileStore()
-      store.folder = 'C:\\Users\\test\\docs'
+      store.folder = String.raw`C:\Users\test\docs`
       expect(store.currentFolderName).toBe('docs')
     })
 
