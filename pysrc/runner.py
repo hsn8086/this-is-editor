@@ -10,7 +10,7 @@ import subprocess
 import time
 from collections.abc import Callable
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, TypeVar
 
 import psutil
 from loguru import logger
@@ -57,7 +57,13 @@ class RunProcessResult(NamedTuple):
     status: str | None
 
 
-def try_r[T](
+# Nuitka 2.7.12 does not implement the PEP 695 annotation scope, so the compiled
+# binary raises "NameError: name 'T' is not defined" while importing this module.
+# Keep the classic TypeVar spelling until Nuitka supports `def try_r[T](...)`.
+T = TypeVar("T")
+
+
+def try_r(
     func: Callable[..., T],
     *args: object,
     default: T | None = None,
