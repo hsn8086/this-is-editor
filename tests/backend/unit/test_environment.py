@@ -98,6 +98,41 @@ def test_scan_returns_all_path_environments_in_priority_order(tmp_path: Path) ->
     ]
 
 
+def test_scan_survives_unreadable_path_entry(tmp_path: Path) -> None:
+    """An entry whose stat() raises EACCES must not abort the whole scan.
+
+    macOS keeps SIP-protected binaries such as /usr/sbin/weakpass_edit on PATH,
+    and Path.is_file() propagates PermissionError instead of swallowing it.
+    """
+    path_bin = tmp_path / "bin"
+    path_bin.mkdir(parents=True)
+    (path_bin / "python3").touch(mode=0o755)
+    protected = path_bin / "weakpass_edit"
+    protected.touch(mode=0o755)
+
+    real_is_file = Path.is_file
+
+    def fake_is_file(self: Path) -> bool:
+        if self.name == "weakpass_edit":
+            raise PermissionError(13, "Permission denied")
+        return real_is_file(self)
+
+    with (
+        patch.object(Path, "is_file", fake_is_file),
+        patch.object(
+            environment,
+            "_tool_version",
+            return_value=("ready", "Python 3.12", None),
+        ),
+    ):
+        results = environment.scan_environment(
+            managed_root=tmp_path / "managed",
+            search_path=str(path_bin),
+        )
+
+    assert _tool(results, "python")["status"] == "ready"
+
+
 def test_scan_ignores_configured_executable_for_a_different_tool(
     tmp_path: Path,
 ) -> None:

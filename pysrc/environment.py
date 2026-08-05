@@ -151,6 +151,20 @@ def _matches_tool_name(spec: ToolSpec, path: Path) -> bool:
     return name in spec.commands
 
 
+def _is_file(entry: Path) -> bool:
+    """Report whether the entry is a regular file, treating errors as a miss.
+
+    ``Path.is_file()`` only swallows ENOENT, ENOTDIR, EBADF and ELOOP, so a
+    ``PermissionError`` propagates. macOS keeps SIP-protected binaries such as
+    ``/usr/sbin/weakpass_edit`` on PATH where ``stat()`` raises EACCES, which
+    would otherwise abort the whole environment scan.
+    """
+    try:
+        return entry.is_file()
+    except OSError:
+        return False
+
+
 def _managed_executables(spec: ToolSpec, managed_root: Path) -> list[Path]:
     if not managed_root.is_dir():
         return []
@@ -193,7 +207,7 @@ def _path_executables(
         results.extend(
             Path(executable).resolve()
             for entry in entries
-            if entry.is_file()
+            if _is_file(entry)
             and _matches_tool_name(spec, entry)
             and (executable := shutil.which(entry.name, path=directory))
         )
@@ -221,7 +235,7 @@ def _find_executables(
         configured_path = Path(configured_name).expanduser()
         if (
             configured_path.is_absolute()
-            and configured_path.is_file()
+            and _is_file(configured_path)
             and _matches_tool_name(spec, configured_path)
         ):
             add(configured_path, "configured")
