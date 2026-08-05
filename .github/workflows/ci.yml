@@ -77,6 +77,14 @@ jobs:
       - name: Install Python dependencies
         run: uv sync --locked
 
+      # pysrc/web.py mounts StaticFiles(web/) at import time, so importing it
+      # needs the directory to exist. web/ is the gitignored Vite output, and
+      # the backend tests do not read its contents, so an empty one is enough.
+      # Building the frontend here just to satisfy an import would double the
+      # job's runtime for no extra coverage.
+      - name: Create placeholder frontend output
+        run: mkdir -p web
+
       # Pinned so a new ruff release cannot turn CI red without a code change.
       - name: Check formatting
         run: uvx ruff@0.16.1 format --check
