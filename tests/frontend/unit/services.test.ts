@@ -1,15 +1,18 @@
 import type { API, Code, Config, FileInfo, TaskResult, TestCase } from '@/pywebview-defines'
+// Type-only, so it is erased at compile time and does not pull the module in
+// before window.pywebview is mocked. The values are still imported dynamically
+// in beforeAll below.
+import type * as Services from '@/services'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-// Dynamic imports for services (after window.pywebview is mocked)
-let ApiClient: typeof import('@/services').ApiClient
-let ApiError: typeof import('@/services').ApiError
-let Cache: typeof import('@/services').Cache
-let handleApiError: typeof import('@/services').handleApiError
-let configService: typeof import('@/services').configService
-let fileService: typeof import('@/services').fileService
-let codeService: typeof import('@/services').codeService
-let taskService: typeof import('@/services').taskService
+let ApiClient: typeof Services.ApiClient
+let ApiError: typeof Services.ApiError
+let Cache: typeof Services.Cache
+let handleApiError: typeof Services.handleApiError
+let configService: typeof Services.configService
+let fileService: typeof Services.fileService
+let codeService: typeof Services.codeService
+let taskService: typeof Services.taskService
 
 // Get the mocked API
 const getMockApi = (): Partial<API> => window.pywebview.api as unknown as Partial<API>

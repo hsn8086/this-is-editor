@@ -60,8 +60,9 @@ describe('CheckerPanel.vue - Core Logic Tests', () => {
 
     it('should calculate judge threads correctly', async () => {
       const [cpu_count, cpu_count_logical] = await window.pywebview.api.get_cpu_count()
-      let judgeThread: number
-      judgeThread = cpu_count == cpu_count_logical ? Math.max(Math.floor((cpu_count * 3) / 2), 1) : cpu_count
+      const judgeThread: number = cpu_count == cpu_count_logical
+        ? Math.max(Math.floor((cpu_count * 3) / 2), 1)
+        : cpu_count
       // cpu_count=4, cpu_count_logical=8, so 4 != 8, judgeThread = cpu_count = 4
       expect(judgeThread).toBe(4)
     })

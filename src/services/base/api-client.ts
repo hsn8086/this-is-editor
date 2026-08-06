@@ -20,11 +20,6 @@ export interface ApiClientOptions {
  * 封装 window.pywebview.api 调用，提供缓存和错误处理
  */
 export class ApiClient {
-  private api: API
-  private cache: Cache
-  private enableCache: boolean
-  private defaultCacheTtl: number
-
   /**
    * 缓存策略配置：哪些方法应该被缓存
    */
@@ -35,6 +30,11 @@ export class ApiClient {
     'get_pinned_files',
     'path_get_info',
   ])
+
+  private api: API
+  private cache: Cache
+  private enableCache: boolean
+  private defaultCacheTtl: number
 
   constructor (options: ApiClientOptions = {}) {
     this.api = window.pywebview.api
@@ -48,28 +48,6 @@ export class ApiClient {
    */
   get rawApi (): API {
     return this.api
-  }
-
-  /**
-   * 生成缓存键
-   */
-  private generateCacheKey (method: string, args: unknown[]): string | null {
-    if (args.length === 0) {
-      return method
-    }
-    try {
-      return `${method}:${JSON.stringify(args)}`
-    } catch {
-      // JSON.stringify 失败（如循环引用），返回 null 表示跳过缓存
-      return null
-    }
-  }
-
-  /**
-   * 检查方法是否应该被缓存
-   */
-  private shouldCache (method: string): boolean {
-    return this.enableCache && ApiClient.CACHEABLE_METHODS.has(method)
   }
 
   /**
@@ -137,6 +115,28 @@ export class ApiClient {
    */
   clearCache (): void {
     this.cache.clear()
+  }
+
+  /**
+   * 生成缓存键
+   */
+  private generateCacheKey (method: string, args: unknown[]): string | null {
+    if (args.length === 0) {
+      return method
+    }
+    try {
+      return `${method}:${JSON.stringify(args)}`
+    } catch {
+      // JSON.stringify 失败（如循环引用），返回 null 表示跳过缓存
+      return null
+    }
+  }
+
+  /**
+   * 检查方法是否应该被缓存
+   */
+  private shouldCache (method: string): boolean {
+    return this.enableCache && ApiClient.CACHEABLE_METHODS.has(method)
   }
 }
 

@@ -6,6 +6,12 @@
     "composite": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
 
+    // @vue/tsconfig caps lib at ES2020 and leaves newer built-ins to the
+    // consumer, since using them requires either a modern runtime or polyfills.
+    // Vuetify already ships Array.prototype.at in the bundle, so the runtime
+    // requirement exists regardless and ES2022 only makes it visible to tsc.
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]

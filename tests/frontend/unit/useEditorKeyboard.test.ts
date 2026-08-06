@@ -5,11 +5,13 @@ import { useEditorKeyboard } from '@/composables/editor/useEditorKeyboard'
 // Track HashHandler instances and their commands
 let lastHashHandlerInstance: { commands: any[] } | null = null
 
-// Mock ace-code HashHandler
+// Mock ace-code HashHandler.
+// Returning the instance rather than assigning to `this` keeps the capture
+// explicit: `new` yields whatever object a constructor returns.
 vi.mock('ace-code/src/keyboard/hash_handler', () => ({
-  HashHandler: vi.fn().mockImplementation(function (this: any, commands: any[]) {
-    this.commands = commands || []
-    lastHashHandlerInstance = this
+  HashHandler: vi.fn(function (commands: any[]) {
+    lastHashHandlerInstance = { commands: commands || [] }
+    return lastHashHandlerInstance
   }),
 }))
 
