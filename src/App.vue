@@ -92,4 +92,16 @@ body,
   scrollbar-gutter: stable;
   overflow: overlay;
 }
+
+/*
+  这是固定布局的桌面窗口，不是网页。WebKit 默认的橡皮筋滚动会让在不可滚动
+  区域拖拽时整个界面轻微位移再回弹，看起来像界面松动。
+
+  只在文档层关掉：设置页、许可证页等长页面仍需要正常滚动，
+  面板内部的 .scroll-container 也不受影响。
+*/
+html,
+body {
+  overscroll-behavior: none;
+}
 </style>

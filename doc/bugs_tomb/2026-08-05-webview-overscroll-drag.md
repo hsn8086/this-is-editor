@@ -1,6 +1,6 @@
 # 2026-08-05 不可滚动区域被拖动时整体轻微位移
 
-**状态**: 待解决
+**状态**: 已修复（等待报告者在真机确认视觉表现）
 
 ## 现象
 
@@ -24,13 +24,23 @@
     管不到 `html` / `body`。
 - 因此文档级的弹性滚动没有被抑制。
 
-## 待验证 / 可能的处理方向
+## 处理
 
-1. 给 `html, body` 加 `overscroll-behavior: none`，确认位移是否消失。
-   这是纯 CSS 改动，成本最低，应先试。
-2. 若无效，可能是窗口层而非文档层的行为，需要看 pywebview / WKWebView 侧：
-   例如 `window.gui` 的 bounce 设置，或 WKWebView 的 `scrollView.bounces`。
-3. 确认三个平台的表现差异后再决定是全局改还是只在 macOS 生效。
+- 在 `src/App.vue` 的全局样式里给 `html, body` 加 `overscroll-behavior: none`，
+  在文档层关掉橡皮筋滚动。
+
+**刻意只改文档层**：一开始顺手加了 `html, body, #app { height: 100%; overflow: hidden }`，
+随后撤掉了——许可证页要渲染 400 多张卡片，设置页、环境页也都是长页面，
+锁死 body 溢出很可能把它们的滚动搞坏。面板内部的 `.scroll-container` 同样不受影响。
+
+## 验证程度（重要）
+
+- 已确认规则进入构建产物：`web/assets/index-*.css` 中存在 `html,body{overscroll-behavior:none}`。
+- **没有验证视觉症状是否真的消失**——拖拽回弹属于交互表现，无法用命令行断言。
+- 因此根因一栏仍是推断。若真机上仍有位移，说明不是文档层的橡皮筋滚动，
+  下一步应查窗口层：pywebview / WKWebView 的 `scrollView.bounces`。
+- 也尚未确认 Linux (GTK WebKit) / Windows (EdgeChromium) 上是否存在同样现象；
+  该属性在这两个内核上是安全的空操作或同义行为，不会引入回归。
 
 ## 复现步骤
 
