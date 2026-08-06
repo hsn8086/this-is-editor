@@ -127,7 +127,8 @@ jobs:
         debug: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.include_debug && '["nodebug", "debug"]' || '["nodebug"]') }}
         # mode: [onefile, dir] # 定义构建模式矩阵
         mode: [onefile]
-        os: [ubuntu-latest, windows-latest] # 定义操作系统矩阵
+        # macos-latest 是 arm64，产物仅适用于 Apple Silicon
+        os: [ubuntu-latest, windows-latest, macos-latest] # 定义操作系统矩阵
 
     steps:
       # 检出代码
@@ -153,6 +154,9 @@ jobs:
           if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
             sudo apt-get update
             sudo apt-get install -y libcairo2-dev libgirepository1.0-dev  # 安装 Linux 系统依赖
+          elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            # Nuitka 走 clang，ccache 命中时能把 C 编译从数百秒降到几十秒
+            brew install ccache
           fi
           uv sync --locked
 
@@ -163,6 +167,8 @@ jobs:
             ~/.cache/Nuitka
             ~/.cache/ccache
             ~/AppData/Local/Nuitka/Nuitka/Cache
+            ~/Library/Caches/Nuitka
+            ~/Library/Caches/ccache
           key: nuitka-${{ runner.os }}-${{ hashFiles('uv.lock') }}-${{ matrix.debug }}
           restore-keys: |
             nuitka-${{ runner.os }}-${{ hashFiles('uv.lock') }}-
@@ -187,24 +193,61 @@ jobs:
         shell: bash
         timeout-minutes: 5
         run: |
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            binary=".dist/main.exe"
-          else
-            binary=".dist/main.bin"
-          fi
+          case "${{ matrix.os }}" in
+            windows-latest) binary=".dist/main.exe" ;;
+            # macOS 必须打成 app bundle 才能包含 PyObjC 框架，
+            # 因此产物是目录而非单文件，可执行体在 Contents/MacOS 下。
+            macos-latest)   binary=".dist/main.app/Contents/MacOS/main" ;;
+            *)              binary=".dist/main.bin" ;;
+          esac
           "$binary" --self-check --dev-user-data-dir "${RUNNER_TEMP}/tie-smoke"
 
-      # 压缩构建产物
-      - name: Compress build artifacts
+      # 打包并解析出上传参数
+      #
+      # 以前这些值写在 upload 步骤的三层嵌套三元表达式里，加上 macOS 后已无法阅读，
+      # 因此改为在这里算好再输出。macOS 的产物是 .app 目录，无论 mode 取什么都必须
+      # 归档；用 ditto 而非 zip，它是 macOS 原生工具，能正确保留 bundle 里的符号链接
+      # 与可执行权限。
+      - name: Package artifact
+        id: package
         shell: bash
         run: |
-          if [[ "${{ matrix.mode }}" == "dir" ]]; then
-            if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-              tar -czf main.tar.gz -C .dist/main.dist .
-            elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-              pwsh -Command "Compress-Archive -Path .dist/main.dist -DestinationPath main.zip"
-            fi
+          case "${{ matrix.os }}" in
+            macos-latest)
+              ditto -c -k --sequesterRsrc --keepParent .dist/main.app main.zip
+              path="main.zip"; ext="zip"; type="application/zip"
+              ;;
+            windows-latest)
+              if [[ "${{ matrix.mode }}" == "dir" ]]; then
+                pwsh -Command "Compress-Archive -Path .dist/main.dist -DestinationPath main.zip"
+                path="main.zip"; ext="zip"; type="application/zip"
+              else
+                path=".dist/main.exe"; ext="exe"
+                type="application/vnd.microsoft.portable-executable"
+              fi
+              ;;
+            *)
+              if [[ "${{ matrix.mode }}" == "dir" ]]; then
+                tar -czf main.tar.gz -C .dist/main.dist .
+                path="main.tar.gz"; ext="tar.gz"; type="application/gzip"
+              else
+                path=".dist/main.bin"; ext="bin"; type="application/octet-stream"
+              fi
+              ;;
+          esac
+
+          suffix=""
+          if [[ "${{ matrix.debug }}" == "debug" ]]; then
+            suffix="-debug"
           fi
+
+          {
+            echo "asset_path=${path}"
+            echo "asset_name=ThisIsEditor-${{ matrix.os }}${suffix}.${ext}"
+            echo "asset_content_type=${type}"
+          } >> "$GITHUB_OUTPUT"
+
+          ls -lh "${path}"
 
       # 上传构建产物到 GitHub Release
       - name: Upload build artifacts
@@ -213,6 +256,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ${{ matrix.os == 'windows-latest' && matrix.mode == 'onefile' && '.dist/main.exe' || matrix.os == 'windows-latest' && matrix.mode == 'dir' && 'main.zip' || matrix.os == 'ubuntu-latest' && matrix.mode == 'onefile' && '.dist/main.bin' || matrix.os == 'ubuntu-latest' && matrix.mode == 'dir' && 'main.tar.gz' }}
-          asset_name: ThisIsEditor-${{ matrix.os }}${{ matrix.debug == 'debug' && '-debug' || '' }}.${{ matrix.os == 'windows-latest' && matrix.mode == 'onefile' && 'exe' || matrix.os == 'ubuntu-latest' && matrix.mode == 'onefile' && 'bin' || matrix.mode == 'dir' && matrix.os == 'windows-latest' && 'zip' || matrix.mode == 'dir' && matrix.os == 'ubuntu-latest' && 'tar.gz' }}
-          asset_content_type: ${{ matrix.os == 'windows-latest' && matrix.mode == 'onefile' && 'application/vnd.microsoft.portable-executable' || matrix.os == 'windows-latest' && matrix.mode == 'dir' && 'application/zip' || matrix.os == 'ubuntu-latest' && matrix.mode == 'onefile' && 'application/octet-stream' || matrix.os == 'ubuntu-latest' && matrix.mode == 'dir' && 'application/gzip' }}
+          asset_path: ${{ steps.package.outputs.asset_path }}
+          asset_name: ${{ steps.package.outputs.asset_name }}
+          asset_content_type: ${{ steps.package.outputs.asset_content_type }}
