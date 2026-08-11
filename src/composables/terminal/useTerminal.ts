@@ -128,6 +128,7 @@ export function useTerminal (options: UseTerminalOptions): UseTerminalReturn {
   let fitAddon: FitAddon | undefined
   let socket: WebSocket | undefined
   let resizeObserver: ResizeObserver | undefined
+  let fitFrame: number | undefined
   let disposed = false
 
   /** 从 Vuetify 当前主题 token 构建 xterm 配色 */
@@ -172,6 +173,17 @@ export function useTerminal (options: UseTerminalOptions): UseTerminalReturn {
     } catch (error) {
       console.warn('[useTerminal] Failed to fit terminal:', error)
     }
+  }
+
+  /** 合并同一帧内 ResizeObserver 的多次通知，避免拖拽时重复 layout。 */
+  function scheduleFit (): void {
+    if (fitFrame !== undefined) {
+      return
+    }
+    fitFrame = window.requestAnimationFrame(() => {
+      fitFrame = undefined
+      fit()
+    })
   }
 
   function clear (): void {
@@ -256,7 +268,7 @@ export function useTerminal (options: UseTerminalOptions): UseTerminalReturn {
 
     // 面板可拖拽改变高度，尺寸一变就要重新计算行列并通知 shell
     if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(() => fit())
+      resizeObserver = new ResizeObserver(() => scheduleFit())
       resizeObserver.observe(element)
     }
   }
@@ -266,6 +278,10 @@ export function useTerminal (options: UseTerminalOptions): UseTerminalReturn {
     isReady.value = false
     resizeObserver?.disconnect()
     resizeObserver = undefined
+    if (fitFrame !== undefined) {
+      window.cancelAnimationFrame(fitFrame)
+      fitFrame = undefined
+    }
     if (socket) {
       socket.close()
       socket = undefined

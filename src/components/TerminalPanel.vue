@@ -124,11 +124,6 @@
     { immediate: true },
   )
 
-  watch(height, async () => {
-    await nextTick()
-    fit()
-  })
-
   let resizeHandle: HTMLElement | undefined
   let resizePointerId: number | undefined
   let resizeStartY = 0
@@ -239,5 +234,12 @@
 :global(html.terminal-is-resizing *) {
   cursor: ns-resize !important;
   user-select: none !important;
+}
+
+/* Vuetify 默认给 drawer 和 v-main 都加 0.2s 尺寸过渡。自定义拖拽期间必须
+   逐帧跟手，否则 panel、主区域和 xterm canvas 三者各慢一拍并露出底色黑条。 */
+:global(html.terminal-is-resizing .terminal-panel),
+:global(html.terminal-is-resizing .v-main) {
+  transition: none !important;
 }
 </style>

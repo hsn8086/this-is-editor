@@ -12,7 +12,11 @@
       />
     </v-list>
   </v-navigation-drawer>
-  <v-main>
+  <!--
+    使用 Vuetify 原生 scroller 作为页面唯一滚动容器。依赖 html/body 的根滚动
+    在 WKWebView 中会被内部 overflow:auto 的 VList 截断滚轮链，只剩拖动根滚动条可用。
+  -->
+  <v-main class="app-main" scrollable>
     <router-view />
   </v-main>
   <!-- <AppFooter /> -->
@@ -87,3 +91,10 @@
   }
 
 </script>
+
+<style scoped>
+.app-main :deep(.v-main__scroller) {
+  /* 自己正常滚动，但到边界后不把手势传给 WKWebView 根 scroll view。 */
+  overscroll-behavior: contain;
+}
+</style>
