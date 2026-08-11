@@ -5,10 +5,11 @@
   -->
   <v-navigation-drawer
     v-model="visible"
-    :height="height"
+    class="terminal-panel"
     location="bottom"
     permanent
-    :width="undefined"
+    touchless
+    :width="height"
   >
     <!-- 拖拽把手：改变面板高度 -->
     <div
@@ -17,7 +18,7 @@
       @pointerdown="startResize"
     />
 
-    <v-list class="py-0" density="compact" nav>
+    <v-list class="terminal-toolbar py-0" density="compact" nav>
       <v-list-item class="my-1">
         <template #prepend>
           <v-icon :color="statusColor" size="small">mdi-console</v-icon>
@@ -128,34 +129,82 @@
     fit()
   })
 
-  function startResize (event: PointerEvent): void {
+  let resizeHandle: HTMLElement | undefined
+  let resizePointerId: number | undefined
+  let resizeStartY = 0
+  let resizeStartHeight = 0
+
+  function onResizeMove (event: PointerEvent): void {
+    if (event.pointerId !== resizePointerId) {
+      return
+    }
     event.preventDefault()
-    const startY = event.clientY
-    const startHeight = height.value
-
-    function onMove (moveEvent: PointerEvent): void {
-      // 面板贴在底部，向上拖动即增高，故取反
-      terminalStore.setHeight(startHeight + (startY - moveEvent.clientY))
-    }
-
-    function onUp (): void {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-    }
-
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
+    // 面板贴在底部，向上拖动即增高，故取反；至少给编辑器留 120px。
+    const maxHeight = Math.max(120, window.innerHeight - 120)
+    terminalStore.setHeight(
+      Math.min(
+        resizeStartHeight + (resizeStartY - event.clientY),
+        maxHeight,
+      ),
+    )
   }
 
-  onUnmounted(() => dispose())
+  function stopResize (event?: PointerEvent): void {
+    if (event && event.pointerId !== resizePointerId) {
+      return
+    }
+    if (
+      resizeHandle
+      && resizePointerId !== undefined
+      && resizeHandle.hasPointerCapture(resizePointerId)
+    ) {
+      resizeHandle.releasePointerCapture(resizePointerId)
+    }
+    resizeHandle = undefined
+    resizePointerId = undefined
+    document.documentElement.classList.remove('terminal-is-resizing')
+    window.removeEventListener('pointermove', onResizeMove)
+    window.removeEventListener('pointerup', stopResize)
+    window.removeEventListener('pointercancel', stopResize)
+  }
+
+  function startResize (event: PointerEvent): void {
+    event.preventDefault()
+    stopResize()
+    resizeHandle = event.currentTarget as HTMLElement
+    resizePointerId = event.pointerId
+    resizeStartY = event.clientY
+    resizeStartHeight = height.value
+
+    // WKWebView 中指针离开 6px 把手后，只有 pointer capture 能保证继续收到事件。
+    resizeHandle.setPointerCapture(resizePointerId)
+    document.documentElement.classList.add('terminal-is-resizing')
+    window.addEventListener('pointermove', onResizeMove, { passive: false })
+    window.addEventListener('pointerup', stopResize)
+    window.addEventListener('pointercancel', stopResize)
+  }
+
+  onUnmounted(() => {
+    stopResize()
+    dispose()
+  })
 
   defineExpose({ clear, interrupt, fit })
 </script>
 
 <style scoped>
+.terminal-panel :deep(.v-navigation-drawer__content) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .terminal-resizer {
+  flex: 0 0 6px;
   height: 6px;
   cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
   /* 用 border token 而非写死颜色，亮暗两套主题都能拿到正确对比度 */
   border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
@@ -164,12 +213,31 @@
   background-color: rgba(var(--v-theme-primary), 0.24);
 }
 
+.terminal-toolbar {
+  flex: 0 0 auto;
+}
+
 .terminal-host {
-  /* 40px 标题行 + 1px 分隔线 + 6px 拖拽条 */
-  height: calc(100% - 47px);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
   padding: 4px 8px;
   /* xterm 自身会用 useTerminal 注入的 theme.background 填充，
      这里同样取 surface，避免尺寸未铺满时露出不同底色 */
   background-color: rgb(var(--v-theme-surface));
+}
+
+.terminal-host :deep(.xterm) {
+  height: 100%;
+}
+
+.terminal-host :deep(.xterm-viewport) {
+  overscroll-behavior: contain;
+}
+
+:global(html.terminal-is-resizing),
+:global(html.terminal-is-resizing *) {
+  cursor: ns-resize !important;
+  user-select: none !important;
 }
 </style>

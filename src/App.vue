@@ -87,10 +87,9 @@
   background: rgba(100, 100, 100, 0.8);
 }
 
-body,
 .scroll-container {
   scrollbar-gutter: stable;
-  overflow: overlay;
+  overflow: auto;
 }
 
 /*
@@ -103,5 +102,11 @@ body,
 html,
 body {
   overscroll-behavior: none;
+}
+
+/* Vuetify reset 强制 html { overflow-y: scroll }，无溢出时也会永久留下
+   8px 根滚动条（截图中的黑线）。长页面仍由 auto 按需正常滚动。 */
+html {
+  overflow-y: auto;
 }
 </style>

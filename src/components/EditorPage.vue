@@ -1,24 +1,25 @@
 <template>
   <CheckerPanel v-if="enableCheckerPanel" ref="checkPanel" />
   <TerminalPanel />
+  <v-ace-editor
+    ref="aceRef"
+    v-model:value="content"
+    :lang="lang"
+    :options="editorOptions"
+    :readonly="false"
+    style="height: 100%"
+    theme="github"
+    @contextmenu.prevent="onContextMenu"
+  />
   <v-menu
     v-model="showMenu"
-    absolute
-    offset-y
-    :style="{ left: menuX + 'px', top: menuY + 'px' }"
+    content-class="editor-context-menu"
+    location="bottom start"
+    :max-height="contextMenuMaxHeight"
+    :offset="4"
+    scroll-strategy="reposition"
+    :target="[menuX, menuY]"
   >
-    <template #activator>
-      <v-ace-editor
-        ref="aceRef"
-        v-model:value="content"
-        :lang="lang"
-        :options="editorOptions"
-        :readonly="false"
-        style="height: 100%"
-        theme="github"
-        @contextmenu.prevent="onContextMenu"
-      />
-    </template>
     <v-list density="compact" nav>
       <div v-for="(group, gIndex) in menuList" :key="gIndex">
         <v-divider v-if="gIndex > 0" class="my-1" />
@@ -97,6 +98,9 @@
   // Phase 2B: 使用 composables 管理剪贴板、右键菜单、键盘快捷键和格式化
   const { cut, copy, copyAll, paste } = useEditorClipboard({ editor })
   const { menuX, menuY, showMenu, onContextMenu } = useEditorContextMenu({ editor })
+  // 由 VMenu 的 connected location strategy 负责在视口边缘翻转/位移，
+  // 最大高度则保证矮窗口里滚动发生在菜单内部，而不是把 document 撑高。
+  const contextMenuMaxHeight = 'calc(100dvh - 16px)'
 
   // Phase 2.4: 文件同步与自动保存
   const { onCodeChange, handleExternalChange, resetCode, flushPendingSave } = useEditorFileSync({
@@ -275,3 +279,16 @@
     ],
   ]
 </script>
+
+<!-- VMenu teleport 到 body，不能用 scoped style，否则选择器匹配不到。 -->
+<style>
+.editor-context-menu {
+  overflow: hidden !important;
+}
+
+.editor-context-menu > .v-list {
+  max-height: inherit;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+</style>
